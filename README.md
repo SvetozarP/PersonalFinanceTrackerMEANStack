@@ -13,7 +13,7 @@ A comprehensive personal finance management application built with Angular 20, E
 
 1. **Clone and install dependencies:**
    ```bash
-   git clone <your-repo>
+   git clone https://github.com/SvetozarP/PersonalFinanceTrackerMEANStack
    cd finance-tracker
    npm install
    cd backend && npm install
