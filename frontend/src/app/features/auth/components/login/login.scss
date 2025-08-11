@@ -1,0 +1,163 @@
+  .login-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 20px;
+    /* Prevent any potential duplication issues */
+    position: relative;
+    z-index: 1;
+    /* Force single instance rendering */
+    isolation: isolate;
+    /* Prevent hydration duplication */
+    contain: layout style paint;
+    /* Force single instance rendering */
+    transform: translateZ(0);
+    backface-visibility: hidden;
+  }
+
+  .login-card {
+    max-width: 400px;
+    width: 100%;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    border-radius: 16px;
+    /* Prevent any rendering duplication */
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    /* Force single rendering */
+    contain: layout style paint;
+    /* Prevent any potential duplication */
+    position: relative;
+    z-index: 1;
+    /* Force single instance rendering */
+    isolation: isolate;
+  }
+
+  .full-width {
+    width: 100%;
+    margin-bottom: 16px;
+    /* Ensure form fields are properly isolated */
+    position: relative;
+    z-index: 2;
+    /* Prevent duplication during hydration */
+    contain: layout style;
+    /* Force single instance rendering */
+    isolation: isolate;
+  }
+
+  .form-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    /* Prevent duplication during hydration */
+    contain: layout style;
+    /* Force single instance rendering */
+    isolation: isolate;
+  }
+
+  .forgot-password-link {
+    color: #667eea;
+    text-decoration: none;
+    font-size: 14px;
+    /* Prevent duplication during hydration */
+    contain: layout style;
+    /* Force single instance rendering */
+    isolation: isolate;
+  }
+
+  .forgot-password-link:hover {
+    text-decoration: underline;
+  }
+
+  .login-button {
+    height: 48px;
+    font-size: 16px;
+    font-weight: 500;
+    /* Prevent duplication during hydration */
+    contain: layout style;
+    /* Force single instance rendering */
+    isolation: isolate;
+  }
+
+  .spinner {
+    animation: spin 1s linear infinite;
+    margin-right: 8px;
+    /* Prevent duplication during hydration */
+    contain: layout style;
+  }
+
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+  
+  /* Global prevention of duplication during hydration */
+  * {
+    contain: layout style;
+  }
+  
+  /* Force single instance rendering for all elements */
+  .login-container * {
+    contain: layout style paint;
+  }
+  
+  /* Prevent any potential duplication during hydration */
+  .login-container {
+    contain: layout style paint;
+    isolation: isolate;
+    position: relative;
+    z-index: 1;
+  }
+
+  .signup-prompt {
+    text-align: center;
+    width: 100%;
+    color: #666;
+    /* Prevent duplication during hydration */
+    contain: layout style;
+    /* Force single instance rendering */
+    isolation: isolate;
+  }
+
+  .signup-link {
+    color: #667eea;
+    text-decoration: none;
+    font-weight: 500;
+    /* Prevent duplication during hydration */
+    contain: layout style;
+  }
+
+  .signup-link:hover {
+    text-decoration: underline;
+  }
+
+  mat-card-header {
+    text-align: center;
+    margin-bottom: 24px;
+    /* Prevent duplication during hydration */
+    contain: layout style;
+    /* Force single instance rendering */
+    isolation: isolate;
+  }
+
+  mat-card-title {
+    font-size: 28px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 8px;
+    /* Prevent duplication during hydration */
+    contain: layout style;
+    /* Force single instance rendering */
+    isolation: isolate;
+  }
+
+  mat-card-subtitle {
+    color: #666;
+    font-size: 16px;
+    /* Prevent duplication during hydration */
+    contain: layout style;
+    /* Force single instance rendering */
+    isolation: isolate;
+  }

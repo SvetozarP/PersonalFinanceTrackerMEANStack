@@ -30,7 +30,18 @@ export class AuthController {
         message: 'User registered successfully',
         data: { user }
       });
-    } catch (error) {
+    } catch (error: any) {
+      // Handle business logic errors with appropriate status codes
+      if (error.message === 'User with this email already exists') {
+        res.status(400).json({
+          success: false,
+          message: error.message,
+          errors: [error.message]
+        });
+        return;
+      }
+      
+      // For other errors, pass to global error handler
       next(error);
     }
   };
@@ -64,7 +75,18 @@ export class AuthController {
         message: 'Login successful',
         data: { user, accessToken: tokens.accessToken }
       });
-    } catch (error) {
+    } catch (error: any) {
+      // Handle business logic errors with appropriate status codes
+      if (error.message === 'Invalid email or password' || error.message === 'Account is deactivated') {
+        res.status(400).json({
+          success: false,
+          message: error.message,
+          errors: [error.message]
+        });
+        return;
+      }
+      
+      // For other errors, pass to global error handler
       next(error);
     }
   };
@@ -96,7 +118,18 @@ export class AuthController {
         message: 'Token refreshed successfully',
         data: { accessToken: tokens.accessToken }
       });
-    } catch (error) {
+    } catch (error: any) {
+      // Handle business logic errors with appropriate status codes
+      if (error.message === 'Invalid refresh token') {
+        res.status(401).json({
+          success: false,
+          message: error.message,
+          errors: [error.message]
+        });
+        return;
+      }
+      
+      // For other errors, pass to global error handler
       next(error);
     }
   };
