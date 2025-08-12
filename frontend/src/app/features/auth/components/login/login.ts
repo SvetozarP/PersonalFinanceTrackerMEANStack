@@ -61,7 +61,7 @@ export class LoginComponent implements OnInit, OnDestroy {
   }
 
   onSubmit(): void {
-    if (this.loginForm.valid) {
+    if (this.loginForm.valid && !this.isLoading) {
       // Use markForCheck to avoid change detection issues
       this.isLoading = true;
       this.cdr.markForCheck();

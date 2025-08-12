@@ -114,7 +114,7 @@ export class RegisterComponent implements OnInit, OnDestroy {
   }
 
   onSubmit(): void {
-    if (this.registerForm.valid) {
+    if (this.registerForm.valid && !this.isLoading) {
       // Use markForCheck to avoid change detection issues
       this.isLoading = true;
       this.cdr.markForCheck();
@@ -148,7 +148,12 @@ export class RegisterComponent implements OnInit, OnDestroy {
           // Show more detailed error message
           let errorMessage = 'Registration failed. Please try again.';
           if (error.error && error.error.errors && Array.isArray(error.error.errors)) {
-            errorMessage = error.error.errors.join(', ');
+            // Handle array of error objects with field and message properties
+            if (error.error.errors.length > 0 && typeof error.error.errors[0] === 'object' && 'message' in error.error.errors[0]) {
+              errorMessage = error.error.errors.map((err: any) => err.message).join(', ');
+            } else {
+              errorMessage = error.error.errors.join(', ');
+            }
           } else if (error.error && error.error.message) {
             errorMessage = error.error.message;
           } else if (error.message) {

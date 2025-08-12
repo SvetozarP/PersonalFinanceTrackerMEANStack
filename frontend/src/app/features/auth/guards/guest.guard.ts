@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { CanActivate, Router } from '@angular/router';
-import { Observable, map } from 'rxjs';
+import { Observable, map, catchError, of } from 'rxjs';
 import { AuthService } from '../services/auth.service';
 
 @Injectable({
@@ -15,18 +15,25 @@ export class GuestGuard implements CanActivate {
   canActivate(): Observable<boolean> {
     console.log('GuestGuard: canActivate called');
     
-    // Initialize auth service if not already done
-    this.authService.initializeAuth();
-    
     return this.authService.isAuthenticated$.pipe(
       map(isAuthenticated => {
         console.log('GuestGuard: Authentication check result:', isAuthenticated);
         if (!isAuthenticated) {
           return true;
         } else {
-          this.router.navigate(['/dashboard']);
+          try {
+            this.router.navigate(['/dashboard']);
+          } catch (error) {
+            console.error('GuestGuard navigation error:', error);
+            // If navigation fails, still return false to prevent access
+          }
           return false;
         }
+      }),
+      catchError(error => {
+        console.error('GuestGuard error:', error);
+        // On error, allow access (fail open for guest routes)
+        return of(true);
       })
     );
   }
