@@ -19,20 +19,20 @@ export const authenticateToken = async (
     if (!token) {
       res.status(401).json({
         success: false,
-        message: 'Access token not provided'
+        message: 'Access token not provided',
       });
       return;
     }
 
     const authService = new AuthService();
     const decoded = await authService.validateToken(token);
-    
+
     req.user = decoded;
     next();
-  } catch (error) {
+  } catch {
     res.status(403).json({
       success: false,
-      message: 'Invalid or expired token'
+      message: 'Invalid or expired token',
     });
   }
 };
@@ -51,9 +51,9 @@ export const optionalAuth = async (
       const decoded = await authService.validateToken(token);
       req.user = decoded;
     }
-    
+
     next();
-  } catch (error) {
+  } catch {
     // Continue without authentication
     next();
   }

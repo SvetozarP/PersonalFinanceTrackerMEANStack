@@ -1,4 +1,6 @@
 import mongoose from 'mongoose';
+import { logger } from '../shared/services/logger.service';
+import { config } from './environment';
 
 export class DatabaseConnection {
   private static instance: DatabaseConnection;
@@ -15,13 +17,13 @@ export class DatabaseConnection {
 
   public async connect(): Promise<void> {
     if (this.isConnected) {
-      console.log('Database already connected');
+      logger.info('Database already connected');
       return;
     }
 
     try {
       const mongoUri = this.buildMongoUri();
-      
+
       await mongoose.connect(mongoUri, {
         maxPoolSize: 10,
         serverSelectionTimeoutMS: 5000,
@@ -30,21 +32,21 @@ export class DatabaseConnection {
       });
 
       this.isConnected = true;
-      console.log('✅ MongoDB connected successfully');
+      logger.info('✅ MongoDB connected successfully');
 
       // Handle connection events
-      mongoose.connection.on('error', (error) => {
-        console.error('MongoDB connection error:', error);
+      mongoose.connection.on('error', error => {
+        logger.error('MongoDB connection error:', error);
         this.isConnected = false;
       });
 
       mongoose.connection.on('disconnected', () => {
-        console.log('MongoDB disconnected');
+        logger.warn('MongoDB disconnected');
         this.isConnected = false;
       });
 
       mongoose.connection.on('reconnected', () => {
-        console.log('MongoDB reconnected');
+        logger.info('MongoDB reconnected');
         this.isConnected = true;
       });
 
@@ -53,9 +55,8 @@ export class DatabaseConnection {
         await this.disconnect();
         process.exit(0);
       });
-
     } catch (error) {
-      console.error('Failed to connect to MongoDB:', error);
+      logger.error('Failed to connect to MongoDB:', error);
       throw error;
     }
   }
@@ -68,23 +69,15 @@ export class DatabaseConnection {
     try {
       await mongoose.disconnect();
       this.isConnected = false;
-      console.log('MongoDB disconnected');
+      logger.info('MongoDB disconnected');
     } catch (error) {
-      console.error('Error disconnecting from MongoDB:', error);
+      logger.error('Error disconnecting from MongoDB:', error);
       throw error;
     }
   }
 
-    private buildMongoUri(): string {
-    // Read the MONGO_URI connection string from environment
-    const mongoUri = process.env.MONGO_URI;
-    
-    // Validate required environment variable
-    if (!mongoUri) {
-      throw new Error('MONGO_URI environment variable is required');
-    }
-    
-    return mongoUri;
+  private buildMongoUri(): string {
+    return config.MONGO_URI;
   }
 
   public getConnectionStatus(): boolean {

@@ -9,7 +9,11 @@ export class AuthController {
     this.authService = new AuthService();
   }
 
-  register = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  register = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
       // Validate input
       const { error, value } = registerSchema.validate(req.body);
@@ -17,18 +21,18 @@ export class AuthController {
         res.status(400).json({
           success: false,
           message: 'Validation error',
-          errors: error.details.map(detail => detail.message)
+          errors: error.details.map(detail => detail.message),
         });
         return;
       }
 
       // Register user
       const user = await this.authService.register(value);
-      
+
       res.status(201).json({
         success: true,
         message: 'User registered successfully',
-        data: { user }
+        data: { user },
       });
     } catch (error: any) {
       // Handle business logic errors with appropriate status codes
@@ -36,17 +40,21 @@ export class AuthController {
         res.status(400).json({
           success: false,
           message: error.message,
-          errors: [error.message]
+          errors: [error.message],
         });
         return;
       }
-      
+
       // For other errors, pass to global error handler
       next(error);
     }
   };
 
-  login = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  login = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
       // Validate input
       const { error, value } = loginSchema.validate(req.body);
@@ -54,69 +62,76 @@ export class AuthController {
         res.status(400).json({
           success: false,
           message: 'Validation error',
-          errors: error.details.map(detail => detail.message)
+          errors: error.details.map(detail => detail.message),
         });
         return;
       }
 
       // Login user
       const { user, tokens } = await this.authService.login(value);
-      
+
       // Set refresh token in HTTP-only cookie
       res.cookie('refreshToken', tokens.refreshToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'strict',
-        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
       });
 
       res.status(200).json({
         success: true,
         message: 'Login successful',
-        data: { user, accessToken: tokens.accessToken }
+        data: { user, accessToken: tokens.accessToken },
       });
     } catch (error: any) {
       // Handle business logic errors with appropriate status codes
-      if (error.message === 'Invalid email or password' || error.message === 'Account is deactivated') {
+      if (
+        error.message === 'Invalid email or password' ||
+        error.message === 'Account is deactivated'
+      ) {
         res.status(400).json({
           success: false,
           message: error.message,
-          errors: [error.message]
+          errors: [error.message],
         });
         return;
       }
-      
+
       // For other errors, pass to global error handler
       next(error);
     }
   };
 
-  refreshToken = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  refreshToken = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
       const { refreshToken } = req.cookies;
-      
+
       if (!refreshToken) {
         res.status(401).json({
           success: false,
-          message: 'Refresh token not provided'
+          message: 'Refresh token not provided',
         });
         return;
       }
 
       const tokens = await this.authService.refreshToken(refreshToken);
-      
+
       // Set new refresh token in cookie
       res.cookie('refreshToken', tokens.refreshToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'strict',
-        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
       });
 
       res.status(200).json({
         success: true,
         message: 'Token refreshed successfully',
-        data: { accessToken: tokens.accessToken }
+        data: { accessToken: tokens.accessToken },
       });
     } catch (error: any) {
       // Handle business logic errors with appropriate status codes
@@ -124,44 +139,52 @@ export class AuthController {
         res.status(401).json({
           success: false,
           message: error.message,
-          errors: [error.message]
+          errors: [error.message],
         });
         return;
       }
-      
+
       // For other errors, pass to global error handler
       next(error);
     }
   };
 
-  logout = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  logout = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
       const userId = (req as any).user?.userId;
-      
+
       if (userId) {
         await this.authService.logout(userId);
       }
 
       // Clear refresh token cookie
       res.clearCookie('refreshToken');
-      
+
       res.status(200).json({
         success: true,
-        message: 'Logout successful'
+        message: 'Logout successful',
       });
     } catch (error) {
       next(error);
     }
   };
 
-  getProfile = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  getProfile = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
       const userId = (req as any).user?.userId;
-      
+
       if (!userId) {
         res.status(401).json({
           success: false,
-          message: 'User not authenticated'
+          message: 'User not authenticated',
         });
         return;
       }
@@ -170,7 +193,7 @@ export class AuthController {
       res.status(200).json({
         success: true,
         message: 'Profile retrieved successfully',
-        data: { userId }
+        data: { userId },
       });
     } catch (error) {
       next(error);
