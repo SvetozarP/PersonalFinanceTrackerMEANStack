@@ -1,10 +1,14 @@
-import { HttpInterceptor, HttpRequest, HttpHandler, HttpEvent, HttpInterceptorFn, HttpHandlerFn } from '@angular/common/http';
+import { HttpInterceptor, HttpRequest, HttpHandler, HttpEvent, HttpInterceptorFn, HttpHandlerFn, HttpErrorResponse } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, throwError, BehaviorSubject } from 'rxjs';
+import { catchError, filter, take, switchMap } from 'rxjs/operators';
 import { TokenService } from '../services/token.service';
 
 @Injectable()
 export class AuthInterceptor implements HttpInterceptor {
+  private isRefreshing = false;
+  private refreshTokenSubject: BehaviorSubject<any> = new BehaviorSubject<any>(null);
+
   constructor(private tokenService: TokenService) {}
 
   intercept(req: HttpRequest<unknown>, next: HttpHandler): Observable<HttpEvent<unknown>> {
@@ -20,7 +24,40 @@ export class AuthInterceptor implements HttpInterceptor {
       req = this.addToken(req, token);
     }
 
-    return next.handle(req);
+    return next.handle(req).pipe(
+      catchError((error: HttpErrorResponse) => {
+        if (error.status === 401 && !req.url.includes('/auth/refresh-token')) {
+          return this.handle401Error(req, next);
+        }
+        return throwError(() => error);
+      })
+    );
+  }
+
+  private handle401Error(request: HttpRequest<unknown>, next: HttpHandler): Observable<HttpEvent<unknown>> {
+    if (!this.isRefreshing) {
+      this.isRefreshing = true;
+      this.refreshTokenSubject.next(null);
+
+      return this.tokenService.refreshAccessToken().pipe(
+        switchMap((response) => {
+          this.isRefreshing = false;
+          this.refreshTokenSubject.next(response.accessToken);
+          return next.handle(this.addToken(request, response.accessToken));
+        }),
+        catchError((err) => {
+          this.isRefreshing = false;
+          this.tokenService.clearAll();
+          return throwError(() => err);
+        })
+      );
+    } else {
+      return this.refreshTokenSubject.pipe(
+        filter(token => token !== null),
+        take(1),
+        switchMap(token => next.handle(this.addToken(request, token)))
+      );
+    }
   }
 
   private addToken(request: HttpRequest<unknown>, token: string): HttpRequest<unknown> {

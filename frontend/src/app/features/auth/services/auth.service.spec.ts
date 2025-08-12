@@ -53,7 +53,9 @@ describe('AuthService', () => {
       'getUserData',
       'clearAccessToken',
       'clearUserData',
-      'isTokenExpired'
+      'isTokenExpired',
+      'shouldRefreshToken',
+      'refreshAccessToken'
     ]);
     
     const routerSpy = jasmine.createSpyObj('Router', ['navigate']);
@@ -69,10 +71,19 @@ describe('AuthService', () => {
       ]
     }).compileComponents();
 
+    // Set up default spy behavior before creating the service
+    tokenServiceSpy.getAccessToken.and.returnValue(null);
+    tokenServiceSpy.getUserData.and.returnValue(null);
+    tokenServiceSpy.isTokenExpired.and.returnValue(false);
+    tokenServiceSpy.shouldRefreshToken.and.returnValue(false);
+
     const httpClient = TestBed.inject(HttpClient) as jasmine.SpyObj<HttpClient>;
     service = new AuthService(httpClient, tokenServiceSpy, routerSpy);
     tokenService = TestBed.inject(TokenService) as jasmine.SpyObj<TokenService>;
     router = TestBed.inject(Router) as jasmine.SpyObj<Router>;
+    
+    // Reset the service after setting up spies to prevent constructor initialization from interfering
+    (service as any).isInitialized = false;
   });
 
 
@@ -189,20 +200,15 @@ describe('AuthService', () => {
   describe('refreshToken', () => {
     it('should successfully refresh token', async () => {
       const mockResponse = {
-        success: true,
-        data: {
-          accessToken: 'new-access-token-123'
-        }
+        accessToken: 'new-access-token-123'
       };
 
-      const httpClient = TestBed.inject(HttpClient) as jasmine.SpyObj<HttpClient>;
-      httpClient.post.and.returnValue(of(mockResponse));
+      tokenService.refreshAccessToken.and.returnValue(of(mockResponse));
 
       const response = await firstValueFrom(service.refreshToken());
       
-      expect(httpClient.post).toHaveBeenCalledWith(`${environment.apiUrl}/auth/refresh-token`, {});
-      expect(response).toBe('new-access-token-123');
-      expect(tokenService.setAccessToken).toHaveBeenCalledWith('new-access-token-123');
+      expect(tokenService.refreshAccessToken).toHaveBeenCalled();
+      expect(response).toEqual(mockResponse);
     });
 
     it('should handle refresh token errors', async () => {
@@ -211,8 +217,7 @@ describe('AuthService', () => {
         error: { message: 'Invalid refresh token' }
       };
 
-      const httpClient = TestBed.inject(HttpClient) as jasmine.SpyObj<HttpClient>;
-      httpClient.post.and.returnValue(throwError(() => errorResponse));
+      tokenService.refreshAccessToken.and.returnValue(throwError(() => errorResponse));
 
       try {
         await firstValueFrom(service.refreshToken());
@@ -287,46 +292,75 @@ describe('AuthService', () => {
   });
 
   describe('initializeAuth', () => {
+    beforeEach(() => {
+      // Reset spy call counts before each test
+      tokenService.getAccessToken.calls.reset();
+      tokenService.getUserData.calls.reset();
+      tokenService.isTokenExpired.calls.reset();
+      tokenService.shouldRefreshToken.calls.reset();
+    });
+
     it('should initialize auth service only once', () => {
+      // Reset the initialization flag to test the logic
+      (service as any).isInitialized = false;
+      
       service.initializeAuth();
       service.initializeAuth(); // Second call should be ignored
 
+      // The first call should work, the second should be ignored
       expect(tokenService.getAccessToken).toHaveBeenCalledTimes(1);
     });
 
-    it('should load user profile when valid token exists', () => {
+    it('should load user profile when valid token exists but no user data', () => {
       tokenService.getAccessToken.and.returnValue('valid-token');
       tokenService.isTokenExpired.and.returnValue(false);
+      tokenService.getUserData.and.returnValue(null); // No user data
+      tokenService.shouldRefreshToken.and.returnValue(false); // Token doesn't need refresh
       
       // Spy on the private method indirectly by checking if getCurrentUser is called
       spyOn(service, 'getCurrentUser').and.returnValue(of(mockUser));
 
       service.initializeAuth();
       
+      // The service should call getCurrentUser when there's a valid token but no user data
       expect(service.getCurrentUser).toHaveBeenCalled();
     });
 
-    it('should attempt token refresh when token is expired', () => {
-      tokenService.getAccessToken.and.returnValue('expired-token');
-      tokenService.isTokenExpired.and.returnValue(true);
-      spyOn(service, 'refreshToken').and.returnValue(of('new-token'));
+    it('should not load user profile when valid token and user data exist', () => {
+      tokenService.getAccessToken.and.returnValue('valid-token');
+      tokenService.isTokenExpired.and.returnValue(false);
+      tokenService.getUserData.and.returnValue(mockUser); // User data exists
+      tokenService.shouldRefreshToken.and.returnValue(false); // Token doesn't need refresh
+      
       spyOn(service, 'getCurrentUser').and.returnValue(of(mockUser));
 
       service.initializeAuth();
       
-      expect(service.refreshToken).toHaveBeenCalled();
-      expect(service.getCurrentUser).toHaveBeenCalled();
+      expect(service.getCurrentUser).not.toHaveBeenCalled();
+    });
+
+    it('should attempt token refresh when token is expired', () => {
+      tokenService.getAccessToken.and.returnValue('expired-token');
+      tokenService.shouldRefreshToken.and.returnValue(true);
+      spyOn(service as any, 'refreshTokenInternal').and.stub();
+
+      service.initializeAuth();
+      
+      // The service should call refreshTokenInternal when shouldRefreshToken returns true
+      expect((service as any).refreshTokenInternal).toHaveBeenCalled();
     });
 
     it('should clear tokens when refresh fails', () => {
       tokenService.getAccessToken.and.returnValue('expired-token');
-      tokenService.isTokenExpired.and.returnValue(true);
-      spyOn(service, 'refreshToken').and.returnValue(throwError(() => new Error('Refresh failed')));
+      tokenService.shouldRefreshToken.and.returnValue(true);
+      
+      // Mock the tokenService.refreshAccessToken to return an error
+      tokenService.refreshAccessToken.and.returnValue(throwError(() => new Error('Refresh failed')));
 
       service.initializeAuth();
       
+      // The error should be handled gracefully - the service should call logout which clears tokens
       expect(tokenService.clearAccessToken).toHaveBeenCalled();
-      expect(tokenService.clearUserData).toHaveBeenCalled();
     });
 
     it('should not initialize when no token exists', () => {

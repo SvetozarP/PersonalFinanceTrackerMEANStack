@@ -1,6 +1,7 @@
 import { TestBed, inject } from '@angular/core/testing';
 import { PLATFORM_ID } from '@angular/core';
 import { provideZonelessChangeDetection } from '@angular/core';
+import { HttpClientTestingModule } from '@angular/common/http/testing';
 
 import { TokenService } from './token.service';
 import { User } from '../../../core/models/auth.models';
@@ -26,6 +27,7 @@ describe('TokenService', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
+      imports: [HttpClientTestingModule],
       providers: [
         TokenService,
         { provide: PLATFORM_ID, useValue: 'browser' },
@@ -106,6 +108,7 @@ describe('TokenService', () => {
     beforeEach(() => {
       TestBed.resetTestingModule();
       TestBed.configureTestingModule({
+        imports: [HttpClientTestingModule],
         providers: [
           TokenService,
           { provide: PLATFORM_ID, useValue: 'server' },

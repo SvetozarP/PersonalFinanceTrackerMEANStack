@@ -22,7 +22,8 @@ export class AuthService {
     private router: Router
   ) {
     console.log('AuthService: Constructor called');
-    // Don't auto-initialize in constructor to avoid multiple calls
+    // Auto-initialize to check for existing tokens
+    this.initializeAuth();
   }
 
   login(credentials: LoginRequest): Observable<AuthResponse> {
@@ -103,20 +104,7 @@ export class AuthService {
     }
   }
 
-  refreshToken(): Observable<any> {
-    // Refresh token is automatically sent via HTTP-only cookie
-    return this.http.post<any>(`${environment.apiUrl}/auth/refresh-token`, {}).pipe(
-      map(response => {
-        // Backend returns { success: true, data: { accessToken } }
-        return response.data.accessToken;
-      }),
-      tap(accessToken => {
-        // Only update the access token (refresh token remains in HTTP-only cookie)
-        this.tokenService.setAccessToken(accessToken);
-      }),
-      catchError(this.handleError)
-    );
-  }
+
 
   getCurrentUser(): Observable<User> {
     return this.http.get<any>(`${environment.apiUrl}/auth/profile`).pipe(
@@ -157,47 +145,7 @@ export class AuthService {
     );
   }
 
-  public initializeAuth(): void {
-    if (this.isInitialized) {
-      console.log('AuthService: Already initialized, skipping');
-      return;
-    }
-    
-    console.log('AuthService: Initializing auth service');
-    this.isInitialized = true;
-    
-    const token = this.tokenService.getAccessToken();
-    console.log('AuthService: Found token:', token ? 'Yes' : 'No');
-    
-    if (token) {
-      const isExpired = this.tokenService.isTokenExpired(token);
-      console.log('AuthService: Token expired:', isExpired);
-      
-      if (!isExpired) {
-        console.log('AuthService: Loading user profile with valid token');
-        this.loadUserProfile();
-      } else {
-        console.log('AuthService: Token expired, attempting refresh');
-        // Token exists but is expired, try to refresh it
-        this.refreshToken().subscribe({
-          next: (tokenResponse) => {
-            console.log('AuthService: Token refreshed successfully');
-            // Token refreshed successfully, now load user profile
-            this.loadUserProfile();
-          },
-          error: (error) => {
-            console.log('AuthService: Token refresh failed, clearing tokens');
-            // Refresh failed, clear tokens and stay logged out
-            this.tokenService.clearAccessToken();
-            this.tokenService.clearUserData(); // Clear user data when token refresh fails
-            this.currentUserSubject.next(null);
-          }
-        });
-      }
-    } else {
-      console.log('AuthService: No token found, user remains unauthenticated');
-    }
-  }
+
 
   private loadUserProfile(): void {
     console.log('AuthService: Starting to load user profile');
@@ -219,8 +167,148 @@ export class AuthService {
     });
   }
 
-  private handleError(error: any): Observable<never> {
+  private handleError = (error: any): Observable<never> => {
     console.error('Auth Service Error:', error);
-    return throwError(() => error);
+    
+    let errorMessage = 'An unexpected error occurred. Please try again.';
+    
+    if (error.error) {
+      // Handle structured error responses from the backend
+      if (error.error.errors && Array.isArray(error.error.errors)) {
+        // Multiple validation errors
+        errorMessage = error.error.errors.map((err: any) => err.message || err).join(', ');
+      } else if (error.error.message) {
+        // Single error message
+        errorMessage = error.error.message;
+      } else if (error.error.error) {
+        // Nested error object
+        errorMessage = error.error.error;
+      }
+    } else if (error.message) {
+      // Handle network or other errors
+      if (error.message.includes('Network Error') || error.message.includes('Http failure response')) {
+        errorMessage = 'Unable to connect to the server. Please check your internet connection.';
+      } else if (error.message.includes('timeout')) {
+        errorMessage = 'Request timed out. Please try again.';
+      } else {
+        errorMessage = error.message;
+      }
+    } else if (error.status) {
+      // Handle HTTP status codes
+      switch (error.status) {
+        case 400:
+          errorMessage = 'Invalid request. Please check your input and try again.';
+          break;
+        case 401:
+          errorMessage = 'Invalid credentials. Please check your email and password.';
+          break;
+        case 403:
+          errorMessage = 'Access denied. You do not have permission to perform this action.';
+          break;
+        case 404:
+          errorMessage = 'The requested resource was not found.';
+          break;
+        case 409:
+          errorMessage = 'A user with this email already exists.';
+          break;
+        case 422:
+          errorMessage = 'Validation failed. Please check your input and try again.';
+          break;
+        case 429:
+          errorMessage = 'Too many requests. Please wait a moment and try again.';
+          break;
+        case 500:
+          errorMessage = 'Server error. Please try again later.';
+          break;
+        case 503:
+          errorMessage = 'Service temporarily unavailable. Please try again later.';
+          break;
+        default:
+          errorMessage = `Request failed with status ${error.status}. Please try again.`;
+      }
+    }
+    
+    // Create a more structured error object that includes the original error
+    const enhancedError = {
+      ...error, // Preserve original error properties
+      message: errorMessage,
+      timestamp: new Date().toISOString(),
+      userFriendly: true
+    };
+    
+    return throwError(() => enhancedError);
+  };
+
+  public initializeAuth(): void {
+    if (this.isInitialized) {
+      return;
+    }
+
+    console.log('AuthService: Initializing authentication...');
+    
+    // Check if we have a valid access token
+    const accessToken = this.tokenService.getAccessToken();
+    const userData = this.tokenService.getUserData();
+    
+    if (accessToken && userData && !this.tokenService.isTokenExpired(accessToken)) {
+      console.log('AuthService: Valid token found, restoring user session');
+      this.currentUserSubject.next(userData);
+    } else if (accessToken && this.tokenService.shouldRefreshToken()) {
+      console.log('AuthService: Token needs refresh, attempting to refresh...');
+      this.refreshTokenInternal();
+    } else if (accessToken && this.tokenService.isTokenExpired(accessToken)) {
+      console.log('AuthService: Token expired, clearing session');
+      this.logout();
+    } else if (accessToken && !this.tokenService.isTokenExpired(accessToken)) {
+      // Token exists and is valid, but no user data - fetch user profile
+      console.log('AuthService: Valid token found, fetching user profile');
+      this.getCurrentUser().subscribe({
+        next: (user) => {
+          console.log('AuthService: User profile loaded successfully');
+        },
+        error: (error) => {
+          console.error('AuthService: Failed to load user profile:', error);
+          this.logout();
+        }
+      });
+    }
+    
+    this.isInitialized = true;
+  }
+
+  // Public method for external token refresh
+  public refreshToken(): Observable<any> {
+    return this.tokenService.refreshAccessToken().pipe(
+      tap(response => {
+        console.log('AuthService: Token refreshed successfully');
+        // Token is already set in the service, just restore user data
+        const userData = this.tokenService.getUserData();
+        if (userData) {
+          this.currentUserSubject.next(userData);
+        }
+      }),
+      catchError(error => {
+        console.error('AuthService: Token refresh failed:', error);
+        this.logout();
+        return throwError(() => error);
+      })
+    );
+  }
+
+  private refreshTokenInternal(): void {
+    this.tokenService.refreshAccessToken().subscribe({
+      next: (response) => {
+        console.log('AuthService: Token refreshed successfully');
+        // Token is already set in the service, just restore user data
+        const userData = this.tokenService.getUserData();
+        if (userData) {
+          this.currentUserSubject.next(userData);
+        }
+      },
+      error: (error) => {
+        console.error('AuthService: Token refresh failed:', error);
+        this.logout();
+      }
+    });
   }
 }
