@@ -53,7 +53,10 @@ export class DatabaseConnection {
       // Graceful shutdown
       process.on('SIGINT', async () => {
         await this.disconnect();
-        process.exit(0);
+        // Only exit in non-test environments to avoid Jest worker crashes
+        if (process.env.NODE_ENV !== 'test') {
+          process.exit(0);
+        }
       });
     } catch (error) {
       logger.error('Failed to connect to MongoDB:', error);
