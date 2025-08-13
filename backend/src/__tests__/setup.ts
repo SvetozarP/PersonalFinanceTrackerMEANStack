@@ -13,10 +13,10 @@ beforeAll(async () => {
   // Start in-memory MongoDB
   mongod = await MongoMemoryServer.create();
   const uri = mongod.getUri();
-  
+
   // Update environment variable for tests
   process.env.MONGO_URI = uri;
-  
+
   // Connect to test database
   await mongoose.connect(uri);
 });

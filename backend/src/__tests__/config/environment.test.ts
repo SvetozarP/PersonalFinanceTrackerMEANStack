@@ -6,7 +6,7 @@ describe('Environment Configuration', () => {
   beforeEach(() => {
     jest.resetModules();
     process.env = { ...originalEnv };
-    
+
     // Set required environment variables for tests
     process.env.MONGO_URI = 'mongodb://test:27017/testdb';
     process.env.JWT_SECRET = 'test-jwt-secret';
@@ -62,12 +62,12 @@ describe('Environment Configuration', () => {
       // Test that the validation works by checking the current configuration
       const { environment: env } = require('../../config/environment');
       const config = env.getConfig();
-      
+
       // Verify that required fields are present
       expect(config.MONGO_URI).toBeDefined();
       expect(config.JWT_SECRET).toBeDefined();
       expect(config.COOKIE_SECRET).toBeDefined();
-      
+
       // Verify that the validation passed
       expect(() => env.getConfig()).not.toThrow();
     });
@@ -107,8 +107,10 @@ describe('Environment Configuration', () => {
     it('should correctly identify development environment', () => {
       process.env.NODE_ENV = 'development';
       jest.resetModules();
-      const { environment: devEnvironment } = require('../../config/environment');
-      
+      const {
+        environment: devEnvironment,
+      } = require('../../config/environment');
+
       expect(devEnvironment.isDevelopment()).toBe(true);
       expect(devEnvironment.isProduction()).toBe(false);
       expect(devEnvironment.isTest()).toBe(false);
@@ -117,7 +119,9 @@ describe('Environment Configuration', () => {
     it('should correctly identify production environment', () => {
       process.env.NODE_ENV = 'production';
       jest.resetModules();
-      const { environment: prodEnvironment } = require('../../config/environment');
+      const {
+        environment: prodEnvironment,
+      } = require('../../config/environment');
 
       expect(prodEnvironment.isProduction()).toBe(true);
       expect(prodEnvironment.isDevelopment()).toBe(false);
@@ -127,7 +131,9 @@ describe('Environment Configuration', () => {
     it('should correctly identify test environment', () => {
       process.env.NODE_ENV = 'test';
       jest.resetModules();
-      const { environment: testEnvironment } = require('../../config/environment');
+      const {
+        environment: testEnvironment,
+      } = require('../../config/environment');
 
       expect(testEnvironment.isTest()).toBe(true);
       expect(testEnvironment.isDevelopment()).toBe(false);

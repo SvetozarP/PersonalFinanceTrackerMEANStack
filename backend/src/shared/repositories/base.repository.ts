@@ -125,7 +125,11 @@ export abstract class BaseRepository<T extends Document> {
     options?: QueryOptions
   ): Promise<any> {
     try {
-      const result = await this.model.updateMany(filter, update, options as any);
+      const result = await this.model.updateMany(
+        filter,
+        update,
+        options as any
+      );
       logger.info(`Updated multiple ${this.model.modelName}`, {
         filter,
         result,

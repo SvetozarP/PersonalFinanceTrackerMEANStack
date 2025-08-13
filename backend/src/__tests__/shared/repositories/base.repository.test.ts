@@ -95,7 +95,11 @@ describe('Base Repository', () => {
       const result = await repository.find({ name: 'Test' });
 
       expect(result).toEqual(mockDocuments);
-      expect(mockModel.find).toHaveBeenCalledWith({ name: 'Test' }, undefined, undefined);
+      expect(mockModel.find).toHaveBeenCalledWith(
+        { name: 'Test' },
+        undefined,
+        undefined
+      );
     });
 
     it('should find documents with projection and options', async () => {
@@ -104,17 +108,27 @@ describe('Base Repository', () => {
       const options = { sort: { name: 1 } };
       mockModel.find.mockResolvedValue(mockDocuments);
 
-      const result = await repository.find({ name: 'Test' }, projection, options);
+      const result = await repository.find(
+        { name: 'Test' },
+        projection,
+        options
+      );
 
       expect(result).toEqual(mockDocuments);
-      expect(mockModel.find).toHaveBeenCalledWith({ name: 'Test' }, projection, options);
+      expect(mockModel.find).toHaveBeenCalledWith(
+        { name: 'Test' },
+        projection,
+        options
+      );
     });
 
     it('should handle find errors', async () => {
       const mockError = new Error('Find failed');
       mockModel.find.mockRejectedValue(mockError);
 
-      await expect(repository.find({ name: 'Test' })).rejects.toThrow('Find failed');
+      await expect(repository.find({ name: 'Test' })).rejects.toThrow(
+        'Find failed'
+      );
     });
   });
 
@@ -126,14 +140,20 @@ describe('Base Repository', () => {
       const result = await repository.findOne({ name: 'Test' });
 
       expect(result).toEqual(mockDocument);
-      expect(mockModel.findOne).toHaveBeenCalledWith({ name: 'Test' }, undefined, undefined);
+      expect(mockModel.findOne).toHaveBeenCalledWith(
+        { name: 'Test' },
+        undefined,
+        undefined
+      );
     });
 
     it('should handle find one errors', async () => {
       const mockError = new Error('Find one failed');
       mockModel.findOne.mockRejectedValue(mockError);
 
-      await expect(repository.findOne({ name: 'Test' })).rejects.toThrow('Find one failed');
+      await expect(repository.findOne({ name: 'Test' })).rejects.toThrow(
+        'Find one failed'
+      );
     });
   });
 
@@ -146,14 +166,18 @@ describe('Base Repository', () => {
       const result = await repository.updateById('123', update);
 
       expect(result).toEqual(mockDocument);
-      expect(mockModel.findByIdAndUpdate).toHaveBeenCalledWith('123', update, { new: true });
+      expect(mockModel.findByIdAndUpdate).toHaveBeenCalledWith('123', update, {
+        new: true,
+      });
     });
 
     it('should handle update by ID errors', async () => {
       const mockError = new Error('Update failed');
       mockModel.findByIdAndUpdate.mockRejectedValue(mockError);
 
-      await expect(repository.updateById('123', { name: 'Updated' })).rejects.toThrow('Update failed');
+      await expect(
+        repository.updateById('123', { name: 'Updated' })
+      ).rejects.toThrow('Update failed');
     });
   });
 
@@ -167,14 +191,20 @@ describe('Base Repository', () => {
       const result = await repository.updateMany(filter, update);
 
       expect(result).toEqual(mockResult);
-      expect(mockModel.updateMany).toHaveBeenCalledWith(filter, update, undefined);
+      expect(mockModel.updateMany).toHaveBeenCalledWith(
+        filter,
+        update,
+        undefined
+      );
     });
 
     it('should handle update many errors', async () => {
       const mockError = new Error('Update many failed');
       mockModel.updateMany.mockRejectedValue(mockError);
 
-      await expect(repository.updateMany({ status: 'active' }, { status: 'inactive' })).rejects.toThrow('Update many failed');
+      await expect(
+        repository.updateMany({ status: 'active' }, { status: 'inactive' })
+      ).rejects.toThrow('Update many failed');
     });
   });
 
@@ -193,7 +223,9 @@ describe('Base Repository', () => {
       const mockError = new Error('Delete failed');
       mockModel.findByIdAndDelete.mockRejectedValue(mockError);
 
-      await expect(repository.deleteById('123')).rejects.toThrow('Delete failed');
+      await expect(repository.deleteById('123')).rejects.toThrow(
+        'Delete failed'
+      );
     });
   });
 
@@ -213,7 +245,9 @@ describe('Base Repository', () => {
       const mockError = new Error('Delete many failed');
       mockModel.deleteMany.mockRejectedValue(mockError);
 
-      await expect(repository.deleteMany({ status: 'inactive' })).rejects.toThrow('Delete many failed');
+      await expect(
+        repository.deleteMany({ status: 'inactive' })
+      ).rejects.toThrow('Delete many failed');
     });
   });
 
@@ -224,14 +258,18 @@ describe('Base Repository', () => {
       const result = await repository.count({ status: 'active' });
 
       expect(result).toBe(5);
-      expect(mockModel.countDocuments).toHaveBeenCalledWith({ status: 'active' });
+      expect(mockModel.countDocuments).toHaveBeenCalledWith({
+        status: 'active',
+      });
     });
 
     it('should handle count errors', async () => {
       const mockError = new Error('Count failed');
       mockModel.countDocuments.mockRejectedValue(mockError);
 
-      await expect(repository.count({ status: 'active' })).rejects.toThrow('Count failed');
+      await expect(repository.count({ status: 'active' })).rejects.toThrow(
+        'Count failed'
+      );
     });
   });
 
@@ -242,30 +280,41 @@ describe('Base Repository', () => {
       const result = await repository.exists({ email: 'test@example.com' });
 
       expect(result).toBe(true);
-      expect(mockModel.exists).toHaveBeenCalledWith({ email: 'test@example.com' });
+      expect(mockModel.exists).toHaveBeenCalledWith({
+        email: 'test@example.com',
+      });
     });
 
     it('should check existence successfully when document does not exist', async () => {
       mockModel.exists.mockResolvedValue(null);
 
-      const result = await repository.exists({ email: 'nonexistent@example.com' });
+      const result = await repository.exists({
+        email: 'nonexistent@example.com',
+      });
 
       expect(result).toBe(false);
-      expect(mockModel.exists).toHaveBeenCalledWith({ email: 'nonexistent@example.com' });
+      expect(mockModel.exists).toHaveBeenCalledWith({
+        email: 'nonexistent@example.com',
+      });
     });
 
     it('should handle exists errors', async () => {
       const mockError = new Error('Exists check failed');
       mockModel.exists.mockRejectedValue(mockError);
 
-      await expect(repository.exists({ email: 'test@example.com' })).rejects.toThrow('Exists check failed');
+      await expect(
+        repository.exists({ email: 'test@example.com' })
+      ).rejects.toThrow('Exists check failed');
     });
   });
 
   describe('Aggregate', () => {
     it('should perform aggregation successfully', async () => {
       const mockResults = [{ _id: 'active', count: 5 }];
-      const pipeline = [{ $match: { status: 'active' } }, { $group: { _id: '$status', count: { $sum: 1 } } }];
+      const pipeline = [
+        { $match: { status: 'active' } },
+        { $group: { _id: '$status', count: { $sum: 1 } } },
+      ];
       mockModel.aggregate.mockResolvedValue(mockResults);
 
       const result = await repository.aggregate(pipeline);
@@ -279,7 +328,9 @@ describe('Base Repository', () => {
       const pipeline = [{ $match: { status: 'active' } }];
       mockModel.aggregate.mockRejectedValue(mockError);
 
-      await expect(repository.aggregate(pipeline)).rejects.toThrow('Aggregation failed');
+      await expect(repository.aggregate(pipeline)).rejects.toThrow(
+        'Aggregation failed'
+      );
     });
   });
 });

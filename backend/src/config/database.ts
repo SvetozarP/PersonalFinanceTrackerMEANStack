@@ -81,10 +81,13 @@ export class DatabaseConnection {
 
   private buildMongoUri(): string {
     // If MONGO_URI is already a complete connection string, use it
-    if (config.MONGO_URI.includes('mongodb://') && config.MONGO_URI.includes('@')) {
+    if (
+      config.MONGO_URI.includes('mongodb://') &&
+      config.MONGO_URI.includes('@')
+    ) {
       return config.MONGO_URI;
     }
-    
+
     // Build connection string with authentication
     const { MONGO_ROOT_USERNAME, MONGO_ROOT_PASSWORD, MONGO_DATABASE } = config;
     return `mongodb://${MONGO_ROOT_USERNAME}:${MONGO_ROOT_PASSWORD}@localhost:27017/${MONGO_DATABASE}?authSource=admin`;

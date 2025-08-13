@@ -1,4 +1,7 @@
-import { registerSchema, loginSchema } from '../../../modules/auth/auth.validation';
+import {
+  registerSchema,
+  loginSchema,
+} from '../../../modules/auth/auth.validation';
 
 describe('Auth Validation', () => {
   describe('registerSchema', () => {
@@ -278,10 +281,10 @@ describe('Auth Validation', () => {
 
       const { error } = registerSchema.validate(invalidData);
       expect(error).toBeDefined();
-      
+
       const errorMessages = error?.details.map(detail => detail.message);
       expect(errorMessages).toContain('Please provide a valid email address');
-      
+
       // Test password validation separately
       const passwordData = {
         email: 'test@example.com',
@@ -291,8 +294,12 @@ describe('Auth Validation', () => {
       };
       const passwordError = registerSchema.validate(passwordData);
       expect(passwordError.error).toBeDefined();
-      expect(passwordError.error?.details.some(detail => detail.message.includes('Password'))).toBe(true);
-      
+      expect(
+        passwordError.error?.details.some(detail =>
+          detail.message.includes('Password')
+        )
+      ).toBe(true);
+
       // Test firstName validation separately
       const firstNameData = {
         email: 'test@example.com',
@@ -302,8 +309,12 @@ describe('Auth Validation', () => {
       };
       const firstNameError = registerSchema.validate(firstNameData);
       expect(firstNameError.error).toBeDefined();
-      expect(firstNameError.error?.details.some(detail => detail.message.includes('firstName'))).toBe(true);
-      
+      expect(
+        firstNameError.error?.details.some(detail =>
+          detail.message.includes('firstName')
+        )
+      ).toBe(true);
+
       // Test lastName validation separately
       const lastNameData = {
         email: 'test@example.com',
@@ -313,7 +324,11 @@ describe('Auth Validation', () => {
       };
       const lastNameError = registerSchema.validate(lastNameData);
       expect(lastNameError.error).toBeDefined();
-      expect(lastNameError.error?.details.some(detail => detail.message.includes('lastName'))).toBe(true);
+      expect(
+        lastNameError.error?.details.some(detail =>
+          detail.message.includes('lastName')
+        )
+      ).toBe(true);
     });
 
     it('should have proper error messages for login schema', () => {
@@ -324,10 +339,10 @@ describe('Auth Validation', () => {
 
       const { error } = loginSchema.validate(invalidData);
       expect(error).toBeDefined();
-      
+
       const errorMessages = error?.details.map(detail => detail.message);
       expect(errorMessages).toContain('Please provide a valid email address');
-      
+
       // Test password validation separately
       const passwordData = {
         email: 'test@example.com',
@@ -335,7 +350,11 @@ describe('Auth Validation', () => {
       };
       const passwordError = loginSchema.validate(passwordData);
       expect(passwordError.error).toBeDefined();
-      expect(passwordError.error?.details.some(detail => detail.message.includes('Password'))).toBe(true);
+      expect(
+        passwordError.error?.details.some(detail =>
+          detail.message.includes('Password')
+        )
+      ).toBe(true);
     });
   });
 });

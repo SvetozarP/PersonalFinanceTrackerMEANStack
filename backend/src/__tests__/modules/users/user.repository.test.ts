@@ -46,10 +46,10 @@ describe('User Repository', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    
+
     // Create a new instance and get the mocked base repository methods
     userRepository = new UserRepository();
-    
+
     // Get the mocked methods from the instance
     mockBaseRepository = {
       findOne: jest.fn(),
@@ -58,13 +58,14 @@ describe('User Repository', () => {
       find: jest.fn(),
       findWithPagination: jest.fn(),
     };
-    
+
     // Replace the methods on the repository instance
     (userRepository as any).findOne = mockBaseRepository.findOne;
     (userRepository as any).exists = mockBaseRepository.exists;
     (userRepository as any).updateById = mockBaseRepository.updateById;
     (userRepository as any).find = mockBaseRepository.find;
-    (userRepository as any).findWithPagination = mockBaseRepository.findWithPagination;
+    (userRepository as any).findWithPagination =
+      mockBaseRepository.findWithPagination;
   });
 
   describe('findByEmail', () => {
@@ -74,13 +75,17 @@ describe('User Repository', () => {
       const result = await userRepository.findByEmail('test@example.com');
 
       expect(result).toEqual(mockUser);
-      expect(mockBaseRepository.findOne).toHaveBeenCalledWith({ email: 'test@example.com' });
+      expect(mockBaseRepository.findOne).toHaveBeenCalledWith({
+        email: 'test@example.com',
+      });
     });
 
     it('should return null when user not found', async () => {
       mockBaseRepository.findOne.mockResolvedValue(null);
 
-      const result = await userRepository.findByEmail('nonexistent@example.com');
+      const result = await userRepository.findByEmail(
+        'nonexistent@example.com'
+      );
 
       expect(result).toBeNull();
     });
@@ -90,7 +95,9 @@ describe('User Repository', () => {
 
       await userRepository.findByEmail('TEST@EXAMPLE.COM');
 
-      expect(mockBaseRepository.findOne).toHaveBeenCalledWith({ email: 'test@example.com' });
+      expect(mockBaseRepository.findOne).toHaveBeenCalledWith({
+        email: 'test@example.com',
+      });
     });
   });
 
@@ -98,10 +105,14 @@ describe('User Repository', () => {
     it('should find user by email with password', async () => {
       mockBaseRepository.findOne.mockResolvedValue(mockUser);
 
-      const result = await userRepository.findByEmailWithPassword('test@example.com');
+      const result =
+        await userRepository.findByEmailWithPassword('test@example.com');
 
       expect(result).toEqual(mockUser);
-      expect(mockBaseRepository.findOne).toHaveBeenCalledWith({ email: 'test@example.com' }, '+password');
+      expect(mockBaseRepository.findOne).toHaveBeenCalledWith(
+        { email: 'test@example.com' },
+        '+password'
+      );
     });
   });
 
@@ -112,13 +123,17 @@ describe('User Repository', () => {
       const result = await userRepository.emailExists('test@example.com');
 
       expect(result).toBe(true);
-      expect(mockBaseRepository.exists).toHaveBeenCalledWith({ email: 'test@example.com' });
+      expect(mockBaseRepository.exists).toHaveBeenCalledWith({
+        email: 'test@example.com',
+      });
     });
 
     it('should return false when email does not exist', async () => {
       mockBaseRepository.exists.mockResolvedValue(false);
 
-      const result = await userRepository.emailExists('nonexistent@example.com');
+      const result = await userRepository.emailExists(
+        'nonexistent@example.com'
+      );
 
       expect(result).toBe(false);
     });
@@ -128,7 +143,9 @@ describe('User Repository', () => {
 
       await userRepository.emailExists('TEST@EXAMPLE.COM');
 
-      expect(mockBaseRepository.exists).toHaveBeenCalledWith({ email: 'test@example.com' });
+      expect(mockBaseRepository.exists).toHaveBeenCalledWith({
+        email: 'test@example.com',
+      });
     });
   });
 
@@ -140,9 +157,12 @@ describe('User Repository', () => {
       const result = await userRepository.updateLastLogin('123');
 
       expect(result).toEqual(updatedUser);
-      expect(mockBaseRepository.updateById).toHaveBeenCalledWith('123', expect.objectContaining({
-        lastLogin: expect.any(Date),
-      }));
+      expect(mockBaseRepository.updateById).toHaveBeenCalledWith(
+        '123',
+        expect.objectContaining({
+          lastLogin: expect.any(Date),
+        })
+      );
     });
   });
 
@@ -166,7 +186,9 @@ describe('User Repository', () => {
       const result = await userRepository.deactivateUser('123');
 
       expect(result).toEqual(deactivatedUser);
-      expect(mockBaseRepository.updateById).toHaveBeenCalledWith('123', { isActive: false });
+      expect(mockBaseRepository.updateById).toHaveBeenCalledWith('123', {
+        isActive: false,
+      });
     });
   });
 
@@ -178,7 +200,9 @@ describe('User Repository', () => {
       const result = await userRepository.reactivateUser('123');
 
       expect(result).toEqual(reactivatedUser);
-      expect(mockBaseRepository.updateById).toHaveBeenCalledWith('123', { isActive: true });
+      expect(mockBaseRepository.updateById).toHaveBeenCalledWith('123', {
+        isActive: true,
+      });
     });
   });
 
@@ -222,7 +246,9 @@ describe('User Repository', () => {
         totalPages: 1,
       };
 
-      mockBaseRepository.findWithPagination.mockResolvedValue(mockPaginationResult);
+      mockBaseRepository.findWithPagination.mockResolvedValue(
+        mockPaginationResult
+      );
 
       const result = await userRepository.getUsersWithSearch('Test', 1, 10);
 
@@ -237,7 +263,9 @@ describe('User Repository', () => {
         totalPages: 1,
       };
 
-      mockBaseRepository.findWithPagination.mockResolvedValue(mockPaginationResult);
+      mockBaseRepository.findWithPagination.mockResolvedValue(
+        mockPaginationResult
+      );
 
       await userRepository.getUsersWithSearch('test@example.com', 1, 10);
 
@@ -263,7 +291,9 @@ describe('User Repository', () => {
         totalPages: 1,
       };
 
-      mockBaseRepository.findWithPagination.mockResolvedValue(mockPaginationResult);
+      mockBaseRepository.findWithPagination.mockResolvedValue(
+        mockPaginationResult
+      );
 
       await userRepository.getUsersWithSearch(undefined, 1, 10);
 
@@ -290,10 +320,12 @@ describe('User Repository', () => {
           reactivateUser: jest.fn(),
           searchByName: jest.fn(),
           getUsersWithSearch: jest.fn(),
-        }
+        },
       }));
 
-      const { userRepository: exportedRepo } = require('../../../modules/users/user.repository');
+      const {
+        userRepository: exportedRepo,
+      } = require('../../../modules/users/user.repository');
       expect(exportedRepo).toBeDefined();
       expect(exportedRepo).toHaveProperty('findByEmail');
     });

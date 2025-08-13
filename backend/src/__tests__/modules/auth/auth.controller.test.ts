@@ -29,7 +29,7 @@ describe('Auth Controller', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    
+
     // Create mock AuthService instance
     mockAuthServiceInstance = {
       register: jest.fn(),
@@ -37,11 +37,11 @@ describe('Auth Controller', () => {
       refreshToken: jest.fn(),
       logout: jest.fn(),
     } as any;
-    
+
     mockAuthService.mockImplementation(() => mockAuthServiceInstance);
-    
+
     authController = new AuthController();
-    
+
     // Setup mock request and response
     mockRequest = {
       body: {},
@@ -49,14 +49,14 @@ describe('Auth Controller', () => {
       headers: {},
       user: undefined,
     };
-    
+
     mockResponse = {
       status: jest.fn().mockReturnThis(),
       json: jest.fn().mockReturnThis(),
       cookie: jest.fn().mockReturnThis(),
       clearCookie: jest.fn().mockReturnThis(),
     };
-    
+
     mockNext = jest.fn();
   });
 
@@ -116,19 +116,25 @@ describe('Auth Controller', () => {
         validate: jest.fn(),
         validateSync: jest.fn(),
       } as any;
-      
+
       mockRequest.body = {
         email: 'test@example.com',
         password: 'Password123!',
         firstName: 'Test',
         lastName: 'User',
       };
-      
+
       mockAuthServiceInstance.register.mockResolvedValue(mockUser);
-      
-      await authController.register(mockRequest as TestRequest, mockResponse as Response, mockNext);
-      
-      expect(mockAuthServiceInstance.register).toHaveBeenCalledWith(mockRequest.body);
+
+      await authController.register(
+        mockRequest as TestRequest,
+        mockResponse as Response,
+        mockNext
+      );
+
+      expect(mockAuthServiceInstance.register).toHaveBeenCalledWith(
+        mockRequest.body
+      );
       expect(mockResponse.status).toHaveBeenCalledWith(201);
       expect(mockResponse.json).toHaveBeenCalledWith({
         success: true,
@@ -144,15 +150,21 @@ describe('Auth Controller', () => {
         firstName: 'Test',
         lastName: 'User',
       };
-      
-      await authController.register(mockRequest as TestRequest, mockResponse as Response, mockNext);
-      
+
+      await authController.register(
+        mockRequest as TestRequest,
+        mockResponse as Response,
+        mockNext
+      );
+
       expect(mockResponse.status).toHaveBeenCalledWith(400);
       expect(mockResponse.json).toHaveBeenCalledWith({
         success: false,
         message: 'Validation error',
         errors: expect.arrayContaining([
-          expect.stringContaining('Password must be at least 8 characters long'),
+          expect.stringContaining(
+            'Password must be at least 8 characters long'
+          ),
         ]),
       });
     });
@@ -214,24 +226,28 @@ describe('Auth Controller', () => {
         validate: jest.fn(),
         validateSync: jest.fn(),
       } as any;
-      
+
       const mockTokens = {
         accessToken: 'access123',
         refreshToken: 'refresh123',
       };
-      
+
       mockRequest.body = {
         email: 'test@example.com',
         password: 'Password123!',
       };
-      
+
       mockAuthServiceInstance.login.mockResolvedValue({
         user: mockUser,
         tokens: mockTokens,
       });
-      
-      await authController.login(mockRequest as TestRequest, mockResponse as Response, mockNext);
-      
+
+      await authController.login(
+        mockRequest as TestRequest,
+        mockResponse as Response,
+        mockNext
+      );
+
       expect(mockAuthServiceInstance.login).toHaveBeenCalledWith({
         email: 'test@example.com',
         password: 'Password123!',
@@ -243,7 +259,11 @@ describe('Auth Controller', () => {
         message: 'Login successful',
         data: { user: mockUser, accessToken: mockTokens.accessToken },
       });
-      expect(mockResponse.cookie).toHaveBeenCalledWith('refreshToken', mockTokens.refreshToken, expect.any(Object));
+      expect(mockResponse.cookie).toHaveBeenCalledWith(
+        'refreshToken',
+        mockTokens.refreshToken,
+        expect.any(Object)
+      );
     });
 
     it('should handle login errors', async () => {
@@ -252,11 +272,15 @@ describe('Auth Controller', () => {
         email: 'test@example.com',
         password: 'wrongpassword',
       };
-      
+
       mockAuthServiceInstance.login.mockRejectedValue(mockError);
-      
-      await authController.login(mockRequest as TestRequest, mockResponse as Response, mockNext);
-      
+
+      await authController.login(
+        mockRequest as TestRequest,
+        mockResponse as Response,
+        mockNext
+      );
+
       expect(mockResponse.status).toHaveBeenCalledWith(400);
       expect(mockResponse.json).toHaveBeenCalledWith({
         success: false,
@@ -269,11 +293,15 @@ describe('Auth Controller', () => {
   describe('logout', () => {
     it('should logout user successfully', async () => {
       mockRequest.user = { userId: 'user123' };
-      
+
       mockAuthServiceInstance.logout.mockResolvedValue(undefined);
-      
-      await authController.logout(mockRequest as TestRequest, mockResponse as Response, mockNext);
-      
+
+      await authController.logout(
+        mockRequest as TestRequest,
+        mockResponse as Response,
+        mockNext
+      );
+
       expect(mockAuthServiceInstance.logout).toHaveBeenCalledWith('user123');
       expect(mockResponse.status).toHaveBeenCalledWith(200);
       expect(mockResponse.json).toHaveBeenCalledWith({
@@ -285,9 +313,13 @@ describe('Auth Controller', () => {
 
     it('should handle logout without user', async () => {
       mockRequest.user = undefined;
-      
-      await authController.logout(mockRequest as TestRequest, mockResponse as Response, mockNext);
-      
+
+      await authController.logout(
+        mockRequest as TestRequest,
+        mockResponse as Response,
+        mockNext
+      );
+
       expect(mockResponse.status).toHaveBeenCalledWith(200);
       expect(mockResponse.json).toHaveBeenCalledWith({
         success: true,
@@ -302,31 +334,45 @@ describe('Auth Controller', () => {
         accessToken: 'newAccess123',
         refreshToken: 'newRefresh123',
       };
-      
+
       mockRequest.cookies = { refreshToken: 'oldRefresh123' };
-      
+
       mockAuthServiceInstance.refreshToken.mockResolvedValue(mockTokens);
-      
-      await authController.refreshToken(mockRequest as TestRequest, mockResponse as Response, mockNext);
-      
-      expect(mockAuthServiceInstance.refreshToken).toHaveBeenCalledWith('oldRefresh123');
+
+      await authController.refreshToken(
+        mockRequest as TestRequest,
+        mockResponse as Response,
+        mockNext
+      );
+
+      expect(mockAuthServiceInstance.refreshToken).toHaveBeenCalledWith(
+        'oldRefresh123'
+      );
       expect(mockResponse.status).toHaveBeenCalledWith(200);
       expect(mockResponse.json).toHaveBeenCalledWith({
         success: true,
         message: 'Token refreshed successfully',
         data: { accessToken: mockTokens.accessToken },
       });
-      expect(mockResponse.cookie).toHaveBeenCalledWith('refreshToken', mockTokens.refreshToken, expect.any(Object));
+      expect(mockResponse.cookie).toHaveBeenCalledWith(
+        'refreshToken',
+        mockTokens.refreshToken,
+        expect.any(Object)
+      );
     });
 
     it('should handle refresh token errors', async () => {
       const mockError = new Error('Invalid refresh token');
       mockRequest.cookies = { refreshToken: 'invalidToken' };
-      
+
       mockAuthServiceInstance.refreshToken.mockRejectedValue(mockError);
-      
-      await authController.refreshToken(mockRequest as TestRequest, mockResponse as Response, mockNext);
-      
+
+      await authController.refreshToken(
+        mockRequest as TestRequest,
+        mockResponse as Response,
+        mockNext
+      );
+
       expect(mockResponse.status).toHaveBeenCalledWith(401);
       expect(mockResponse.json).toHaveBeenCalledWith({
         success: false,
@@ -339,9 +385,13 @@ describe('Auth Controller', () => {
   describe('getProfile', () => {
     it('should get user profile successfully', async () => {
       mockRequest.user = { userId: 'user123' };
-      
-      await authController.getProfile(mockRequest as TestRequest, mockResponse as Response, mockNext);
-      
+
+      await authController.getProfile(
+        mockRequest as TestRequest,
+        mockResponse as Response,
+        mockNext
+      );
+
       expect(mockResponse.status).toHaveBeenCalledWith(200);
       expect(mockResponse.json).toHaveBeenCalledWith({
         success: true,
@@ -352,9 +402,13 @@ describe('Auth Controller', () => {
 
     it('should handle profile request without user', async () => {
       mockRequest.user = undefined;
-      
-      await authController.getProfile(mockRequest as TestRequest, mockResponse as Response, mockNext);
-      
+
+      await authController.getProfile(
+        mockRequest as TestRequest,
+        mockResponse as Response,
+        mockNext
+      );
+
       expect(mockResponse.status).toHaveBeenCalledWith(401);
       expect(mockResponse.json).toHaveBeenCalledWith({
         success: false,

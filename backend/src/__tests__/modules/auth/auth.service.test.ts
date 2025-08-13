@@ -35,7 +35,7 @@ describe('Auth Service', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     authService = new AuthService();
-    
+
     mockUser = {
       _id: new mongoose.Types.ObjectId('507f1f77bcf86cd799439011'),
       email: 'test@example.com',
@@ -170,7 +170,10 @@ describe('Auth Service', () => {
   describe('refreshToken', () => {
     it('should refresh token successfully with valid refresh token', async () => {
       const refreshToken = 'valid-refresh-token';
-      const decodedToken = { userId: '507f1f77bcf86cd799439011', type: 'refresh' };
+      const decodedToken = {
+        userId: '507f1f77bcf86cd799439011',
+        type: 'refresh',
+      };
 
       mockJwt.verify.mockReturnValue(decodedToken);
       mockUserModel.findById.mockResolvedValue(mockUser);
@@ -198,7 +201,10 @@ describe('Auth Service', () => {
 
     it('should throw error when user not found', async () => {
       const refreshToken = 'valid-refresh-token';
-      const decodedToken = { userId: '507f1f77bcf86cd799439011', type: 'refresh' };
+      const decodedToken = {
+        userId: '507f1f77bcf86cd799439011',
+        type: 'refresh',
+      };
 
       mockJwt.verify.mockReturnValue(decodedToken);
       mockUserModel.findById.mockResolvedValue(null);
@@ -210,7 +216,10 @@ describe('Auth Service', () => {
 
     it('should throw error when user is inactive', async () => {
       const refreshToken = 'valid-refresh-token';
-      const decodedToken = { userId: '507f1f77bcf86cd799439011', type: 'refresh' };
+      const decodedToken = {
+        userId: '507f1f77bcf86cd799439011',
+        type: 'refresh',
+      };
       const inactiveUser = { ...mockUser, isActive: false };
 
       mockJwt.verify.mockReturnValue(decodedToken);
@@ -237,7 +246,10 @@ describe('Auth Service', () => {
   describe('validateToken', () => {
     it('should validate token successfully', async () => {
       const token = 'valid-access-token';
-      const decodedToken = { userId: '507f1f77bcf86cd799439011', type: 'access' };
+      const decodedToken = {
+        userId: '507f1f77bcf86cd799439011',
+        type: 'access',
+      };
 
       mockJwt.verify.mockReturnValue(decodedToken);
       mockUserModel.findById.mockResolvedValue(mockUser);
@@ -261,7 +273,10 @@ describe('Auth Service', () => {
 
     it('should throw error when token type is not access', async () => {
       const token = 'refresh-token';
-      const decodedToken = { userId: '507f1f77bcf86cd799439011', type: 'refresh' };
+      const decodedToken = {
+        userId: '507f1f77bcf86cd799439011',
+        type: 'refresh',
+      };
 
       mockJwt.verify.mockReturnValue(decodedToken);
 
@@ -272,7 +287,10 @@ describe('Auth Service', () => {
 
     it('should throw error when user not found', async () => {
       const token = 'valid-access-token';
-      const decodedToken = { userId: '507f1f77bcf86cd799439011', type: 'access' };
+      const decodedToken = {
+        userId: '507f1f77bcf86cd799439011',
+        type: 'access',
+      };
 
       mockJwt.verify.mockReturnValue(decodedToken);
       mockUserModel.findById.mockResolvedValue(null);
@@ -284,7 +302,10 @@ describe('Auth Service', () => {
 
     it('should throw error when user is inactive', async () => {
       const token = 'valid-access-token';
-      const decodedToken = { userId: '507f1f77bcf86cd799439011', type: 'access' };
+      const decodedToken = {
+        userId: '507f1f77bcf86cd799439011',
+        type: 'access',
+      };
       const inactiveUser = { ...mockUser, isActive: false };
 
       mockJwt.verify.mockReturnValue(decodedToken);
@@ -299,13 +320,15 @@ describe('Auth Service', () => {
   describe('private methods', () => {
     it('should generate tokens correctly', async () => {
       const userId = '507f1f77bcf86cd799439011';
-      
+
       mockJwt.sign
         .mockReturnValueOnce('access-token')
         .mockReturnValueOnce('refresh-token');
 
       // Access private method through reflection
-      const generateTokensMethod = (authService as any).generateTokens.bind(authService);
+      const generateTokensMethod = (authService as any).generateTokens.bind(
+        authService
+      );
       const result = await generateTokensMethod(userId);
 
       expect(result.accessToken).toBe('access-token');
@@ -316,7 +339,7 @@ describe('Auth Service', () => {
     it('should sign JWT with correct parameters', () => {
       const payload = { userId: 'test', type: 'access' };
       const expiresIn = '1h';
-      
+
       mockJwt.sign.mockReturnValue('signed-token');
 
       // Access private method through reflection
@@ -324,23 +347,25 @@ describe('Auth Service', () => {
       const result = signJWTMethod(payload, expiresIn);
 
       expect(result).toBe('signed-token');
-      expect(mockJwt.sign).toHaveBeenCalledWith(payload, expect.any(String), { expiresIn });
+      expect(mockJwt.sign).toHaveBeenCalledWith(payload, expect.any(String), {
+        expiresIn,
+      });
     });
 
     it('should throw error when JWT_SECRET is not configured', () => {
       // Temporarily remove JWT_SECRET
       const originalSecret = process.env.JWT_SECRET;
       delete process.env.JWT_SECRET;
-      
+
       const payload = { userId: 'test', type: 'access' };
       const expiresIn = '1h';
 
       // Access private method through reflection
       const signJWTMethod = (authService as any).signJWT.bind(authService);
-      
+
       // Since JWT_SECRET has a fallback value, it should not throw
       expect(() => signJWTMethod(payload, expiresIn)).not.toThrow();
-      
+
       // Restore JWT_SECRET
       process.env.JWT_SECRET = originalSecret;
     });

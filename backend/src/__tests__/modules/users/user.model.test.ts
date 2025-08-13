@@ -9,7 +9,9 @@ const mockBcrypt = bcrypt as jest.Mocked<typeof bcrypt>;
 describe('User Model', () => {
   beforeAll(async () => {
     // Connect to test database
-    await mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/test');
+    await mongoose.connect(
+      process.env.MONGO_URI || 'mongodb://localhost:27017/test'
+    );
   });
 
   afterAll(async () => {
@@ -236,7 +238,7 @@ describe('User Model', () => {
     it('should hash password before saving', async () => {
       const mockSalt = 'mocked-salt';
       const mockHash = 'mocked-hash';
-      
+
       mockBcrypt.genSalt.mockResolvedValue(mockSalt as never);
       mockBcrypt.hash.mockResolvedValue(mockHash as never);
 
@@ -298,7 +300,10 @@ describe('User Model', () => {
 
       const result = await user.comparePassword('TestPass123!');
       expect(result).toBe(mockResult);
-      expect(mockBcrypt.compare).toHaveBeenCalledWith('TestPass123!', user.password);
+      expect(mockBcrypt.compare).toHaveBeenCalledWith(
+        'TestPass123!',
+        user.password
+      );
     });
   });
 
@@ -356,7 +361,9 @@ describe('User Model', () => {
       savedUser.password = 'TestPass123!'; // Keep the password
       const updatedUser = await savedUser.save();
 
-      expect(updatedUser.updatedAt.getTime()).toBeGreaterThan(originalUpdatedAt.getTime());
+      expect(updatedUser.updatedAt.getTime()).toBeGreaterThan(
+        originalUpdatedAt.getTime()
+      );
     });
   });
 

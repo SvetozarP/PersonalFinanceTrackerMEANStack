@@ -54,9 +54,10 @@ app.use(
     res.status(500).json({
       success: false,
       message: 'Internal server error',
-      error: config.NODE_ENV === 'development'
-        ? String(error.message)
-        : 'Something went wrong',
+      error:
+        config.NODE_ENV === 'development'
+          ? String(error.message)
+          : 'Something went wrong',
     });
   }
 );
