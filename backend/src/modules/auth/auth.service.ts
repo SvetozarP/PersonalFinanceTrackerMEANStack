@@ -92,7 +92,7 @@ export class AuthService {
     try {
       const decoded = jwt.verify(
         refreshToken,
-        this.JWT_SECRET as jwt.Secret
+        this.JWT_SECRET
       ) as jwt.JwtPayload & { userId: string };
       const user = await User.findById(decoded.userId);
 
@@ -138,10 +138,10 @@ export class AuthService {
 
   async validateToken(token: string): Promise<{ userId: string }> {
     try {
-      const decoded = jwt.verify(
-        token,
-        this.JWT_SECRET as jwt.Secret
-      ) as jwt.JwtPayload & { userId: string; type: string };
+      const decoded = jwt.verify(token, this.JWT_SECRET) as jwt.JwtPayload & {
+        userId: string;
+        type: string;
+      };
 
       if (decoded.type !== 'access') {
         throw new Error('Invalid token type');

@@ -8,7 +8,7 @@ export class CategoryRepository extends BaseRepository<ICategory> {
 
   constructor() {
     super(Category);
-    this.model = Category as ICategoryModel;
+    this.model = Category;
   }
 
   /**
