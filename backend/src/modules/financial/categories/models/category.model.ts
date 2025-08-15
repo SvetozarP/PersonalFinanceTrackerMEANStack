@@ -162,17 +162,20 @@ categorySchema.statics.getCategoryTree = async function (userId: string) {
   const buildTree = (
     items: ICategory[],
     parentId: mongoose.Types.ObjectId | null = null
-  ): any[] => {
+  ): ICategory[] => {
     return items
       .filter(item =>
         parentId === null
           ? !item.parentId
           : item.parentId?.toString() === parentId.toString()
       )
-      .map(item => ({
-        ...item.toObject(),
-        children: buildTree(items, item._id as mongoose.Types.ObjectId),
-      }));
+      .map(item => {
+        const itemObj = item.toObject();
+        return {
+          ...itemObj,
+          children: buildTree(items, item._id as mongoose.Types.ObjectId),
+        } as ICategory;
+      });
   };
 
   return buildTree(categories);
@@ -183,11 +186,12 @@ categorySchema.statics.getCategoryPath = async function (categoryId: string) {
   const category = await this.findById(categoryId);
   if (!category) return null;
 
+  const categoryObj = category.toObject();
   return {
-    id: category._id,
-    name: category.name,
-    path: category.path,
-    fullPath: category.fullPath,
+    id: categoryObj._id,
+    name: categoryObj.name,
+    path: categoryObj.path,
+    fullPath: categoryObj.fullPath,
   };
 };
 

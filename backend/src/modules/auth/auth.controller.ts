@@ -1,13 +1,15 @@
 import { Request, Response, NextFunction } from 'express';
-import { AuthService } from './auth.service';
+import { AuthService, IRegisterData, ILoginCredentials } from './auth.service';
 import { registerSchema, loginSchema } from './auth.validation';
 
-export class AuthController {
-  private authService: AuthService;
+interface AuthenticatedRequest extends Request {
+  user?: {
+    userId: string;
+  };
+}
 
-  constructor() {
-    this.authService = new AuthService();
-  }
+export class AuthController {
+  constructor(private authService: AuthService) {}
 
   register = async (
     req: Request,
@@ -16,7 +18,8 @@ export class AuthController {
   ): Promise<void> => {
     try {
       // Validate input
-      const { error, value } = registerSchema.validate(req.body);
+      const validationResult = registerSchema.validate(req.body);
+      const { error, value } = validationResult;
       if (error) {
         res.status(400).json({
           success: false,
@@ -27,16 +30,19 @@ export class AuthController {
       }
 
       // Register user
-      const user = await this.authService.register(value);
+      const user = await this.authService.register(value as IRegisterData);
 
       res.status(201).json({
         success: true,
         message: 'User registered successfully',
         data: { user },
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Handle business logic errors with appropriate status codes
-      if (error.message === 'User with this email already exists') {
+      if (
+        error instanceof Error &&
+        error.message === 'User with this email already exists'
+      ) {
         res.status(400).json({
           success: false,
           message: error.message,
@@ -57,7 +63,8 @@ export class AuthController {
   ): Promise<void> => {
     try {
       // Validate input
-      const { error, value } = loginSchema.validate(req.body);
+      const validationResult = loginSchema.validate(req.body);
+      const { error, value } = validationResult;
       if (error) {
         res.status(400).json({
           success: false,
@@ -68,7 +75,9 @@ export class AuthController {
       }
 
       // Login user
-      const { user, tokens } = await this.authService.login(value);
+      const { user, tokens } = await this.authService.login(
+        value as ILoginCredentials
+      );
 
       // Set refresh token in HTTP-only cookie
       res.cookie('refreshToken', tokens.refreshToken, {
@@ -83,11 +92,12 @@ export class AuthController {
         message: 'Login successful',
         data: { user, accessToken: tokens.accessToken },
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Handle business logic errors with appropriate status codes
       if (
-        error.message === 'Invalid email or password' ||
-        error.message === 'Account is deactivated'
+        error instanceof Error &&
+        (error.message === 'Invalid email or password' ||
+          error.message === 'Account is deactivated')
       ) {
         res.status(400).json({
           success: false,
@@ -108,7 +118,7 @@ export class AuthController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      const { refreshToken } = req.cookies;
+      const { refreshToken } = req.cookies as { refreshToken?: string };
 
       if (!refreshToken) {
         res.status(401).json({
@@ -133,9 +143,9 @@ export class AuthController {
         message: 'Token refreshed successfully',
         data: { accessToken: tokens.accessToken },
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Handle business logic errors with appropriate status codes
-      if (error.message === 'Invalid refresh token') {
+      if (error instanceof Error && error.message === 'Invalid refresh token') {
         res.status(401).json({
           success: false,
           message: error.message,
@@ -150,12 +160,12 @@ export class AuthController {
   };
 
   logout = async (
-    req: Request,
+    req: AuthenticatedRequest,
     res: Response,
     next: NextFunction
   ): Promise<void> => {
     try {
-      const userId = (req as any).user?.userId;
+      const userId = req.user?.userId;
 
       if (userId) {
         await this.authService.logout(userId);
@@ -173,20 +183,20 @@ export class AuthController {
     }
   };
 
-  getProfile = async (
-    req: Request,
+  getProfile = (
+    req: AuthenticatedRequest,
     res: Response,
     next: NextFunction
   ): Promise<void> => {
     try {
-      const userId = (req as any).user?.userId;
+      const userId = req.user?.userId;
 
       if (!userId) {
         res.status(401).json({
           success: false,
           message: 'User not authenticated',
         });
-        return;
+        return Promise.resolve();
       }
 
       // Get user profile (you'll need to implement this in UserService)
@@ -195,8 +205,10 @@ export class AuthController {
         message: 'Profile retrieved successfully',
         data: { userId },
       });
+      return Promise.resolve();
     } catch (error) {
       next(error);
+      return Promise.resolve();
     }
   };
 }

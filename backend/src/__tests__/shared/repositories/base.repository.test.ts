@@ -1,5 +1,5 @@
 import { BaseRepository } from '../../../shared/repositories/base.repository';
-import { Document, Model } from 'mongoose';
+import { Model } from 'mongoose';
 
 // Mock logger
 jest.mock('../../../shared/services/logger.service', () => ({

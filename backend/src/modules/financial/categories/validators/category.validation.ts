@@ -23,7 +23,7 @@ export const categoryValidation = {
       'string.max': 'Icon name cannot exceed 50 characters',
     }),
     parentId: Joi.string()
-      .custom((value, helpers) => {
+      .custom((value: string, helpers) => {
         if (value && !mongoose.Types.ObjectId.isValid(value)) {
           return helpers.error('any.invalid');
         }
@@ -55,7 +55,7 @@ export const categoryValidation = {
       'string.max': 'Icon name cannot exceed 50 characters',
     }),
     parentId: Joi.string()
-      .custom((value, helpers) => {
+      .custom((value: string, helpers) => {
         if (value && !mongoose.Types.ObjectId.isValid(value)) {
           return helpers.error('any.invalid');
         }
@@ -71,7 +71,7 @@ export const categoryValidation = {
   // Validation for category ID parameter
   id: Joi.object({
     id: Joi.string()
-      .custom((value, helpers) => {
+      .custom((value: string, helpers) => {
         if (!mongoose.Types.ObjectId.isValid(value)) {
           return helpers.error('any.invalid');
         }
@@ -87,7 +87,7 @@ export const categoryValidation = {
   // Validation for query parameters
   query: Joi.object({
     parentId: Joi.string()
-      .custom((value, helpers) => {
+      .custom((value: string, helpers) => {
         if (value && !mongoose.Types.ObjectId.isValid(value)) {
           return helpers.error('any.invalid');
         }

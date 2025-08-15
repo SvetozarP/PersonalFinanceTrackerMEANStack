@@ -42,7 +42,7 @@ export class AuthService {
     // Return user without password
     const userWithoutPassword = user.toObject();
     if (userWithoutPassword.password) {
-      delete (userWithoutPassword as any).password;
+      delete (userWithoutPassword as Record<string, unknown>).password;
     }
 
     return userWithoutPassword as IUser;
@@ -82,7 +82,7 @@ export class AuthService {
     // Return user without password and tokens
     const userWithoutPassword = user.toObject();
     if (userWithoutPassword.password) {
-      delete (userWithoutPassword as any).password;
+      delete (userWithoutPassword as Record<string, unknown>).password;
     }
 
     return { user: userWithoutPassword as IUser, tokens };
@@ -108,21 +108,21 @@ export class AuthService {
     }
   }
 
-  async logout(userId: string): Promise<void> {
+  async logout(_userId: string): Promise<void> {
     // In a more advanced implementation, you might want to blacklist the refresh token
     // For now, we'll just log the logout action
-    console.log(`User ${userId} logged out`);
+    // TODO: Implement proper logout logging
   }
 
   private signJWT(payload: object, expiresIn: string): string {
     if (!this.JWT_SECRET) {
       throw new Error('JWT_SECRET is not configured');
     }
-    // @ts-ignore - JWT types compatibility issue
+    // @ts-expect-error - JWT types compatibility issue
     return jwt.sign(payload, this.JWT_SECRET, { expiresIn });
   }
 
-  private async generateTokens(userId: string): Promise<IAuthTokens> {
+  private generateTokens(userId: string): Promise<IAuthTokens> {
     const accessToken = this.signJWT(
       { userId, type: 'access' },
       this.JWT_EXPIRES_IN
@@ -133,7 +133,7 @@ export class AuthService {
       this.REFRESH_TOKEN_EXPIRES_IN
     );
 
-    return { accessToken, refreshToken };
+    return Promise.resolve({ accessToken, refreshToken });
   }
 
   async validateToken(token: string): Promise<{ userId: string }> {

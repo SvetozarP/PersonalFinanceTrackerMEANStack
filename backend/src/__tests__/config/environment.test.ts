@@ -18,7 +18,7 @@ describe('Environment Configuration', () => {
   });
 
   describe('Environment Loading', () => {
-    it('should load default values when environment variables are not set', () => {
+    it('should load default values when environment variables are not set', async () => {
       // Clear environment variables but keep required ones
       delete process.env.NODE_ENV;
       delete process.env.BACKEND_PORT;
@@ -28,7 +28,7 @@ describe('Environment Configuration', () => {
 
       // Re-import to trigger new environment loading
       jest.resetModules();
-      const { config: newConfig } = require('../../config/environment');
+      const { config: newConfig } = await import('../../config/environment');
 
       expect(newConfig.NODE_ENV).toBe('development');
       expect(newConfig.BACKEND_PORT).toBe(3000);
@@ -38,7 +38,7 @@ describe('Environment Configuration', () => {
       expect(newConfig.LOG_LEVEL).toBe('info');
     });
 
-    it('should load custom values from environment variables', () => {
+    it('should load custom values from environment variables', async () => {
       process.env.NODE_ENV = 'production';
       process.env.BACKEND_PORT = '4000';
       process.env.CORS_ORIGIN = 'https://example.com';
@@ -46,7 +46,7 @@ describe('Environment Configuration', () => {
       process.env.LOG_LEVEL = 'debug';
 
       jest.resetModules();
-      const { config: newConfig } = require('../../config/environment');
+      const { config: newConfig } = await import('../../config/environment');
 
       expect(newConfig.NODE_ENV).toBe('production');
       expect(newConfig.BACKEND_PORT).toBe(4000);
@@ -58,9 +58,9 @@ describe('Environment Configuration', () => {
   });
 
   describe('Environment Validation', () => {
-    it('should throw error when required fields are missing', () => {
+    it('should throw error when required fields are missing', async () => {
       // Test that the validation works by checking the current configuration
-      const { environment: env } = require('../../config/environment');
+      const { environment: env } = await import('../../config/environment');
       const config = env.getConfig();
 
       // Verify that required fields are present
@@ -72,68 +72,68 @@ describe('Environment Configuration', () => {
       expect(() => env.getConfig()).not.toThrow();
     });
 
-    it('should validate BACKEND_PORT range', () => {
+    it('should validate BACKEND_PORT range', async () => {
       process.env.BACKEND_PORT = '0';
 
-      expect(() => {
+      await expect(async () => {
         jest.resetModules();
-        require('../../config/environment');
-      }).toThrow('BACKEND_PORT must be between 1 and 65535');
+        await import('../../config/environment');
+      }).rejects.toThrow('BACKEND_PORT must be between 1 and 65535');
 
       process.env.BACKEND_PORT = '70000';
-      expect(() => {
+      await expect(async () => {
         jest.resetModules();
-        require('../../config/environment');
-      }).toThrow('BACKEND_PORT must be between 1 and 65535');
+        await import('../../config/environment');
+      }).rejects.toThrow('BACKEND_PORT must be between 1 and 65535');
     });
 
-    it('should validate BCRYPT_SALT_ROUNDS range', () => {
+    it('should validate BCRYPT_SALT_ROUNDS range', async () => {
       process.env.BCRYPT_SALT_ROUNDS = '5';
 
-      expect(() => {
+      await expect(async () => {
         jest.resetModules();
-        require('../../config/environment');
-      }).toThrow('BCRYPT_SALT_ROUNDS must be between 10 and 20');
+        await import('../../config/environment');
+      }).rejects.toThrow('BCRYPT_SALT_ROUNDS must be between 10 and 20');
 
       process.env.BCRYPT_SALT_ROUNDS = '25';
-      expect(() => {
+      await expect(async () => {
         jest.resetModules();
-        require('../../config/environment');
-      }).toThrow('BCRYPT_SALT_ROUNDS must be between 10 and 20');
+        await import('../../config/environment');
+      }).rejects.toThrow('BCRYPT_SALT_ROUNDS must be between 10 and 20');
     });
   });
 
   describe('Environment Helper Methods', () => {
-    it('should correctly identify development environment', () => {
+    it('should correctly identify development environment', async () => {
       process.env.NODE_ENV = 'development';
       jest.resetModules();
-      const {
-        environment: devEnvironment,
-      } = require('../../config/environment');
+      const { environment: devEnvironment } = await import(
+        '../../config/environment'
+      );
 
       expect(devEnvironment.isDevelopment()).toBe(true);
       expect(devEnvironment.isProduction()).toBe(false);
       expect(devEnvironment.isTest()).toBe(false);
     });
 
-    it('should correctly identify production environment', () => {
+    it('should correctly identify production environment', async () => {
       process.env.NODE_ENV = 'production';
       jest.resetModules();
-      const {
-        environment: prodEnvironment,
-      } = require('../../config/environment');
+      const { environment: prodEnvironment } = await import(
+        '../../config/environment'
+      );
 
       expect(prodEnvironment.isProduction()).toBe(true);
       expect(prodEnvironment.isDevelopment()).toBe(false);
       expect(prodEnvironment.isTest()).toBe(false);
     });
 
-    it('should correctly identify test environment', () => {
+    it('should correctly identify test environment', async () => {
       process.env.NODE_ENV = 'test';
       jest.resetModules();
-      const {
-        environment: testEnvironment,
-      } = require('../../config/environment');
+      const { environment: testEnvironment } = await import(
+        '../../config/environment'
+      );
 
       expect(testEnvironment.isTest()).toBe(true);
       expect(testEnvironment.isDevelopment()).toBe(false);

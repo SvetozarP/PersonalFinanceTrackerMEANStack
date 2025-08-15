@@ -25,8 +25,8 @@ jest.mock('../../../shared/services/logger.service', () => ({
 }));
 
 // Import the mocked User model
-const { User: mockUserModel } = require('../../../modules/users/user.model');
-const mockJwt = require('jsonwebtoken');
+import { User as mockUserModel } from '../../../modules/users/user.model';
+import * as mockJwt from 'jsonwebtoken';
 
 describe('Auth Service', () => {
   let authService: AuthService;

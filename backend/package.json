@@ -1,6 +1,7 @@
 {
   "name": "finance-tracker-backend",
   "version": "1.0.0",
+  "type": "module",
   "description": "Backend API for Personal Finance Tracker",
   "main": "dist/app.js",
   "scripts": {
@@ -66,6 +67,7 @@
     "mongoose": "^8.17.1",
     "mongoose-unique-validator": "^5.0.0",
     "morgan": "^1.10.1",
+    "nestjs": "^0.0.1",
     "winston": "^3.17.0",
     "winston-daily-rotate-file": "^5.0.0"
   }

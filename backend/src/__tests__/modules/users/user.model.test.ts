@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
-import { User, IUser } from '../../../modules/users/user.model';
+import { User } from '../../../modules/users/user.model';
 
 // Mock bcrypt
 jest.mock('bcryptjs');

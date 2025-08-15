@@ -1,4 +1,4 @@
-import { LoggerService, logger } from '../../../shared/services/logger.service';
+import { logger } from '../../../shared/services/logger.service';
 
 // Mock logger
 jest.mock('../../../shared/services/logger.service', () => ({

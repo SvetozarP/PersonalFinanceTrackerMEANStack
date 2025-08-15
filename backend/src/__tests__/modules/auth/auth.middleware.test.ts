@@ -3,7 +3,7 @@ import {
   optionalAuth,
   AuthenticatedRequest,
 } from '../../../modules/auth/auth.middleware';
-import { Request, Response, NextFunction } from 'express';
+import { Response, NextFunction } from 'express';
 import { AuthService } from '../../../modules/auth/auth.service';
 
 // Mock AuthService

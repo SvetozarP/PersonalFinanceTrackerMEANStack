@@ -1,5 +1,5 @@
 import { UserRepository } from '../../../modules/users/user.repository';
-import { User, IUser } from '../../../modules/users/user.model';
+import { IUser } from '../../../modules/users/user.model';
 
 // Mock the base repository
 jest.mock('../../../shared/repositories/base.repository', () => {
@@ -323,9 +323,9 @@ describe('User Repository', () => {
         },
       }));
 
-      const {
-        userRepository: exportedRepo,
-      } = require('../../../modules/users/user.repository');
+      const { userRepository: exportedRepo } = await import(
+        '../../../modules/users/user.repository'
+      );
       expect(exportedRepo).toBeDefined();
       expect(exportedRepo).toHaveProperty('findByEmail');
     });
