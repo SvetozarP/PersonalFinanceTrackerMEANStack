@@ -18,6 +18,8 @@ export interface ICategory extends Document {
 
 // Category Model Interface with static methods
 export interface ICategoryModel extends Model<ICategory> {
-  getCategoryTree(userId: string): Promise<any[]>;
-  getCategoryPath(categoryId: string): Promise<any>;
+  getCategoryTree(userId: string): Promise<ICategory[]>;
+  getCategoryPath(
+    categoryId: string
+  ): Promise<{ path: string[]; level: number }>;
 }

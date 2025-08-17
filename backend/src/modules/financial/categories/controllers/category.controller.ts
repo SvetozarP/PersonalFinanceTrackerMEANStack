@@ -2,11 +2,56 @@ import { Request, Response } from 'express';
 import { CategoryService } from '../service/category.service';
 import { logger } from '../../../../shared/services/logger.service';
 import { categoryValidation } from '../validators/category.validation';
+import { ICategory } from '../interfaces/category.interface';
+import mongoose from 'mongoose';
+import { ValidationResult, ValidationErrorItem } from 'joi';
 
 // Extend Express Request interface to include user property
 interface AuthenticatedRequest extends Request {
   user?: {
     userId: string;
+  };
+}
+
+// Type for validation results
+interface CreateCategoryData {
+  name: string;
+  description?: string;
+  color?: string;
+  icon?: string;
+  parentId?: string;
+}
+
+interface UpdateCategoryData {
+  name?: string;
+  description?: string;
+  color?: string;
+  icon?: string;
+  parentId?: string;
+  isActive?: boolean;
+}
+
+interface CategoryQueryParams {
+  parentId?: string;
+  level?: number;
+  isActive?: boolean;
+  search?: string;
+  page?: number;
+  limit?: number;
+}
+
+interface CategoryIdParams {
+  id: string;
+}
+
+// Helper function to safely extract validation results
+function extractValidationResult<T>(validationResult: ValidationResult): {
+  error: any;
+  value: T;
+} {
+  return {
+    error: validationResult.error,
+    value: validationResult.value as T,
   };
 }
 
@@ -36,12 +81,14 @@ export class CategoryController {
       }
 
       // Validate request body
-      const { error, value } = categoryValidation.create.validate(req.body);
+      const { error, value } = extractValidationResult<CreateCategoryData>(
+        categoryValidation.create.validate(req.body)
+      );
       if (error) {
         res.status(400).json({
           success: false,
           message: 'Validation error',
-          errors: error.details.map(detail => ({
+          errors: error.details.map((detail: ValidationErrorItem) => ({
             field: detail.path.join('.'),
             message: detail.message,
           })),
@@ -49,7 +96,20 @@ export class CategoryController {
         return;
       }
 
-      const category = await this.categoryService.createCategory(value, userId);
+      const categoryData: Partial<ICategory> = {
+        name: value.name,
+        description: value.description,
+        color: value.color,
+        icon: value.icon,
+        parentId: value.parentId
+          ? new mongoose.Types.ObjectId(value.parentId)
+          : undefined,
+      };
+
+      const category = await this.categoryService.createCategory(
+        categoryData,
+        userId
+      );
 
       res.status(201).json({
         success: true,
@@ -116,12 +176,14 @@ export class CategoryController {
       }
 
       // Validate category ID parameter
-      const { error, value } = categoryValidation.id.validate(req.params);
+      const { error, value } = extractValidationResult<CategoryIdParams>(
+        categoryValidation.id.validate(req.params)
+      );
       if (error) {
         res.status(400).json({
           success: false,
           message: 'Invalid category ID',
-          errors: error.details.map(detail => ({
+          errors: error.details.map((detail: ValidationErrorItem) => ({
             field: detail.path.join('.'),
             message: detail.message,
           })),
@@ -190,12 +252,14 @@ export class CategoryController {
       }
 
       // Validate query parameters
-      const { error, value } = categoryValidation.query.validate(req.query);
+      const { error, value } = extractValidationResult<CategoryQueryParams>(
+        categoryValidation.query.validate(req.query)
+      );
       if (error) {
         res.status(400).json({
           success: false,
           message: 'Invalid query parameters',
-          errors: error.details.map(detail => ({
+          errors: error.details.map((detail: ValidationErrorItem) => ({
             field: detail.path.join('.'),
             message: detail.message,
           })),
@@ -203,9 +267,19 @@ export class CategoryController {
         return;
       }
 
+      const validationData = value;
+      const queryParams = {
+        parentId: validationData.parentId,
+        level: validationData.level,
+        isActive: validationData.isActive,
+        search: validationData.search,
+        page: validationData.page,
+        limit: validationData.limit,
+      };
+
       const result = await this.categoryService.getUserCategories(
         userId,
-        value
+        queryParams
       );
 
       res.status(200).json({
@@ -213,7 +287,7 @@ export class CategoryController {
         data: result.categories,
         pagination: {
           page: result.page,
-          limit: value.limit || 20,
+          limit: queryParams.limit || 20,
           total: result.total,
           totalPages: result.totalPages,
         },
@@ -288,14 +362,15 @@ export class CategoryController {
       }
 
       // Validate category ID parameter
-      const { error: idError, value: idValue } = categoryValidation.id.validate(
-        req.params
-      );
+      const { error: idError, value: idValue } =
+        extractValidationResult<CategoryIdParams>(
+          categoryValidation.id.validate(req.params)
+        );
       if (idError) {
         res.status(400).json({
           success: false,
           message: 'Invalid category ID',
-          errors: idError.details.map(detail => ({
+          errors: idError.details.map((detail: ValidationErrorItem) => ({
             field: detail.path.join('.'),
             message: detail.message,
           })),
@@ -305,12 +380,14 @@ export class CategoryController {
 
       // Validate request body
       const { error: bodyError, value: bodyValue } =
-        categoryValidation.update.validate(req.body);
+        extractValidationResult<UpdateCategoryData>(
+          categoryValidation.update.validate(req.body)
+        );
       if (bodyError) {
         res.status(400).json({
           success: false,
           message: 'Validation error',
-          errors: bodyError.details.map(detail => ({
+          errors: bodyError.details.map((detail: ValidationErrorItem) => ({
             field: detail.path.join('.'),
             message: detail.message,
           })),
@@ -318,9 +395,22 @@ export class CategoryController {
         return;
       }
 
+      const idParams = idValue;
+      const validationData = bodyValue;
+      const updateData: Partial<ICategory> = {
+        name: validationData.name,
+        description: validationData.description,
+        color: validationData.color,
+        icon: validationData.icon,
+        parentId: validationData.parentId
+          ? new mongoose.Types.ObjectId(validationData.parentId)
+          : undefined,
+        isActive: validationData.isActive,
+      };
+
       const updatedCategory = await this.categoryService.updateCategory(
-        idValue.id,
-        bodyValue,
+        idParams.id,
+        updateData,
         userId
       );
 
@@ -343,23 +433,15 @@ export class CategoryController {
       });
 
       if (error instanceof Error) {
-        if (
-          error.message.includes('not found') ||
-          error.message.includes('access denied')
-        ) {
+        if (error.message === 'Category not found') {
           res.status(404).json({
             success: false,
-            message: error.message,
+            message: 'Category not found',
           });
-        } else if (error.message.includes('cannot be modified')) {
+        } else if (error.message === 'Access denied') {
           res.status(403).json({
             success: false,
-            message: error.message,
-          });
-        } else if (error.message.includes('circular reference')) {
-          res.status(400).json({
-            success: false,
-            message: error.message,
+            message: 'Access denied',
           });
         } else if (error.message.includes('already exists')) {
           res.status(409).json({
@@ -413,7 +495,8 @@ export class CategoryController {
         return;
       }
 
-      await this.categoryService.deleteCategory(value.id, userId);
+      const params = value as CategoryIdParams;
+      await this.categoryService.deleteCategory(params.id, userId);
 
       res.status(200).json({
         success: true,
@@ -421,7 +504,7 @@ export class CategoryController {
       });
 
       logger.info('Category deleted via API', {
-        categoryId: value.id,
+        categoryId: params.id,
         userId,
       });
     } catch (error) {
@@ -495,9 +578,15 @@ export class CategoryController {
       }
 
       // Validate each category
-      const validationErrors: any[] = [];
-      categories.forEach((category: any, index: number) => {
-        const { error } = categoryValidation.create.validate(category);
+      const validationErrors: Array<{
+        index: number;
+        errors: Array<{ field: string; message: string }>;
+      }> = [];
+
+      const validatedCategories: CreateCategoryData[] = [];
+
+      categories.forEach((category: unknown, index: number) => {
+        const { error, value } = categoryValidation.create.validate(category);
         if (error) {
           validationErrors.push({
             index,
@@ -506,6 +595,8 @@ export class CategoryController {
               message: detail.message,
             })),
           });
+        } else {
+          validatedCategories.push(value as CreateCategoryData);
         }
       });
 
@@ -518,8 +609,21 @@ export class CategoryController {
         return;
       }
 
+      // Convert validation data to service format
+      const categoryDataArray: Partial<ICategory>[] = validatedCategories.map(
+        cat => ({
+          name: cat.name,
+          description: cat.description,
+          color: cat.color,
+          icon: cat.icon,
+          parentId: cat.parentId
+            ? new mongoose.Types.ObjectId(cat.parentId)
+            : undefined,
+        })
+      );
+
       const createdCategories = await this.categoryService.bulkCreateCategories(
-        categories,
+        categoryDataArray,
         userId
       );
 
