@@ -7,34 +7,37 @@ import { logger } from '../services/logger.service';
  * @param schema - Joi validation schema
  * @param source - Source of data to validate ('body', 'query', 'params')
  */
-export const validateRequest = (schema: Schema, source: 'body' | 'query' | 'params' = 'body') => {
+export const validateRequest = (
+  schema: Schema,
+  source: 'body' | 'query' | 'params' = 'body'
+) => {
   return (req: Request, res: Response, next: NextFunction): void => {
     try {
       const dataToValidate = req[source];
       const { error, value } = schema.validate(dataToValidate, {
         abortEarly: false,
         stripUnknown: true,
-        convert: true
+        convert: true,
       });
 
       if (error) {
         const errors = error.details.map(detail => ({
           field: detail.path.join('.'),
           message: detail.message,
-          type: detail.type
+          type: detail.type,
         }));
 
         logger.warn('Request validation failed', {
           source,
           path: req.path,
           method: req.method,
-          errors: errors.map(e => `${e.field}: ${e.message}`)
+          errors: errors.map(e => `${e.field}: ${e.message}`),
         });
 
         res.status(400).json({
           success: false,
           message: 'Validation error',
-          errors
+          errors,
         });
         return;
       }
@@ -47,12 +50,12 @@ export const validateRequest = (schema: Schema, source: 'body' | 'query' | 'para
         error: String(validationError),
         source,
         path: req.path,
-        method: req.method
+        method: req.method,
       });
 
       res.status(500).json({
         success: false,
-        message: 'Validation processing error'
+        message: 'Validation processing error',
       });
     }
   };
@@ -76,15 +79,17 @@ export const validateMultiple = (schemas: {
         const { error, value } = schemas.body.validate(req.body, {
           abortEarly: false,
           stripUnknown: true,
-          convert: true
+          convert: true,
         });
         if (error) {
-          errors.push(...error.details.map(detail => ({
-            source: 'body',
-            field: detail.path.join('.'),
-            message: detail.message,
-            type: detail.type
-          })));
+          errors.push(
+            ...error.details.map(detail => ({
+              source: 'body',
+              field: detail.path.join('.'),
+              message: detail.message,
+              type: detail.type,
+            }))
+          );
         } else {
           req.body = value;
         }
@@ -94,15 +99,17 @@ export const validateMultiple = (schemas: {
         const { error, value } = schemas.query.validate(req.query, {
           abortEarly: false,
           stripUnknown: true,
-          convert: true
+          convert: true,
         });
         if (error) {
-          errors.push(...error.details.map(detail => ({
-            source: 'query',
-            field: detail.path.join('.'),
-            message: detail.message,
-            type: detail.type
-          })));
+          errors.push(
+            ...error.details.map(detail => ({
+              source: 'query',
+              field: detail.path.join('.'),
+              message: detail.message,
+              type: detail.type,
+            }))
+          );
         } else {
           req.query = value;
         }
@@ -112,15 +119,17 @@ export const validateMultiple = (schemas: {
         const { error, value } = schemas.params.validate(req.params, {
           abortEarly: false,
           stripUnknown: true,
-          convert: true
+          convert: true,
         });
         if (error) {
-          errors.push(...error.details.map(detail => ({
-            source: 'params',
-            field: detail.path.join('.'),
-            message: detail.message,
-            type: detail.type
-          })));
+          errors.push(
+            ...error.details.map(detail => ({
+              source: 'params',
+              field: detail.path.join('.'),
+              message: detail.message,
+              type: detail.type,
+            }))
+          );
         } else {
           req.params = value;
         }
@@ -130,13 +139,13 @@ export const validateMultiple = (schemas: {
         logger.warn('Multiple validation sources failed', {
           path: req.path,
           method: req.method,
-          errors: errors.map(e => `${e.source}.${e.field}: ${e.message}`)
+          errors: errors.map(e => `${e.source}.${e.field}: ${e.message}`),
         });
 
         res.status(400).json({
           success: false,
           message: 'Validation error',
-          errors
+          errors,
         });
         return;
       }
@@ -146,12 +155,12 @@ export const validateMultiple = (schemas: {
       logger.error('Multiple validation middleware error', {
         error: String(validationError),
         path: req.path,
-        method: req.method
+        method: req.method,
       });
 
       res.status(500).json({
         success: false,
-        message: 'Validation processing error'
+        message: 'Validation processing error',
       });
     }
   };

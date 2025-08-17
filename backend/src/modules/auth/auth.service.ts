@@ -1,11 +1,24 @@
 import * as jwt from 'jsonwebtoken';
-import { User, IUser } from '../users/user.model';
+import { User } from '../users/user.model';
 import mongoose from 'mongoose';
+import { logger } from '../../shared/services/logger.service';
 
 // Tokens interface
 export interface IAuthTokens {
   accessToken: string;
   refreshToken: string;
+}
+
+// Interface for user data without password
+export interface IUserWithoutPassword {
+  _id: mongoose.Types.ObjectId;
+  email: string;
+  firstName: string;
+  lastName: string;
+  isActive: boolean;
+  lastLogin?: Date;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 // Interface for login credentials
@@ -28,7 +41,7 @@ export class AuthService {
   private readonly JWT_EXPIRES_IN: string = process.env.JWT_EXPIRES_IN || '1h';
   private readonly REFRESH_TOKEN_EXPIRES_IN: string = '7d';
 
-  async register(userData: IRegisterData): Promise<IUser> {
+  async register(userData: IRegisterData): Promise<IUserWithoutPassword> {
     // Check if user already exists
     const existingUser = await User.findOne({ email: userData.email });
     if (existingUser) {
@@ -39,18 +52,17 @@ export class AuthService {
     const user = new User(userData);
     await user.save();
 
-          // Return user without password
-      const userWithoutPassword = user.toObject();
-      if (userWithoutPassword.password) {
-        delete (userWithoutPassword as any).password;
-      }
+    // Return user without password
+    const userObj = user.toObject();
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { password: _password, ...userWithoutPassword } = userObj;
 
-      return userWithoutPassword as IUser;
+    return userWithoutPassword as IUserWithoutPassword;
   }
 
   async login(
     credentials: ILoginCredentials
-  ): Promise<{ user: IUser; tokens: IAuthTokens }> {
+  ): Promise<{ user: IUserWithoutPassword; tokens: IAuthTokens }> {
     // Find user and include password for comparison
     const user = await User.findOne({ email: credentials.email }).select(
       '+password'
@@ -80,12 +92,11 @@ export class AuthService {
     );
 
     // Return user without password and tokens
-    const userWithoutPassword = user.toObject();
-    if (userWithoutPassword.password) {
-      delete (userWithoutPassword as any).password;
-    }
+    const userObj = user.toObject();
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { password: _password, ...userWithoutPassword } = userObj;
 
-    return { user: userWithoutPassword as IUser, tokens };
+    return { user: userWithoutPassword as IUserWithoutPassword, tokens };
   }
 
   async refreshToken(refreshToken: string): Promise<IAuthTokens> {
@@ -108,10 +119,11 @@ export class AuthService {
     }
   }
 
-  async logout(_userId: string): Promise<void> {
+  logout(_userId: string): void {
     // In a more advanced implementation, you might want to blacklist the refresh token
     // For now, we'll just log the logout action
     // TODO: Implement proper logout logging
+    logger.info(`User ${_userId} logged out`);
   }
 
   private signJWT(payload: object, expiresIn: string): string {

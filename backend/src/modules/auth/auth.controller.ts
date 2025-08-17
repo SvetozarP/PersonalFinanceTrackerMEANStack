@@ -19,18 +19,19 @@ export class AuthController {
     try {
       // Validate input
       const validationResult = registerSchema.validate(req.body);
-      const { error, value } = validationResult;
-      if (error) {
+      if (validationResult.error) {
         res.status(400).json({
           success: false,
           message: 'Validation error',
-          errors: error.details.map(detail => detail.message),
+          errors: validationResult.error.details.map(detail => detail.message),
         });
         return;
       }
 
       // Register user
-      const user = await this.authService.register(value as IRegisterData);
+      const user = await this.authService.register(
+        validationResult.value as IRegisterData
+      );
 
       res.status(201).json({
         success: true,
@@ -64,19 +65,18 @@ export class AuthController {
     try {
       // Validate input
       const validationResult = loginSchema.validate(req.body);
-      const { error, value } = validationResult;
-      if (error) {
+      if (validationResult.error) {
         res.status(400).json({
           success: false,
           message: 'Validation error',
-          errors: error.details.map(detail => detail.message),
+          errors: validationResult.error.details.map(detail => detail.message),
         });
         return;
       }
 
       // Login user
       const { user, tokens } = await this.authService.login(
-        value as ILoginCredentials
+        validationResult.value as ILoginCredentials
       );
 
       // Set refresh token in HTTP-only cookie
@@ -159,16 +159,16 @@ export class AuthController {
     }
   };
 
-  logout = async (
+  logout = (
     req: AuthenticatedRequest,
     res: Response,
     next: NextFunction
-  ): Promise<void> => {
+  ): void => {
     try {
       const userId = req.user?.userId;
 
       if (userId) {
-        await this.authService.logout(userId);
+        this.authService.logout(userId);
       }
 
       // Clear refresh token cookie
@@ -187,7 +187,7 @@ export class AuthController {
     req: AuthenticatedRequest,
     res: Response,
     next: NextFunction
-  ): Promise<void> => {
+  ): void => {
     try {
       const userId = req.user?.userId;
 
@@ -196,7 +196,7 @@ export class AuthController {
           success: false,
           message: 'User not authenticated',
         });
-        return Promise.resolve();
+        return;
       }
 
       // Get user profile (you'll need to implement this in UserService)
@@ -205,10 +205,8 @@ export class AuthController {
         message: 'Profile retrieved successfully',
         data: { userId },
       });
-      return Promise.resolve();
     } catch (error) {
       next(error);
-      return Promise.resolve();
     }
   };
 }

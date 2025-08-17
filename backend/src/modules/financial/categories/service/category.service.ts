@@ -13,13 +13,24 @@ export class CategoryService {
   /**
    * Create a new category
    */
-  async createCategory(categoryData: Partial<ICategory>, userId: string): Promise<ICategory> {
+  async createCategory(
+    categoryData: Partial<ICategory>,
+    userId: string
+  ): Promise<ICategory> {
     try {
-      logger.info('Creating new category', { userId, categoryData: { name: categoryData.name, parentId: categoryData.parentId } });
+      logger.info('Creating new category', {
+        userId,
+        categoryData: {
+          name: categoryData.name,
+          parentId: categoryData.parentId,
+        },
+      });
 
       // Validate parent category exists and belongs to user
       if (categoryData.parentId) {
-        const parentCategory = await this.categoryRepository.findById(categoryData.parentId.toString());
+        const parentCategory = await this.categoryRepository.findById(
+          categoryData.parentId.toString()
+        );
         if (!parentCategory || parentCategory.userId.toString() !== userId) {
           throw new Error('Parent category not found or access denied');
         }
@@ -29,7 +40,7 @@ export class CategoryService {
       const existingCategory = await this.categoryRepository.findOne({
         userId: new mongoose.Types.ObjectId(userId),
         parentId: categoryData.parentId || null,
-        name: categoryData.name
+        name: categoryData.name,
       });
 
       if (existingCategory) {
@@ -37,8 +48,12 @@ export class CategoryService {
       }
 
       // Calculate level and path
-      const level = categoryData.parentId ? await this.calculateLevel(categoryData.parentId.toString()) : 0;
-      const path = categoryData.parentId ? await this.calculatePath(categoryData.parentId.toString()) : [];
+      const level = categoryData.parentId
+        ? await this.calculateLevel(categoryData.parentId.toString())
+        : 0;
+      const path = categoryData.parentId
+        ? await this.calculatePath(categoryData.parentId.toString())
+        : [];
 
       // Create category with calculated fields
       const newCategory = await this.categoryRepository.create({
@@ -47,22 +62,25 @@ export class CategoryService {
         level,
         path: [...path, categoryData.name!],
         isActive: true,
-        isSystem: false
+        isSystem: false,
       });
 
-      logger.info('Category created successfully', { 
-        categoryId: newCategory._id, 
-        userId, 
+      logger.info('Category created successfully', {
+        categoryId: newCategory._id,
+        userId,
         name: newCategory.name,
-        level: newCategory.level 
+        level: newCategory.level,
       });
 
       return newCategory;
     } catch (error) {
-      logger.error('Error creating category', { 
-        error: String(error), 
-        userId, 
-        categoryData: { name: categoryData.name, parentId: categoryData.parentId } 
+      logger.error('Error creating category', {
+        error: String(error),
+        userId,
+        categoryData: {
+          name: categoryData.name,
+          parentId: categoryData.parentId,
+        },
       });
       throw error;
     }
@@ -71,7 +89,10 @@ export class CategoryService {
   /**
    * Get category by ID with user validation
    */
-  async getCategoryById(categoryId: string, userId: string): Promise<ICategory> {
+  async getCategoryById(
+    categoryId: string,
+    userId: string
+  ): Promise<ICategory> {
     try {
       logger.info('Getting category by ID', { categoryId, userId });
 
@@ -86,10 +107,10 @@ export class CategoryService {
 
       return category;
     } catch (error) {
-      logger.error('Error getting category by ID', { 
-        error: String(error), 
-        categoryId, 
-        userId 
+      logger.error('Error getting category by ID', {
+        error: String(error),
+        categoryId,
+        userId,
       });
       throw error;
     }
@@ -98,30 +119,45 @@ export class CategoryService {
   /**
    * Get all categories for a user
    */
-  async getUserCategories(userId: string, options: {
-    parentId?: string;
-    level?: number;
-    isActive?: boolean;
-    search?: string;
-    page?: number;
-    limit?: number;
-  } = {}): Promise<{ categories: ICategory[]; total: number; page: number; totalPages: number }> {
+  async getUserCategories(
+    userId: string,
+    options: {
+      parentId?: string;
+      level?: number;
+      isActive?: boolean;
+      search?: string;
+      page?: number;
+      limit?: number;
+    } = {}
+  ): Promise<{
+    categories: ICategory[];
+    total: number;
+    page: number;
+    totalPages: number;
+  }> {
     try {
       logger.info('Getting user categories', { userId, options });
 
-      const { parentId, level, isActive, search, page = 1, limit = 20 } = options;
+      const {
+        parentId,
+        level,
+        isActive,
+        search,
+        page = 1,
+        limit = 20,
+      } = options;
 
       // Build query
       const query: any = { userId: new mongoose.Types.ObjectId(userId) };
-      
+
       if (parentId !== undefined) {
         query.parentId = parentId || null;
       }
-      
+
       if (level !== undefined) {
         query.level = level;
       }
-      
+
       if (isActive !== undefined) {
         query.isActive = isActive;
       }
@@ -130,7 +166,7 @@ export class CategoryService {
       if (search) {
         query.$or = [
           { name: { $regex: search, $options: 'i' } },
-          { description: { $regex: search, $options: 'i' } }
+          { description: { $regex: search, $options: 'i' } },
         ];
       }
 
@@ -141,25 +177,25 @@ export class CategoryService {
       const categories = await this.categoryRepository.find(query, {
         skip: (page - 1) * limit,
         limit,
-        sort: { level: 1, name: 1 }
+        sort: { level: 1, name: 1 },
       });
 
       const totalPages = Math.ceil(total / limit);
 
-      logger.info('Retrieved user categories', { 
-        userId, 
-        count: categories.length, 
-        total, 
-        page, 
-        totalPages 
+      logger.info('Retrieved user categories', {
+        userId,
+        count: categories.length,
+        total,
+        page,
+        totalPages,
       });
 
       return { categories, total, page, totalPages };
     } catch (error) {
-      logger.error('Error getting user categories', { 
-        error: String(error), 
-        userId, 
-        options 
+      logger.error('Error getting user categories', {
+        error: String(error),
+        userId,
+        options,
       });
       throw error;
     }
@@ -173,17 +209,17 @@ export class CategoryService {
       logger.info('Getting category tree', { userId });
 
       const tree = await this.categoryRepository.getCategoryTree(userId);
-      
-      logger.info('Category tree retrieved successfully', { 
-        userId, 
-        rootCategories: tree.length 
+
+      logger.info('Category tree retrieved successfully', {
+        userId,
+        rootCategories: tree.length,
       });
 
       return tree;
     } catch (error) {
-      logger.error('Error getting category tree', { 
-        error: String(error), 
-        userId 
+      logger.error('Error getting category tree', {
+        error: String(error),
+        userId,
       });
       throw error;
     }
@@ -192,9 +228,17 @@ export class CategoryService {
   /**
    * Update category
    */
-  async updateCategory(categoryId: string, updateData: Partial<ICategory>, userId: string): Promise<ICategory> {
+  async updateCategory(
+    categoryId: string,
+    updateData: Partial<ICategory>,
+    userId: string
+  ): Promise<ICategory> {
     try {
-      logger.info('Updating category', { categoryId, userId, updateData: { name: updateData.name, parentId: updateData.parentId } });
+      logger.info('Updating category', {
+        categoryId,
+        userId,
+        updateData: { name: updateData.name, parentId: updateData.parentId },
+      });
 
       // Get existing category and validate access
       const existingCategory = await this.getCategoryById(categoryId, userId);
@@ -205,14 +249,24 @@ export class CategoryService {
       }
 
       // Validate parent category if changing
-      if (updateData.parentId && updateData.parentId.toString() !== existingCategory.parentId?.toString()) {
-        const parentCategory = await this.categoryRepository.findById(updateData.parentId.toString());
+      if (
+        updateData.parentId &&
+        updateData.parentId.toString() !== existingCategory.parentId?.toString()
+      ) {
+        const parentCategory = await this.categoryRepository.findById(
+          updateData.parentId.toString()
+        );
         if (!parentCategory || parentCategory.userId.toString() !== userId) {
           throw new Error('Parent category not found or access denied');
         }
 
         // Prevent circular references
-        if (await this.wouldCreateCircularReference(categoryId, updateData.parentId.toString())) {
+        if (
+          await this.wouldCreateCircularReference(
+            categoryId,
+            updateData.parentId.toString()
+          )
+        ) {
           throw new Error('Cannot set parent: would create circular reference');
         }
 
@@ -221,18 +275,27 @@ export class CategoryService {
           userId: new mongoose.Types.ObjectId(userId),
           parentId: updateData.parentId,
           name: updateData.name || existingCategory.name,
-          _id: { $ne: new mongoose.Types.ObjectId(categoryId) }
+          _id: { $ne: new mongoose.Types.ObjectId(categoryId) },
         });
 
         if (duplicateCategory) {
-          throw new Error('Category with this name already exists at this level');
+          throw new Error(
+            'Category with this name already exists at this level'
+          );
         }
 
         // Recalculate level and path
-        const newLevel = await this.calculateLevel(updateData.parentId.toString());
-        const newPath = await this.calculatePath(updateData.parentId.toString());
+        const newLevel = await this.calculateLevel(
+          updateData.parentId.toString()
+        );
+        const newPath = await this.calculatePath(
+          updateData.parentId.toString()
+        );
         updateData.level = newLevel;
-        updateData.path = [...newPath, updateData.name || existingCategory.name];
+        updateData.path = [
+          ...newPath,
+          updateData.name || existingCategory.name,
+        ];
 
         // Update all child categories' paths
         await this.updateChildPaths(categoryId, updateData.path);
@@ -249,19 +312,19 @@ export class CategoryService {
         throw new Error('Failed to update category');
       }
 
-      logger.info('Category updated successfully', { 
-        categoryId, 
-        userId, 
-        name: updatedCategory.name 
+      logger.info('Category updated successfully', {
+        categoryId,
+        userId,
+        name: updatedCategory.name,
       });
 
       return updatedCategory;
     } catch (error) {
-      logger.error('Error updating category', { 
-        error: String(error), 
-        categoryId, 
-        userId, 
-        updateData 
+      logger.error('Error updating category', {
+        error: String(error),
+        categoryId,
+        userId,
+        updateData,
       });
       throw error;
     }
@@ -285,11 +348,13 @@ export class CategoryService {
       // Check if category has children
       const hasChildren = await this.categoryRepository.findOne({
         parentId: new mongoose.Types.ObjectId(categoryId),
-        isActive: true
+        isActive: true,
       });
 
       if (hasChildren) {
-        throw new Error('Cannot delete category with subcategories. Please delete subcategories first.');
+        throw new Error(
+          'Cannot delete category with subcategories. Please delete subcategories first.'
+        );
       }
 
       // Check if category is used in transactions (you'll need to implement this check)
@@ -301,15 +366,15 @@ export class CategoryService {
       // Soft delete
       await this.categoryRepository.updateById(categoryId, {
         isActive: false,
-        deletedAt: new Date()
+        deletedAt: new Date(),
       });
 
       logger.info('Category deleted successfully', { categoryId, userId });
     } catch (error) {
-      logger.error('Error deleting category', { 
-        error: String(error), 
-        categoryId, 
-        userId 
+      logger.error('Error deleting category', {
+        error: String(error),
+        categoryId,
+        userId,
       });
       throw error;
     }
@@ -318,9 +383,15 @@ export class CategoryService {
   /**
    * Bulk create categories
    */
-  async bulkCreateCategories(categoriesData: Partial<ICategory>[], userId: string): Promise<ICategory[]> {
+  async bulkCreateCategories(
+    categoriesData: Partial<ICategory>[],
+    userId: string
+  ): Promise<ICategory[]> {
     try {
-      logger.info('Bulk creating categories', { userId, count: categoriesData.length });
+      logger.info('Bulk creating categories', {
+        userId,
+        count: categoriesData.length,
+      });
 
       const createdCategories: ICategory[] = [];
 
@@ -331,24 +402,27 @@ export class CategoryService {
         } catch (error) {
           logger.warn('Failed to create category in bulk operation', {
             error: String(error),
-            categoryData: { name: categoryData.name, parentId: categoryData.parentId }
+            categoryData: {
+              name: categoryData.name,
+              parentId: categoryData.parentId,
+            },
           });
           // Continue with other categories
         }
       }
 
-      logger.info('Bulk category creation completed', { 
-        userId, 
-        requested: categoriesData.length, 
-        created: createdCategories.length 
+      logger.info('Bulk category creation completed', {
+        userId,
+        requested: categoriesData.length,
+        created: createdCategories.length,
       });
 
       return createdCategories;
     } catch (error) {
-      logger.error('Error in bulk category creation', { 
-        error: String(error), 
-        userId, 
-        count: categoriesData.length 
+      logger.error('Error in bulk category creation', {
+        error: String(error),
+        userId,
+        count: categoriesData.length,
       });
       throw error;
     }
@@ -367,14 +441,27 @@ export class CategoryService {
     try {
       logger.info('Getting category statistics', { userId });
 
-      const [totalCategories, activeCategories, rootCategories, maxDepthResult] = await Promise.all([
-        this.categoryRepository.count({ userId: new mongoose.Types.ObjectId(userId) }),
-        this.categoryRepository.count({ userId: new mongoose.Types.ObjectId(userId), isActive: true }),
-        this.categoryRepository.count({ userId: new mongoose.Types.ObjectId(userId), parentId: { $exists: false } }),
+      const [
+        totalCategories,
+        activeCategories,
+        rootCategories,
+        maxDepthResult,
+      ] = await Promise.all([
+        this.categoryRepository.count({
+          userId: new mongoose.Types.ObjectId(userId),
+        }),
+        this.categoryRepository.count({
+          userId: new mongoose.Types.ObjectId(userId),
+          isActive: true,
+        }),
+        this.categoryRepository.count({
+          userId: new mongoose.Types.ObjectId(userId),
+          parentId: { $exists: false },
+        }),
         this.categoryRepository.findOne(
           { userId: new mongoose.Types.ObjectId(userId) },
           { sort: { level: -1 }, select: 'level' }
-        )
+        ),
       ]);
 
       // Get count by level
@@ -382,7 +469,7 @@ export class CategoryService {
       const levelGroups = await this.categoryRepository.aggregate([
         { $match: { userId: new mongoose.Types.ObjectId(userId) } },
         { $group: { _id: '$level', count: { $sum: 1 } } },
-        { $sort: { _id: 1 } }
+        { $sort: { _id: 1 } },
       ]);
 
       levelGroups.forEach((group: any) => {
@@ -394,16 +481,16 @@ export class CategoryService {
         activeCategories,
         rootCategories,
         maxDepth: maxDepthResult?.level || 0,
-        categoriesByLevel
+        categoriesByLevel,
       };
 
       logger.info('Category statistics retrieved', { userId, stats });
 
       return stats;
     } catch (error) {
-      logger.error('Error getting category statistics', { 
-        error: String(error), 
-        userId 
+      logger.error('Error getting category statistics', {
+        error: String(error),
+        userId,
       });
       throw error;
     }
@@ -422,26 +509,32 @@ export class CategoryService {
     return parent ? [...parent.path, parent.name] : [];
   }
 
-  private async wouldCreateCircularReference(categoryId: string, newParentId: string): Promise<boolean> {
+  private async wouldCreateCircularReference(
+    categoryId: string,
+    newParentId: string
+  ): Promise<boolean> {
     let currentParentId = newParentId;
-    
+
     while (currentParentId) {
       if (currentParentId === categoryId) {
         return true;
       }
-      
+
       const parent = await this.categoryRepository.findById(currentParentId);
       if (!parent) break;
-      
+
       currentParentId = parent.parentId?.toString() || '';
     }
-    
+
     return false;
   }
 
-  private async updateChildPaths(categoryId: string, newParentPath: string[]): Promise<void> {
+  private async updateChildPaths(
+    categoryId: string,
+    newParentPath: string[]
+  ): Promise<void> {
     const children = await this.categoryRepository.find({
-      parentId: new mongoose.Types.ObjectId(categoryId)
+      parentId: new mongoose.Types.ObjectId(categoryId),
     });
 
     for (const child of children) {
@@ -449,7 +542,7 @@ export class CategoryService {
       const childId = child._id?.toString();
       if (childId) {
         await this.categoryRepository.updateById(childId, { path: newPath });
-        
+
         // Recursively update grandchildren
         await this.updateChildPaths(childId, newPath);
       }

@@ -291,12 +291,12 @@ describe('Auth Controller', () => {
   });
 
   describe('logout', () => {
-    it('should logout user successfully', async () => {
+    it('should handle logout with user', () => {
       mockRequest.user = { userId: 'user123' };
 
-      mockAuthServiceInstance.logout.mockResolvedValue(undefined);
+      mockAuthServiceInstance.logout.mockReturnValue(undefined);
 
-      await authController.logout(
+      authController.logout(
         mockRequest as TestRequest,
         mockResponse as Response,
         mockNext
@@ -311,10 +311,10 @@ describe('Auth Controller', () => {
       expect(mockResponse.clearCookie).toHaveBeenCalledWith('refreshToken');
     });
 
-    it('should handle logout without user', async () => {
+    it('should handle logout without user', () => {
       mockRequest.user = undefined;
 
-      await authController.logout(
+      authController.logout(
         mockRequest as TestRequest,
         mockResponse as Response,
         mockNext
@@ -383,10 +383,10 @@ describe('Auth Controller', () => {
   });
 
   describe('getProfile', () => {
-    it('should get user profile successfully', async () => {
+    it('should get user profile successfully', () => {
       mockRequest.user = { userId: 'user123' };
 
-      await authController.getProfile(
+      authController.getProfile(
         mockRequest as TestRequest,
         mockResponse as Response,
         mockNext
@@ -400,10 +400,10 @@ describe('Auth Controller', () => {
       });
     });
 
-    it('should handle profile request without user', async () => {
+    it('should handle profile request without user', () => {
       mockRequest.user = undefined;
 
-      await authController.getProfile(
+      authController.getProfile(
         mockRequest as TestRequest,
         mockResponse as Response,
         mockNext

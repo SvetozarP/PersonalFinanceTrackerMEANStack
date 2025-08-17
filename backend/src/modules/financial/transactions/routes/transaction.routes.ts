@@ -33,8 +33,8 @@ router.post(
  * @route   GET /api/transactions
  * @desc    Get all transactions for the authenticated user
  * @access  Private
- * @query   { type?, status?, categoryId?, subcategoryId?, paymentMethod?, isRecurring?, 
- *            source?, startDate?, endDate?, minAmount?, maxAmount?, search?, tags?, 
+ * @query   { type?, status?, categoryId?, subcategoryId?, paymentMethod?, isRecurring?,
+ *            source?, startDate?, endDate?, minAmount?, maxAmount?, search?, tags?,
  *            page?, limit?, sortBy?, sortOrder? }
  */
 router.get(
@@ -49,10 +49,7 @@ router.get(
  * @access  Private
  * @query   { startDate?, endDate?, categoryId?, type? }
  */
-router.get(
-  '/stats',
-  asyncHandler(transactionController.getTransactionStats)
-);
+router.get('/stats', asyncHandler(transactionController.getTransactionStats));
 
 /**
  * @route   GET /api/transactions/recurring
@@ -70,10 +67,7 @@ router.get(
  * @access  Private
  * @params  { id }
  */
-router.get(
-  '/:id',
-  asyncHandler(transactionController.getTransactionById)
-);
+router.get('/:id', asyncHandler(transactionController.getTransactionById));
 
 /**
  * @route   PUT /api/transactions/:id
@@ -94,10 +88,7 @@ router.put(
  * @access  Private
  * @params  { id }
  */
-router.delete(
-  '/:id',
-  asyncHandler(transactionController.deleteTransaction)
-);
+router.delete('/:id', asyncHandler(transactionController.deleteTransaction));
 
 /**
  * @route   POST /api/transactions/bulk

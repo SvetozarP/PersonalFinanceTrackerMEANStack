@@ -24,9 +24,10 @@ jest.mock('../../../shared/services/logger.service', () => ({
   },
 }));
 
-// Import the mocked User model
+// Import the mocked User model and JWT
 import { User as mockUserModel } from '../../../modules/users/user.model';
 import * as mockJwt from 'jsonwebtoken';
+import { logger as mockLogger } from '../../../shared/services/logger.service';
 
 describe('Auth Service', () => {
   let authService: AuthService;
@@ -61,7 +62,7 @@ describe('Auth Service', () => {
         lastName: 'User',
       };
 
-      mockUserModel.findOne.mockResolvedValue(mockUser);
+      (mockUserModel.findOne as any).mockResolvedValue(mockUser);
 
       await expect(authService.register(userData)).rejects.toThrow(
         'User with this email already exists'
@@ -90,9 +91,9 @@ describe('Auth Service', () => {
         select: jest.fn().mockResolvedValue(mockUserWithPassword),
       };
 
-      mockUserModel.findOne.mockReturnValue(mockFindOneResult);
+      (mockUserModel.findOne as any).mockReturnValue(mockFindOneResult);
 
-      mockJwt.sign
+      (mockJwt.sign as any)
         .mockReturnValueOnce('access-token')
         .mockReturnValueOnce('refresh-token');
 
@@ -114,7 +115,7 @@ describe('Auth Service', () => {
         select: jest.fn().mockResolvedValue(null),
       };
 
-      mockUserModel.findOne.mockReturnValue(mockFindOneResult);
+      (mockUserModel.findOne as any).mockReturnValue(mockFindOneResult);
 
       await expect(authService.login(credentials)).rejects.toThrow(
         'Invalid email or password'
@@ -137,7 +138,7 @@ describe('Auth Service', () => {
         select: jest.fn().mockResolvedValue(inactiveUser),
       };
 
-      mockUserModel.findOne.mockReturnValue(mockFindOneResult);
+      (mockUserModel.findOne as any).mockReturnValue(mockFindOneResult);
 
       await expect(authService.login(credentials)).rejects.toThrow(
         'Account is deactivated'
@@ -159,7 +160,7 @@ describe('Auth Service', () => {
         select: jest.fn().mockResolvedValue(userWithPassword),
       };
 
-      mockUserModel.findOne.mockReturnValue(mockFindOneResult);
+      (mockUserModel.findOne as any).mockReturnValue(mockFindOneResult);
 
       await expect(authService.login(credentials)).rejects.toThrow(
         'Invalid email or password'
@@ -175,9 +176,9 @@ describe('Auth Service', () => {
         type: 'refresh',
       };
 
-      mockJwt.verify.mockReturnValue(decodedToken);
-      mockUserModel.findById.mockResolvedValue(mockUser);
-      mockJwt.sign
+      (mockJwt.verify as any).mockReturnValue(decodedToken);
+      (mockUserModel.findById as any).mockResolvedValue(mockUser);
+      (mockJwt.sign as any)
         .mockReturnValueOnce('new-access-token')
         .mockReturnValueOnce('new-refresh-token');
 
@@ -190,7 +191,7 @@ describe('Auth Service', () => {
     it('should throw error when refresh token is invalid', async () => {
       const refreshToken = 'invalid-refresh-token';
 
-      mockJwt.verify.mockImplementation(() => {
+      (mockJwt.verify as any).mockImplementation(() => {
         throw new Error('Invalid token');
       });
 
@@ -206,8 +207,8 @@ describe('Auth Service', () => {
         type: 'refresh',
       };
 
-      mockJwt.verify.mockReturnValue(decodedToken);
-      mockUserModel.findById.mockResolvedValue(null);
+      (mockJwt.verify as any).mockReturnValue(decodedToken);
+      (mockUserModel.findById as any).mockResolvedValue(null);
 
       await expect(authService.refreshToken(refreshToken)).rejects.toThrow(
         'Invalid refresh token'
@@ -222,8 +223,8 @@ describe('Auth Service', () => {
       };
       const inactiveUser = { ...mockUser, isActive: false };
 
-      mockJwt.verify.mockReturnValue(decodedToken);
-      mockUserModel.findById.mockResolvedValue(inactiveUser);
+      (mockJwt.verify as any).mockReturnValue(decodedToken);
+      (mockUserModel.findById as any).mockResolvedValue(inactiveUser);
 
       await expect(authService.refreshToken(refreshToken)).rejects.toThrow(
         'Invalid refresh token'
@@ -232,14 +233,12 @@ describe('Auth Service', () => {
   });
 
   describe('logout', () => {
-    it('should logout user successfully', async () => {
+    it('should logout user successfully', () => {
       const userId = '507f1f77bcf86cd799439011';
-      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
 
-      await authService.logout(userId);
+      authService.logout(userId);
 
-      expect(consoleSpy).toHaveBeenCalledWith(`User ${userId} logged out`);
-      consoleSpy.mockRestore();
+      expect(mockLogger.info).toHaveBeenCalledWith(`User ${userId} logged out`);
     });
   });
 
@@ -251,8 +250,8 @@ describe('Auth Service', () => {
         type: 'access',
       };
 
-      mockJwt.verify.mockReturnValue(decodedToken);
-      mockUserModel.findById.mockResolvedValue(mockUser);
+      (mockJwt.verify as any).mockReturnValue(decodedToken);
+      (mockUserModel.findById as any).mockResolvedValue(mockUser);
 
       const result = await authService.validateToken(token);
 
@@ -262,7 +261,7 @@ describe('Auth Service', () => {
     it('should throw error when token is invalid', async () => {
       const token = 'invalid-token';
 
-      mockJwt.verify.mockImplementation(() => {
+      (mockJwt.verify as any).mockImplementation(() => {
         throw new Error('Invalid token');
       });
 
@@ -278,7 +277,7 @@ describe('Auth Service', () => {
         type: 'refresh',
       };
 
-      mockJwt.verify.mockReturnValue(decodedToken);
+      (mockJwt.verify as any).mockReturnValue(decodedToken);
 
       await expect(authService.validateToken(token)).rejects.toThrow(
         'Invalid token'
@@ -292,8 +291,8 @@ describe('Auth Service', () => {
         type: 'access',
       };
 
-      mockJwt.verify.mockReturnValue(decodedToken);
-      mockUserModel.findById.mockResolvedValue(null);
+      (mockJwt.verify as any).mockReturnValue(decodedToken);
+      (mockUserModel.findById as any).mockResolvedValue(null);
 
       await expect(authService.validateToken(token)).rejects.toThrow(
         'Invalid token'
@@ -308,8 +307,8 @@ describe('Auth Service', () => {
       };
       const inactiveUser = { ...mockUser, isActive: false };
 
-      mockJwt.verify.mockReturnValue(decodedToken);
-      mockUserModel.findById.mockResolvedValue(inactiveUser);
+      (mockJwt.verify as any).mockReturnValue(decodedToken);
+      (mockUserModel.findById as any).mockResolvedValue(inactiveUser);
 
       await expect(authService.validateToken(token)).rejects.toThrow(
         'Invalid token'
@@ -321,7 +320,7 @@ describe('Auth Service', () => {
     it('should generate tokens correctly', async () => {
       const userId = '507f1f77bcf86cd799439011';
 
-      mockJwt.sign
+      (mockJwt.sign as any)
         .mockReturnValueOnce('access-token')
         .mockReturnValueOnce('refresh-token');
 
@@ -340,7 +339,7 @@ describe('Auth Service', () => {
       const payload = { userId: 'test', type: 'access' };
       const expiresIn = '1h';
 
-      mockJwt.sign.mockReturnValue('signed-token');
+      (mockJwt.sign as any).mockReturnValue('signed-token');
 
       // Access private method through reflection
       const signJWTMethod = (authService as any).signJWT.bind(authService);

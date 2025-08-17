@@ -46,20 +46,14 @@ router.get(
  * @desc    Get category tree structure for the authenticated user
  * @access  Private
  */
-router.get(
-  '/tree',
-  asyncHandler(categoryController.getCategoryTree)
-);
+router.get('/tree', asyncHandler(categoryController.getCategoryTree));
 
 /**
  * @route   GET /api/categories/stats
  * @desc    Get category statistics for the authenticated user
  * @access  Private
  */
-router.get(
-  '/stats',
-  asyncHandler(categoryController.getCategoryStats)
-);
+router.get('/stats', asyncHandler(categoryController.getCategoryStats));
 
 /**
  * @route   GET /api/categories/:id
@@ -105,9 +99,6 @@ router.delete(
  * @access  Private
  * @body    { categories: [{ name, description?, color?, icon?, parentId? }] }
  */
-router.post(
-  '/bulk',
-  asyncHandler(categoryController.bulkCreateCategories)
-);
+router.post('/bulk', asyncHandler(categoryController.bulkCreateCategories));
 
 export default router;
