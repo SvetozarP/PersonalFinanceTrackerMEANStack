@@ -40,7 +40,7 @@ describe('Auth Controller', () => {
 
     mockAuthService.mockImplementation(() => mockAuthServiceInstance);
 
-    authController = new AuthController();
+    authController = new AuthController(mockAuthServiceInstance);
 
     // Setup mock request and response
     mockRequest = {

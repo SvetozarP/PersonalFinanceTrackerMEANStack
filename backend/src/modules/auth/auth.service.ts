@@ -39,13 +39,13 @@ export class AuthService {
     const user = new User(userData);
     await user.save();
 
-    // Return user without password
-    const userWithoutPassword = user.toObject();
-    if (userWithoutPassword.password) {
-      delete (userWithoutPassword as Record<string, unknown>).password;
-    }
+          // Return user without password
+      const userWithoutPassword = user.toObject();
+      if (userWithoutPassword.password) {
+        delete (userWithoutPassword as any).password;
+      }
 
-    return userWithoutPassword as IUser;
+      return userWithoutPassword as IUser;
   }
 
   async login(
@@ -82,7 +82,7 @@ export class AuthService {
     // Return user without password and tokens
     const userWithoutPassword = user.toObject();
     if (userWithoutPassword.password) {
-      delete (userWithoutPassword as Record<string, unknown>).password;
+      delete (userWithoutPassword as any).password;
     }
 
     return { user: userWithoutPassword as IUser, tokens };
@@ -118,7 +118,6 @@ export class AuthService {
     if (!this.JWT_SECRET) {
       throw new Error('JWT_SECRET is not configured');
     }
-    // @ts-expect-error - JWT types compatibility issue
     return jwt.sign(payload, this.JWT_SECRET, { expiresIn });
   }
 

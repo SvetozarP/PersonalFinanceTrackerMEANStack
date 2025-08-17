@@ -307,7 +307,7 @@ describe('User Repository', () => {
   });
 
   describe('Repository Instance', () => {
-    it('should export a repository instance', () => {
+    it('should export a repository instance', async () => {
       // Mock the module import
       jest.doMock('../../../modules/users/user.repository', () => ({
         userRepository: {
