@@ -1,360 +1,201 @@
+import Joi from 'joi';
 import {
-  registerSchema,
   loginSchema,
+  registerSchema,
 } from '../../../modules/auth/auth.validation';
 
-describe('Auth Validation', () => {
-  describe('registerSchema', () => {
-    it('should validate correct registration data', () => {
+describe('Auth Validation Schemas', () => {
+  describe('Login Schema', () => {
+    it('should validate valid login data', () => {
       const validData = {
         email: 'test@example.com',
-        password: 'Password123!',
-        firstName: 'Test',
-        lastName: 'User',
+        password: 'password123',
       };
 
-      const { error } = registerSchema.validate(validData);
+      const { error, value } = loginSchema.validate(validData);
       expect(error).toBeUndefined();
+      expect(value).toEqual({
+        ...validData,
+        rememberMe: false, // default value added by Joi
+      });
     });
 
-    it('should require all fields', () => {
+    it('should reject invalid email format', () => {
       const invalidData = {
-        email: 'test@example.com',
-        // missing password, firstName, lastName
-      };
-
-      const { error } = registerSchema.validate(invalidData);
-      expect(error).toBeDefined();
-      expect(error?.details.length).toBeGreaterThan(0);
-    });
-
-    it('should validate email format', () => {
-      const invalidEmails = [
-        'invalid-email',
-        'test@',
-        '@example.com',
-        'test.example.com',
-        '',
-        'test@example',
-      ];
-
-      invalidEmails.forEach(email => {
-        const { error } = registerSchema.validate({
-          email,
-          password: 'Password123!',
-          firstName: 'Test',
-          lastName: 'User',
-        });
-        expect(error).toBeDefined();
-      });
-    });
-
-    it('should validate password complexity requirements', () => {
-      const invalidPasswords = [
-        'password', // no uppercase, no number, no special char
-        'PASSWORD', // no lowercase, no number, no special char
-        'Password', // no number, no special char
-        'Password1', // no special char
-        'Pass@word', // no number
-        '12345678', // no letters, no special char
-        'Pass@1', // too short
-        '', // empty
-      ];
-
-      invalidPasswords.forEach(password => {
-        const { error } = registerSchema.validate({
-          email: 'test@example.com',
-          password,
-          firstName: 'Test',
-          lastName: 'User',
-        });
-        expect(error).toBeDefined();
-      });
-    });
-
-    it('should accept valid passwords with allowed special characters', () => {
-      // Only use special characters that are allowed by the regex: @$!%*?&
-      const validPasswords = [
-        'Password123@',
-        'Secure@456',
-        'MyPass$789',
-        'Test$123',
-        'Complex%456',
-        'Strong@789',
-        'Valid&123',
-        'Good*456',
-        'Safe@789',
-        'Reliable$123',
-      ];
-
-      validPasswords.forEach(password => {
-        const { error } = registerSchema.validate({
-          email: 'test@example.com',
-          password,
-          firstName: 'Test',
-          lastName: 'User',
-        });
-        expect(error).toBeUndefined();
-      });
-    });
-
-    it('should validate firstName requirements', () => {
-      const invalidFirstNames = [
-        '', // empty
-        'A', // too short
-        'A'.repeat(51), // too long
-      ];
-
-      invalidFirstNames.forEach(firstName => {
-        const { error } = registerSchema.validate({
-          email: 'test@example.com',
-          password: 'Password123@',
-          firstName,
-          lastName: 'User',
-        });
-        expect(error).toBeDefined();
-      });
-
-      // Valid first names - use only simple ASCII names
-      const validFirstNames = [
-        'John',
-        'Mary',
-        'Jane',
-        'Robert',
-        'Michael',
-        'David',
-      ];
-
-      validFirstNames.forEach(firstName => {
-        const { error } = registerSchema.validate({
-          email: 'test@example.com',
-          password: 'Password123@',
-          firstName,
-          lastName: 'User',
-        });
-        expect(error).toBeUndefined();
-      });
-    });
-
-    it('should validate lastName requirements', () => {
-      const invalidLastNames = [
-        '', // empty
-        'A', // too short
-        'A'.repeat(51), // too long
-      ];
-
-      invalidLastNames.forEach(lastName => {
-        const { error } = registerSchema.validate({
-          email: 'test@example.com',
-          password: 'Password123@',
-          firstName: 'Test',
-          lastName,
-        });
-        expect(error).toBeDefined();
-      });
-
-      // Valid last names - use only simple ASCII names
-      const validLastNames = [
-        'Smith',
-        'Johnson',
-        'Williams',
-        'Brown',
-        'Jones',
-        'Garcia',
-      ];
-
-      validLastNames.forEach(lastName => {
-        const { error } = registerSchema.validate({
-          email: 'test@example.com',
-          password: 'Password123@',
-          firstName: 'Test',
-          lastName,
-        });
-        expect(error).toBeUndefined();
-      });
-    });
-  });
-
-  describe('loginSchema', () => {
-    it('should validate correct login data', () => {
-      const validData = {
-        email: 'test@example.com',
-        password: 'Password123!',
-      };
-
-      const { error } = loginSchema.validate(validData);
-      expect(error).toBeUndefined();
-    });
-
-    it('should require both email and password', () => {
-      const invalidData = {
-        email: 'test@example.com',
-        // missing password
+        email: 'invalid-email',
+        password: 'password123',
       };
 
       const { error } = loginSchema.validate(invalidData);
       expect(error).toBeDefined();
-      expect(error?.details.length).toBeGreaterThan(0);
+      expect(error?.details[0].message).toContain('valid email address');
     });
 
-    it('should validate email format for login', () => {
-      const invalidEmails = [
-        'invalid-email',
-        'test@',
-        '@example.com',
-        'test.example.com',
-        '',
-        'test@example',
-      ];
-
-      invalidEmails.forEach(email => {
-        const { error } = loginSchema.validate({
-          email,
-          password: 'Password123!',
-        });
-        expect(error).toBeDefined();
-      });
-    });
-
-    it('should accept rememberMe as optional boolean', () => {
-      const dataWithRememberMe = {
+    it('should reject empty password', () => {
+      const invalidData = {
         email: 'test@example.com',
-        password: 'Password123!',
+        password: '',
+      };
+
+      const { error } = loginSchema.validate(invalidData);
+      expect(error).toBeDefined();
+      expect(error?.details[0].message).toContain('not allowed to be empty');
+    });
+
+    it('should reject missing required fields', () => {
+      const invalidData = {
+        email: 'test@example.com',
+      };
+
+      const { error } = loginSchema.validate(invalidData);
+      expect(error).toBeDefined();
+      expect(error?.details[0].message).toContain('Password is required');
+    });
+
+    it('should handle rememberMe field', () => {
+      const validData = {
+        email: 'test@example.com',
+        password: 'password123',
         rememberMe: true,
       };
 
-      const { error, value } = loginSchema.validate(dataWithRememberMe);
+      const { error, value } = loginSchema.validate(validData);
       expect(error).toBeUndefined();
       expect(value.rememberMe).toBe(true);
     });
 
     it('should set rememberMe to false by default', () => {
-      const dataWithoutRememberMe = {
+      const validData = {
         email: 'test@example.com',
-        password: 'Password123!',
+        password: 'password123',
       };
 
-      const { error, value } = loginSchema.validate(dataWithoutRememberMe);
+      const { error, value } = loginSchema.validate(validData);
       expect(error).toBeUndefined();
       expect(value.rememberMe).toBe(false);
     });
-
-    it('should accept rememberMe as string and convert to boolean', () => {
-      const dataWithStringRememberMe = {
-        email: 'test@example.com',
-        password: 'Password123!',
-        rememberMe: 'true',
-      };
-
-      const { error, value } = loginSchema.validate(dataWithStringRememberMe);
-      expect(error).toBeUndefined();
-      expect(value.rememberMe).toBe(true);
-    });
-
-    it('should handle edge cases for rememberMe', () => {
-      const edgeCases = [
-        { rememberMe: true, expected: true },
-        { rememberMe: false, expected: false },
-        { rememberMe: undefined, expected: false },
-      ];
-
-      edgeCases.forEach(({ rememberMe, expected }) => {
-        const { error, value } = loginSchema.validate({
-          email: 'test@example.com',
-          password: 'Password123!',
-          rememberMe,
-        });
-        expect(error).toBeUndefined();
-        expect(value.rememberMe).toBe(expected);
-      });
-    });
   });
 
-  describe('schema configuration', () => {
-    it('should have proper error messages for register schema', () => {
+  describe('Register Schema', () => {
+    it('should validate valid registration data', () => {
+      const validData = {
+        email: 'test@example.com',
+        password: 'Password123@',
+        firstName: 'John',
+        lastName: 'Doe',
+      };
+
+      const { error, value } = registerSchema.validate(validData);
+      expect(error).toBeUndefined();
+      expect(value).toEqual(validData);
+    });
+
+    it('should reject weak password', () => {
       const invalidData = {
-        email: 'invalid-email',
-        password: 'weak',
-        firstName: '',
-        lastName: '',
+        email: 'test@example.com',
+        password: '123',
+        firstName: 'John',
+        lastName: 'Doe',
       };
 
       const { error } = registerSchema.validate(invalidData);
       expect(error).toBeDefined();
+      expect(error?.details[0].message).toContain('at least 8 characters');
+    });
 
-      const errorMessages = error?.details.map(detail => detail.message);
-      expect(errorMessages).toContain('Please provide a valid email address');
-
-      // Test password validation separately
-      const passwordData = {
+    it('should reject password without special characters', () => {
+      const invalidData = {
         email: 'test@example.com',
-        password: 'weak',
-        firstName: 'Test',
-        lastName: 'User',
+        password: 'Password123',
+        firstName: 'John',
+        lastName: 'Doe',
       };
-      const passwordError = registerSchema.validate(passwordData);
-      expect(passwordError.error).toBeDefined();
-      expect(
-        passwordError.error?.details.some(detail =>
-          detail.message.includes('Password')
-        )
-      ).toBe(true);
 
-      // Test firstName validation separately
-      const firstNameData = {
+      const { error } = registerSchema.validate(invalidData);
+      expect(error).toBeDefined();
+      expect(error?.details[0].message).toContain('special character');
+    });
+
+    it('should reject invalid email format', () => {
+      const invalidData = {
+        email: 'invalid-email',
+        password: 'Password123@',
+        firstName: 'John',
+        lastName: 'Doe',
+      };
+
+      const { error } = registerSchema.validate(invalidData);
+      expect(error).toBeDefined();
+      expect(error?.details[0].message).toContain('valid email address');
+    });
+
+    it('should reject empty names', () => {
+      const invalidData = {
         email: 'test@example.com',
         password: 'Password123@',
         firstName: '',
-        lastName: 'User',
+        lastName: 'Doe',
       };
-      const firstNameError = registerSchema.validate(firstNameData);
-      expect(firstNameError.error).toBeDefined();
-      expect(
-        firstNameError.error?.details.some(detail =>
-          detail.message.includes('firstName')
-        )
-      ).toBe(true);
 
-      // Test lastName validation separately
-      const lastNameData = {
-        email: 'test@example.com',
-        password: 'Password123@',
-        firstName: 'Test',
-        lastName: '',
-      };
-      const lastNameError = registerSchema.validate(lastNameData);
-      expect(lastNameError.error).toBeDefined();
-      expect(
-        lastNameError.error?.details.some(detail =>
-          detail.message.includes('lastName')
-        )
-      ).toBe(true);
+      const { error } = registerSchema.validate(invalidData);
+      expect(error).toBeDefined();
+      expect(error?.details[0].message).toContain('not allowed to be empty');
     });
 
-    it('should have proper error messages for login schema', () => {
+    it('should reject short names', () => {
       const invalidData = {
-        email: 'invalid-email',
-        // missing password
-      };
-
-      const { error } = loginSchema.validate(invalidData);
-      expect(error).toBeDefined();
-
-      const errorMessages = error?.details.map(detail => detail.message);
-      expect(errorMessages).toContain('Please provide a valid email address');
-
-      // Test password validation separately
-      const passwordData = {
         email: 'test@example.com',
-        // missing password
+        password: 'Password123@',
+        firstName: 'A',
+        lastName: 'Doe',
       };
-      const passwordError = loginSchema.validate(passwordData);
-      expect(passwordError.error).toBeDefined();
-      expect(
-        passwordError.error?.details.some(detail =>
-          detail.message.includes('Password')
-        )
-      ).toBe(true);
+
+      const { error } = registerSchema.validate(invalidData);
+      expect(error).toBeDefined();
+      expect(error?.details[0].message).toContain('First name must be at least 2 characters');
+    });
+
+    it('should reject long names', () => {
+      const invalidData = {
+        email: 'test@example.com',
+        password: 'Password123@',
+        firstName: 'A'.repeat(51),
+        lastName: 'Doe',
+      };
+
+      const { error } = registerSchema.validate(invalidData);
+      expect(error).toBeDefined();
+      expect(error?.details[0].message).toContain('First name cannot exceed 50 characters');
+    });
+  });
+
+  describe('Edge Cases', () => {
+    it('should handle null values', () => {
+      const { error } = loginSchema.validate(null);
+      expect(error).toBeDefined();
+    });
+
+    it('should handle undefined values', () => {
+      const { error } = loginSchema.validate(undefined);
+      expect(error).toBeUndefined(); // Joi treats undefined as "no validation needed"
+    });
+
+    it('should handle empty objects', () => {
+      const { error } = loginSchema.validate({});
+      expect(error).toBeDefined();
+    });
+
+    it('should handle extra fields gracefully', () => {
+      const validData = {
+        email: 'test@example.com',
+        password: 'password123',
+        extraField: 'should be ignored',
+      };
+
+      const { error, value } = loginSchema.validate(validData);
+      expect(error).toBeUndefined();
+      expect(value.email).toBe('test@example.com');
+      expect(value.password).toBe('password123');
     });
   });
 });

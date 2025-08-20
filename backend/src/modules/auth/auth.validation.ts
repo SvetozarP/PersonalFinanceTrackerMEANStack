@@ -25,7 +25,7 @@ export const registerSchema = Joi.object({
     'string.max': 'Last name cannot exceed 50 characters',
     'any.required': 'Last name is required',
   }),
-});
+}).options({ stripUnknown: true });
 
 export const loginSchema = Joi.object({
   email: Joi.string().email().required().messages({
@@ -36,4 +36,4 @@ export const loginSchema = Joi.object({
     'any.required': 'Password is required',
   }),
   rememberMe: Joi.boolean().optional().default(false),
-});
+}).options({ stripUnknown: true });

@@ -310,7 +310,7 @@ export const baseTransactionSchema = Joi.object({
           .required()
           .trim()
           .pattern(
-            /^[a-zA-Z0-9]+\/[a-zA-Z0-9\\-\.]+$/,
+            /^[a-zA-Z0-9]+\/[a-zA-Z0-9\-\.]+$/,
             'Invalid MIME type format'
           ),
 

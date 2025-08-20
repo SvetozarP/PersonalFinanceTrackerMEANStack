@@ -35,7 +35,7 @@ describe('Auth Controller', () => {
       register: jest.fn(),
       login: jest.fn(),
       refreshToken: jest.fn(),
-      logout: jest.fn(),
+      logout: jest.fn().mockResolvedValue(Promise.resolve()),
     } as any;
 
     mockAuthService.mockImplementation(() => mockAuthServiceInstance);
@@ -291,12 +291,12 @@ describe('Auth Controller', () => {
   });
 
   describe('logout', () => {
-    it('should handle logout with user', () => {
+    it('should handle logout with user', async () => {
       mockRequest.user = { userId: 'user123' };
 
-      mockAuthServiceInstance.logout.mockReturnValue(undefined);
 
-      authController.logout(
+
+      await authController.logout(
         mockRequest as TestRequest,
         mockResponse as Response,
         mockNext
@@ -311,10 +311,10 @@ describe('Auth Controller', () => {
       expect(mockResponse.clearCookie).toHaveBeenCalledWith('refreshToken');
     });
 
-    it('should handle logout without user', () => {
+    it('should handle logout without user', async () => {
       mockRequest.user = undefined;
 
-      authController.logout(
+      await authController.logout(
         mockRequest as TestRequest,
         mockResponse as Response,
         mockNext

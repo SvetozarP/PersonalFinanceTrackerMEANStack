@@ -159,16 +159,16 @@ export class AuthController {
     }
   };
 
-  logout = (
+  logout = async (
     req: AuthenticatedRequest,
     res: Response,
     next: NextFunction
-  ): void => {
+  ): Promise<void> => {
     try {
       const userId = req.user?.userId;
 
       if (userId) {
-        this.authService.logout(userId);
+        await this.authService.logout(userId);
       }
 
       // Clear refresh token cookie
@@ -183,11 +183,11 @@ export class AuthController {
     }
   };
 
-  getProfile = (
+  getProfile = async (
     req: AuthenticatedRequest,
     res: Response,
     next: NextFunction
-  ): void => {
+  ): Promise<void> => {
     try {
       const userId = req.user?.userId;
 
