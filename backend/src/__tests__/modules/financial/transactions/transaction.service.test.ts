@@ -1,9 +1,9 @@
+import mongoose from 'mongoose';
 import { TransactionService } from '../../../../modules/financial/transactions/services/transaction.service';
 import { TransactionRepository } from '../../../../modules/financial/transactions/repositories/transaction.repository';
-import { ITransaction, TransactionType, TransactionStatus, RecurrencePattern } from '../../../../modules/financial/transactions/interfaces/transaction.interface';
-import mongoose from 'mongoose';
+import { ITransaction, TransactionType, TransactionStatus, PaymentMethod, RecurrencePattern } from '../../../../modules/financial/transactions/interfaces/transaction.interface';
 
-// Mock the transaction repository
+// Mock the TransactionRepository
 jest.mock('../../../../modules/financial/transactions/repositories/transaction.repository');
 jest.mock('../../../../shared/services/logger.service', () => ({
   logger: {
@@ -13,450 +13,528 @@ jest.mock('../../../../shared/services/logger.service', () => ({
   },
 }));
 
-const MockTransactionRepository = TransactionRepository as jest.MockedClass<typeof TransactionRepository>;
+const MockedTransactionRepository = TransactionRepository as jest.MockedClass<typeof TransactionRepository>;
 
-// TEMPORARILY DISABLED - Type compilation errors need to be fixed
-/*
 describe('TransactionService', () => {
   let transactionService: TransactionService;
   let mockTransactionRepository: jest.Mocked<TransactionRepository>;
-  let mockUserId: string;
+
+  const mockUserId = 'user123';
+  const mockTransactionId = '507f1f77bcf86cd799439011';
+  const mockCategoryId = '507f1f77bcf86cd799439012';
+  const mockAccountId = '507f1f77bcf86cd799439013';
+
+  const mockTransaction = {
+    _id: new mongoose.Types.ObjectId(mockTransactionId),
+    userId: new mongoose.Types.ObjectId(mockUserId),
+    categoryId: new mongoose.Types.ObjectId(mockCategoryId),
+    accountId: new mongoose.Types.ObjectId(mockAccountId),
+    title: 'Test Transaction',
+    description: 'Test Description',
+    amount: 100.50,
+    currency: 'USD',
+    type: TransactionType.EXPENSE,
+    status: TransactionStatus.COMPLETED,
+    paymentMethod: PaymentMethod.CASH,
+    tags: ['test', 'sample'],
+    date: new Date('2024-01-15'),
+    timezone: 'UTC',
+    isRecurring: false,
+    recurrencePattern: RecurrencePattern.NONE,
+    attachments: [],
+    notes: 'Test notes',
+    source: 'manual',
+    isDeleted: false,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    calculateNextOccurrence: jest.fn(),
+  } as unknown as ITransaction;
+
+  const mockIncomeTransaction = {
+    ...mockTransaction,
+    _id: new mongoose.Types.ObjectId('507f1f77bcf86cd799439014'),
+    type: TransactionType.INCOME,
+    amount: 2000.00,
+    title: 'Salary',
+  } as unknown as ITransaction;
 
   beforeEach(() => {
-    jest.clearAllMocks();
-    
-    mockUserId = '507f1f77bcf86cd799439011';
-    
-    // Create mock instances
-    mockTransactionRepository = new MockTransactionRepository() as jest.Mocked<TransactionRepository>;
-    
-    // Mock the constructor calls
-    (TransactionRepository as any).mockImplementation(() => mockTransactionRepository);
-    
+    // Create a fresh instance of the service
     transactionService = new TransactionService();
+    
+    // Get the mocked repository instance
+    mockTransactionRepository = (transactionService as any).transactionRepository;
+    
+    // Reset all mocks
+    jest.clearAllMocks();
   });
 
   describe('createTransaction', () => {
-    const mockTransactionData = {
-      title: 'Test Transaction',
-      amount: 100,
+    const transactionData = {
+      categoryId: new mongoose.Types.ObjectId(mockCategoryId),
+      accountId: new mongoose.Types.ObjectId(mockAccountId),
       type: TransactionType.EXPENSE,
-      categoryId: '507f1f77bcf86cd799439012',
-      date: new Date(),
+      amount: 75.25,
+      title: 'New Transaction',
+      description: 'New Description',
+      currency: 'USD',
+      status: TransactionStatus.COMPLETED,
+      paymentMethod: PaymentMethod.CASH,
+      date: new Date('2024-01-20'),
+      tags: ['food', 'lunch'],
+      notes: 'Lunch expense',
+      timezone: 'UTC',
+      source: 'manual',
     };
 
     it('should create a transaction successfully', async () => {
-      const mockCreatedTransaction = {
-        _id: new mongoose.Types.ObjectId('507f1f77bcf86cd799439013'),
-        ...mockTransactionData,
-        userId: new mongoose.Types.ObjectId(mockUserId),
-        status: TransactionStatus.COMPLETED,
-        isRecurring: false,
-        recurrencePattern: RecurrencePattern.NONE,
-        tags: [],
-        attachments: [],
-        source: 'manual',
-        timezone: 'UTC',
-      };
+      const newTransaction = { ...mockTransaction, ...transactionData };
+      mockTransactionRepository.create.mockResolvedValue(newTransaction);
 
-      mockTransactionRepository.create.mockResolvedValue(mockCreatedTransaction);
+      const result = await transactionService.createTransaction(transactionData as any, mockUserId);
 
-      const result = await transactionService.createTransaction(mockTransactionData, mockUserId);
-
+      expect(result).toEqual(newTransaction);
       expect(mockTransactionRepository.create).toHaveBeenCalledWith({
-        ...mockTransactionData,
+        ...transactionData,
         userId: new mongoose.Types.ObjectId(mockUserId),
         status: TransactionStatus.COMPLETED,
         isRecurring: false,
         recurrencePattern: RecurrencePattern.NONE,
-        tags: [],
+        tags: ['food', 'lunch'],
         attachments: [],
         source: 'manual',
         timezone: 'UTC',
       });
-      expect(result).toEqual(mockCreatedTransaction);
     });
 
-    it('should create a recurring transaction with series', async () => {
-      const recurringTransactionData = {
-        ...mockTransactionData,
+    it('should handle recurring transaction creation', async () => {
+      const recurringData = {
+        ...transactionData,
         isRecurring: true,
         recurrencePattern: RecurrencePattern.MONTHLY,
-        nextOccurrence: new Date('2024-02-01'),
+        recurrenceInterval: 1,
+        recurrenceEndDate: new Date('2024-12-31'),
       };
 
-      const mockCreatedTransaction = {
-        _id: new mongoose.Types.ObjectId('507f1f77bcf86cd799439013'),
-        ...recurringTransactionData,
-        userId: new mongoose.Types.ObjectId(mockUserId),
-        status: TransactionStatus.COMPLETED,
-        tags: [],
-        attachments: [],
-        source: 'manual',
-        timezone: 'UTC',
-      };
+      const newTransaction = { ...mockTransaction, ...recurringData };
+      mockTransactionRepository.create.mockResolvedValue(newTransaction);
 
-      mockTransactionRepository.create.mockResolvedValue(mockCreatedTransaction);
-      
-      // Mock the createRecurringSeries method
-      jest.spyOn(transactionService as any, 'createRecurringSeries').mockResolvedValue(undefined);
+      const result = await transactionService.createTransaction(recurringData as any, mockUserId);
 
-      const result = await transactionService.createTransaction(recurringTransactionData, mockUserId);
-
-      expect(result).toEqual(mockCreatedTransaction);
-      expect(transactionService['createRecurringSeries']).toHaveBeenCalledWith(mockCreatedTransaction);
-    });
-
-    it('should handle repository errors gracefully', async () => {
-      const error = new Error('Database connection failed');
-      mockTransactionRepository.create.mockRejectedValue(error);
-
-      await expect(transactionService.createTransaction(mockTransactionData, mockUserId)).rejects.toThrow('Database connection failed');
+      expect(result).toEqual(newTransaction);
+      expect(result.isRecurring).toBe(true);
+      expect(result.recurrencePattern).toBe(RecurrencePattern.MONTHLY);
     });
   });
 
   describe('getTransactionById', () => {
-    const mockTransactionId = '507f1f77bcf86cd799439013';
-
     it('should get transaction by ID successfully', async () => {
-      const mockTransaction = {
-        _id: new mongoose.Types.ObjectId(mockTransactionId),
-        userId: new mongoose.Types.ObjectId(mockUserId),
-        title: 'Test Transaction',
-        amount: 100,
-        type: TransactionType.EXPENSE,
-      };
-
       mockTransactionRepository.findById.mockResolvedValue(mockTransaction);
 
       const result = await transactionService.getTransactionById(mockTransactionId, mockUserId);
 
-      expect(mockTransactionRepository.findById).toHaveBeenCalledWith(mockTransactionId);
       expect(result).toEqual(mockTransaction);
+      expect(mockTransactionRepository.findById).toHaveBeenCalledWith(mockTransactionId);
     });
 
     it('should throw error when transaction not found', async () => {
       mockTransactionRepository.findById.mockResolvedValue(null);
 
-      await expect(transactionService.getTransactionById(mockTransactionId, mockUserId)).rejects.toThrow('Transaction not found');
+      await expect(
+        transactionService.getTransactionById(mockTransactionId, mockUserId)
+      ).rejects.toThrow('Transaction not found');
     });
 
-    it('should throw error when user access is denied', async () => {
-      const mockTransaction = {
-        _id: new mongoose.Types.ObjectId(mockTransactionId),
-        userId: new mongoose.Types.ObjectId('507f1f77bcf86cd799439014'), // Different user
-        title: 'Test Transaction',
-        amount: 100,
-        type: TransactionType.EXPENSE,
-      };
+    it('should throw error when transaction belongs to different user', async () => {
+      const differentUserTransaction = {
+        ...mockTransaction,
+        userId: new mongoose.Types.ObjectId('different-user'),
+      } as unknown as ITransaction;
 
-      mockTransactionRepository.findById.mockResolvedValue(mockTransaction);
+      mockTransactionRepository.findById.mockResolvedValue(differentUserTransaction);
 
-      await expect(transactionService.getTransactionById(mockTransactionId, mockUserId)).rejects.toThrow('Access denied');
-    });
-
-    it('should handle repository errors gracefully', async () => {
-      const error = new Error('Database error');
-      mockTransactionRepository.findById.mockRejectedValue(error);
-
-      await expect(transactionService.getTransactionById(mockTransactionId, mockUserId)).rejects.toThrow('Database error');
+      await expect(
+        transactionService.getTransactionById(mockTransactionId, mockUserId)
+      ).rejects.toThrow('Access denied');
     });
   });
 
   describe('getUserTransactions', () => {
-    const mockUserId = '507f1f77bcf86cd799439011';
-
     it('should get user transactions with default options', async () => {
-      const mockTransactions = [
-        { _id: '1', title: 'Transaction 1', amount: 100 },
-        { _id: '2', title: 'Transaction 2', amount: 200 },
-      ];
+      const mockResult = {
+        transactions: [mockTransaction],
+        total: 1,
+        page: 1,
+        totalPages: 1,
+      };
 
-      mockTransactionRepository.find.mockResolvedValue(mockTransactions);
+      mockTransactionRepository.count.mockResolvedValue(1);
+      mockTransactionRepository.find.mockResolvedValue([mockTransaction]);
 
       const result = await transactionService.getUserTransactions(mockUserId);
 
-      expect(mockTransactionRepository.find).toHaveBeenCalledWith({
+      expect(result).toEqual(mockResult);
+      expect(mockTransactionRepository.count).toHaveBeenCalledWith({
         userId: new mongoose.Types.ObjectId(mockUserId),
       });
-      expect(result).toEqual(mockTransactions);
     });
 
-    it('should get user transactions with custom options', async () => {
+    it('should get user transactions with custom filters', async () => {
+      const customOptions = {
+        startDate: new Date('2024-01-01'),
+        endDate: new Date('2024-01-31'),
+        categoryId: mockCategoryId,
+        accountId: mockAccountId,
+        type: TransactionType.EXPENSE,
+        minAmount: 50,
+        maxAmount: 200,
+        tags: ['food'],
+        page: 2,
+        limit: 10,
+      };
+
+      const mockResult = {
+        transactions: [mockTransaction],
+        total: 1,
+        page: 2,
+        totalPages: 1,
+      };
+
+      mockTransactionRepository.count.mockResolvedValue(1);
+      mockTransactionRepository.find.mockResolvedValue([mockTransaction]);
+
+      const result = await transactionService.getUserTransactions(mockUserId, customOptions);
+
+      expect(result).toEqual(mockResult);
+      expect(mockTransactionRepository.count).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: new mongoose.Types.ObjectId(mockUserId),
+          date: {
+            $gte: customOptions.startDate,
+            $lte: customOptions.endDate,
+          },
+          categoryId: new mongoose.Types.ObjectId(mockCategoryId),
+          accountId: new mongoose.Types.ObjectId(mockAccountId),
+          type: TransactionType.EXPENSE,
+          amount: {
+            $gte: customOptions.minAmount,
+            $lte: customOptions.maxAmount,
+          },
+          tags: { $in: customOptions.tags },
+        })
+      );
+    });
+
+    it('should handle date range filtering', async () => {
       const options = {
         startDate: new Date('2024-01-01'),
         endDate: new Date('2024-01-31'),
-        type: TransactionType.EXPENSE,
-        limit: 10,
-        sortBy: 'date',
-        sortOrder: 'desc',
       };
 
-      const mockTransactions = [
-        { _id: '1', title: 'Expense 1', amount: 100, type: TransactionType.EXPENSE },
-      ];
+      mockTransactionRepository.count.mockResolvedValue(1);
+      mockTransactionRepository.find.mockResolvedValue([mockTransaction]);
 
-      mockTransactionRepository.find.mockResolvedValue(mockTransactions);
+      await transactionService.getUserTransactions(mockUserId, options);
 
-      const result = await transactionService.getUserTransactions(mockUserId, options);
-
-      expect(mockTransactionRepository.find).toHaveBeenCalledWith({
-        userId: new mongoose.Types.ObjectId(mockUserId),
-        date: {
-          $gte: options.startDate,
-          $lte: options.endDate,
-        },
-        type: options.type,
-      });
-      expect(result).toEqual(mockTransactions);
+      expect(mockTransactionRepository.count).toHaveBeenCalledWith(
+        expect.objectContaining({
+          date: {
+            $gte: options.startDate,
+            $lte: options.endDate,
+          },
+        })
+      );
     });
 
-    it('should handle repository errors gracefully', async () => {
-      const error = new Error('Database error');
-      mockTransactionRepository.find.mockRejectedValue(error);
+    it('should handle amount range filtering', async () => {
+      const options = { minAmount: 100, maxAmount: 500 };
 
-      await expect(transactionService.getUserTransactions(mockUserId)).rejects.toThrow('Database error');
+      mockTransactionRepository.count.mockResolvedValue(1);
+      mockTransactionRepository.find.mockResolvedValue([mockTransaction]);
+
+      await transactionService.getUserTransactions(mockUserId, options);
+
+      expect(mockTransactionRepository.count).toHaveBeenCalledWith(
+        expect.objectContaining({
+          amount: {
+            $gte: 100,
+            $lte: 500,
+          },
+        })
+      );
+    });
+
+    it('should handle tag filtering', async () => {
+      const options = { tags: ['food', 'transport'] };
+
+      mockTransactionRepository.count.mockResolvedValue(1);
+      mockTransactionRepository.find.mockResolvedValue([mockTransaction]);
+
+      await transactionService.getUserTransactions(mockUserId, options);
+
+      expect(mockTransactionRepository.count).toHaveBeenCalledWith(
+        expect.objectContaining({
+          tags: { $in: ['food', 'transport'] },
+        })
+      );
+    });
+
+    it('should calculate total pages correctly', async () => {
+      mockTransactionRepository.count.mockResolvedValue(25);
+      mockTransactionRepository.find.mockResolvedValue([mockTransaction]);
+
+      const result = await transactionService.getUserTransactions(mockUserId, { limit: 10 });
+
+      expect(result.totalPages).toBe(3); // Math.ceil(25 / 10)
     });
   });
 
   describe('updateTransaction', () => {
-    const mockTransactionId = '507f1f77bcf86cd799439013';
-    const mockUpdateData = {
+    const updateData = {
+      amount: 125.75,
       title: 'Updated Transaction',
-      amount: 150,
+      description: 'Updated Description',
+      tags: ['updated', 'modified'],
     };
 
     it('should update transaction successfully', async () => {
-      const mockExistingTransaction = {
-        _id: new mongoose.Types.ObjectId(mockTransactionId),
-        userId: new mongoose.Types.ObjectId(mockUserId),
-        title: 'Original Transaction',
-        amount: 100,
-      };
+      const updatedTransaction = { ...mockTransaction, ...updateData };
+      mockTransactionRepository.findById.mockResolvedValue(mockTransaction);
+      mockTransactionRepository.updateById.mockResolvedValue(updatedTransaction as any);
 
-      const mockUpdatedTransaction = {
-        ...mockExistingTransaction,
-        ...mockUpdateData,
-      };
+      const result = await transactionService.updateTransaction(mockTransactionId, updateData, mockUserId);
 
-      mockTransactionRepository.findById.mockResolvedValue(mockExistingTransaction);
-      mockTransactionRepository.findByIdAndUpdate.mockResolvedValue(mockUpdatedTransaction);
-
-      const result = await transactionService.updateTransaction(mockTransactionId, mockUpdateData, mockUserId);
-
-      expect(mockTransactionRepository.findById).toHaveBeenCalledWith(mockTransactionId);
-      expect(mockTransactionRepository.findByIdAndUpdate).toHaveBeenCalledWith(
+      expect(result).toEqual(updatedTransaction);
+      expect(mockTransactionRepository.updateById).toHaveBeenCalledWith(
         mockTransactionId,
-        mockUpdateData,
+        updateData,
         { new: true, runValidators: true }
       );
-      expect(result).toEqual(mockUpdatedTransaction);
     });
 
     it('should throw error when transaction not found', async () => {
       mockTransactionRepository.findById.mockResolvedValue(null);
 
-      await expect(transactionService.updateTransaction(mockTransactionId, mockUpdateData, mockUserId)).rejects.toThrow('Transaction not found');
+      await expect(
+        transactionService.updateTransaction(mockTransactionId, updateData, mockUserId)
+      ).rejects.toThrow('Transaction not found');
     });
 
-    it('should throw error when user access is denied', async () => {
-      const mockTransaction = {
-        _id: new mongoose.Types.ObjectId(mockTransactionId),
-        userId: new mongoose.Types.ObjectId('507f1f77bcf86cd799439014'), // Different user
-        title: 'Original Transaction',
-        amount: 100,
-      };
+    it('should throw error when transaction belongs to different user', async () => {
+      const differentUserTransaction = {
+        ...mockTransaction,
+        userId: new mongoose.Types.ObjectId('different-user'),
+      } as unknown as ITransaction;
 
-      mockTransactionRepository.findById.mockResolvedValue(mockTransaction);
+      mockTransactionRepository.findById.mockResolvedValue(differentUserTransaction);
 
-      await expect(transactionService.updateTransaction(mockTransactionId, mockUpdateData, mockUserId)).rejects.toThrow('Access denied');
+      await expect(
+        transactionService.updateTransaction(mockTransactionId, updateData, mockUserId)
+      ).rejects.toThrow('Access denied');
     });
 
-    it('should handle repository errors gracefully', async () => {
-      const mockTransaction = {
-        _id: new mongoose.Types.ObjectId(mockTransactionId),
-        userId: new mongoose.Types.ObjectId(mockUserId),
-        title: 'Original Transaction',
-        amount: 100,
-      };
-
+    it('should throw error when update fails', async () => {
       mockTransactionRepository.findById.mockResolvedValue(mockTransaction);
-      const error = new Error('Update failed');
-      mockTransactionRepository.findByIdAndUpdate.mockRejectedValue(error);
+      mockTransactionRepository.updateById.mockResolvedValue(null);
 
-      await expect(transactionService.updateTransaction(mockTransactionId, mockUpdateData, mockUserId)).rejects.toThrow('Update failed');
+      await expect(
+        transactionService.updateTransaction(mockTransactionId, updateData, mockUserId)
+      ).rejects.toThrow('Failed to update transaction');
     });
   });
 
   describe('deleteTransaction', () => {
-    const mockTransactionId = '507f1f77bcf86cd799439013';
-
     it('should delete transaction successfully', async () => {
-      const mockTransaction = {
-        _id: new mongoose.Types.ObjectId(mockTransactionId),
-        userId: new mongoose.Types.ObjectId(mockUserId),
-        title: 'Test Transaction',
-        amount: 100,
-      };
-
       mockTransactionRepository.findById.mockResolvedValue(mockTransaction);
-      mockTransactionRepository.findByIdAndDelete.mockResolvedValue(mockTransaction);
+      mockTransactionRepository.updateById.mockResolvedValue(mockTransaction);
 
-      const result = await transactionService.deleteTransaction(mockTransactionId, mockUserId);
+      await transactionService.deleteTransaction(mockTransactionId, mockUserId);
 
-      expect(mockTransactionRepository.findById).toHaveBeenCalledWith(mockTransactionId);
-      expect(mockTransactionRepository.findByIdAndDelete).toHaveBeenCalledWith(mockTransactionId);
-      expect(result).toEqual(mockTransaction);
+      expect(mockTransactionRepository.updateById).toHaveBeenCalledWith(mockTransactionId, {
+        isDeleted: true,
+        deletedAt: expect.any(Date),
+      });
     });
 
     it('should throw error when transaction not found', async () => {
       mockTransactionRepository.findById.mockResolvedValue(null);
 
-      await expect(transactionService.deleteTransaction(mockTransactionId, mockUserId)).rejects.toThrow('Transaction not found');
+      await expect(
+        transactionService.deleteTransaction(mockTransactionId, mockUserId)
+      ).rejects.toThrow('Transaction not found');
     });
 
-    it('should throw error when user access is denied', async () => {
-      const mockTransaction = {
-        _id: new mongoose.Types.ObjectId(mockTransactionId),
-        userId: new mongoose.Types.ObjectId('507f1f77bcf86cd799439014'), // Different user
-        title: 'Test Transaction',
-        amount: 100,
-      };
+    it('should throw error when transaction belongs to different user', async () => {
+      const differentUserTransaction = {
+        ...mockTransaction,
+        userId: new mongoose.Types.ObjectId('different-user'),
+      } as unknown as ITransaction;
 
-      mockTransactionRepository.findById.mockResolvedValue(mockTransaction);
+      mockTransactionRepository.findById.mockResolvedValue(differentUserTransaction);
 
-      await expect(transactionService.deleteTransaction(mockTransactionId, mockUserId)).rejects.toThrow('Access denied');
-    });
-
-    it('should handle repository errors gracefully', async () => {
-      const mockTransaction = {
-        _id: new mongoose.Types.ObjectId(mockTransactionId),
-        userId: new mongoose.Types.ObjectId(mockUserId),
-        title: 'Test Transaction',
-        amount: 100,
-      };
-
-      mockTransactionRepository.findById.mockResolvedValue(mockTransaction);
-      const error = new Error('Delete failed');
-      mockTransactionRepository.findByIdAndDelete.mockRejectedValue(error);
-
-      await expect(transactionService.deleteTransaction(mockTransactionId, mockUserId)).rejects.toThrow('Delete failed');
+      await expect(
+        transactionService.deleteTransaction(mockTransactionId, mockUserId)
+      ).rejects.toThrow('Access denied');
     });
   });
 
   describe('getTransactionStats', () => {
-    const mockUserId = '507f1f77bcf86cd799439011';
-
     it('should get transaction statistics successfully', async () => {
       const mockStats = {
-        totalTransactions: 10,
-        totalAmount: 1000,
+        totalTransactions: 50,
+        totalIncome: 5000,
+        totalExpenses: 3000,
+        totalTransfers: 0,
+        totalAdjustments: 0,
+        averageTransactionAmount: 100,
         transactionsByType: {
-          [TransactionType.INCOME]: { total: 2000, count: 3 },
-          [TransactionType.EXPENSE]: { total: 1000, count: 7 },
+          [TransactionType.INCOME]: { count: 10, total: 5000 },
+          [TransactionType.EXPENSE]: { count: 40, total: 3000 },
+          [TransactionType.TRANSFER]: { count: 0, total: 0 },
+          [TransactionType.ADJUSTMENT]: { count: 0, total: 0 },
         },
+        transactionsByCategory: [
+          { categoryId: mockCategoryId, categoryName: 'Food', count: 20, total: 1000, percentage: 20 },
+        ],
+        monthlyTrends: [
+          { month: '2024-01', income: 2500, expenses: 1500, net: 1000 },
+          { month: '2024-02', income: 2500, expenses: 1500, net: 1000 },
+        ],
       };
 
-      mockTransactionRepository.aggregate.mockResolvedValue(mockStats);
+      mockTransactionRepository.count.mockResolvedValue(50);
+      mockTransactionRepository.aggregate
+        .mockResolvedValueOnce([{ total: 5000 }]) // totalIncome
+        .mockResolvedValueOnce([{ total: 3000 }]) // totalExpenses
+        .mockResolvedValueOnce([]) // totalTransfers
+        .mockResolvedValueOnce([]) // totalAdjustments
+        .mockResolvedValueOnce([
+          { _id: TransactionType.INCOME, count: 10, total: 5000 },
+          { _id: TransactionType.EXPENSE, count: 40, total: 3000 },
+        ]) // transactionsByType
+        .mockResolvedValueOnce([
+          { _id: mockCategoryId, categoryName: 'Food', count: 20, total: 1000, percentage: 0 },
+        ]) // transactionsByCategory
+        .mockResolvedValueOnce([
+          { _id: { year: 2024, month: 1 }, income: 2500, expenses: 1500 },
+          { _id: { year: 2024, month: 2 }, income: 2500, expenses: 1500 },
+        ]); // monthlyTrends
+
+      const result = await transactionService.getTransactionStats(mockUserId, {
+        startDate: new Date('2024-01-01'),
+        endDate: new Date('2024-02-29'),
+      });
+
+      expect(result.totalTransactions).toBe(50);
+      expect(result.totalIncome).toBe(5000);
+      expect(result.totalExpenses).toBe(3000);
+      expect(result.transactionsByType[TransactionType.INCOME].count).toBe(10);
+      expect(result.transactionsByType[TransactionType.EXPENSE].count).toBe(40);
+      expect(mockTransactionRepository.count).toHaveBeenCalled();
+      expect(mockTransactionRepository.aggregate).toHaveBeenCalledTimes(7);
+    });
+
+    it('should handle empty transaction data', async () => {
+      mockTransactionRepository.count.mockResolvedValue(0);
+      mockTransactionRepository.aggregate
+        .mockResolvedValueOnce([]) // totalIncome
+        .mockResolvedValueOnce([]) // totalExpenses
+        .mockResolvedValueOnce([]) // totalTransfers
+        .mockResolvedValueOnce([]) // totalAdjustments
+        .mockResolvedValueOnce([]) // transactionsByType
+        .mockResolvedValueOnce([]) // transactionsByCategory
+        .mockResolvedValueOnce([]); // monthlyTrends
 
       const result = await transactionService.getTransactionStats(mockUserId);
 
-      expect(mockTransactionRepository.aggregate).toHaveBeenCalled();
-      expect(result).toEqual(mockStats);
+      expect(result.totalTransactions).toBe(0);
+      expect(result.totalIncome).toBe(0);
+      expect(result.totalExpenses).toBe(0);
+    });
+  });
+
+  describe('bulkCreateTransactions', () => {
+    const transactionsData = [
+      {
+        categoryId: new mongoose.Types.ObjectId(mockCategoryId),
+        accountId: new mongoose.Types.ObjectId(mockAccountId),
+        type: TransactionType.EXPENSE,
+        amount: 50,
+        title: 'Transaction 1',
+        description: 'Transaction 1',
+        currency: 'USD',
+        status: TransactionStatus.COMPLETED,
+        paymentMethod: PaymentMethod.CASH,
+        date: new Date('2024-01-15'),
+        timezone: 'UTC',
+        source: 'manual',
+      },
+      {
+        categoryId: new mongoose.Types.ObjectId(mockCategoryId),
+        accountId: new mongoose.Types.ObjectId(mockAccountId),
+        type: TransactionType.INCOME,
+        amount: 1000,
+        title: 'Transaction 2',
+        description: 'Transaction 2',
+        currency: 'USD',
+        status: TransactionStatus.COMPLETED,
+        paymentMethod: PaymentMethod.CASH,
+        date: new Date('2024-01-16'),
+        timezone: 'UTC',
+        source: 'manual',
+      },
+    ];
+
+    it('should create transactions in bulk successfully', async () => {
+      const createdTransactions = [
+        { ...mockTransaction, title: 'Transaction 1' },
+        { ...mockTransaction, title: 'Transaction 2' },
+      ];
+
+      mockTransactionRepository.create
+        .mockResolvedValueOnce(createdTransactions[0] as any)
+        .mockResolvedValueOnce(createdTransactions[1] as any);
+
+      const result = await transactionService.bulkCreateTransactions(transactionsData, mockUserId);
+
+      expect(result).toEqual(createdTransactions);
+      expect(mockTransactionRepository.create).toHaveBeenCalledTimes(2);
     });
 
-    it('should get transaction statistics with date range', async () => {
-      const options = {
-        startDate: new Date('2024-01-01'),
-        endDate: new Date('2024-01-31'),
-      };
+    it('should continue processing when some transactions fail', async () => {
+      const createdTransactions = [{ ...mockTransaction, title: 'Transaction 1' }];
 
-      const mockStats = {
-        totalTransactions: 5,
-        totalAmount: 500,
-        transactionsByType: {},
-      };
+      mockTransactionRepository.create
+        .mockResolvedValueOnce(createdTransactions[0] as any)
+        .mockRejectedValueOnce(new Error('Validation failed'));
 
-      mockTransactionRepository.aggregate.mockResolvedValue(mockStats);
+      const result = await transactionService.bulkCreateTransactions(transactionsData, mockUserId);
 
-      await transactionService.getTransactionStats(mockUserId, options);
-
-      expect(mockTransactionRepository.aggregate).toHaveBeenCalled();
-    });
-
-    it('should handle repository errors gracefully', async () => {
-      const error = new Error('Aggregation failed');
-      mockTransactionRepository.aggregate.mockRejectedValue(error);
-
-      await expect(transactionService.getTransactionStats(mockUserId)).rejects.toThrow('Aggregation failed');
+      expect(result).toEqual(createdTransactions);
+      expect(result.length).toBe(1);
     });
   });
 
   describe('getRecurringTransactions', () => {
-    const mockUserId = '507f1f77bcf86cd799439011';
-
     it('should get recurring transactions successfully', async () => {
-      const mockRecurringTransactions = [
-        { _id: '1', title: 'Monthly Rent', isRecurring: true, recurrencePattern: RecurrencePattern.MONTHLY },
-        { _id: '2', title: 'Weekly Groceries', isRecurring: true, recurrencePattern: RecurrencePattern.WEEKLY },
-      ];
+      const recurringTransaction = {
+        ...mockTransaction,
+        isRecurring: true,
+        recurrencePattern: RecurrencePattern.MONTHLY,
+        recurrenceInterval: 1,
+        recurrenceEndDate: new Date('2024-12-31'),
+      } as unknown as ITransaction;
 
-      mockTransactionRepository.find.mockResolvedValue(mockRecurringTransactions);
+      mockTransactionRepository.find.mockResolvedValue([recurringTransaction]);
 
       const result = await transactionService.getRecurringTransactions(mockUserId);
 
+      expect(result).toEqual([recurringTransaction]);
       expect(mockTransactionRepository.find).toHaveBeenCalledWith({
         userId: new mongoose.Types.ObjectId(mockUserId),
         isRecurring: true,
+        isDeleted: { $ne: true },
       });
-      expect(result).toEqual(mockRecurringTransactions);
     });
-
-    it('should handle repository errors gracefully', async () => {
-      const error = new Error('Database error');
-      mockTransactionRepository.find.mockRejectedValue(error);
-
-      await expect(transactionService.getRecurringTransactions(mockUserId)).rejects.toThrow('Database error');
-    });
-  });
-
-  describe('searchTransactions', () => {
-    const mockUserId = '507f1f77bcf86cd799439011';
-
-    it('should search transactions successfully', async () => {
-      const searchQuery = 'groceries';
-      const mockSearchResults = [
-        { _id: '1', title: 'Weekly Groceries', amount: 100 },
-        { _id: '2', title: 'Monthly Groceries', amount: 400 },
-      ];
-
-      mockTransactionRepository.find.mockResolvedValue(mockSearchResults);
-
-      const result = await transactionService.searchTransactions(mockUserId, searchQuery);
-
-      expect(mockTransactionRepository.find).toHaveBeenCalledWith({
-        userId: new mongoose.Types.ObjectId(mockUserId),
-        $or: [
-          { title: { $regex: searchQuery, $options: 'i' } },
-          { description: { $regex: searchQuery, $options: 'i' } },
-          { tags: { $in: [new RegExp(searchQuery, 'i')] } },
-        ],
-      });
-      expect(result).toEqual(mockSearchResults);
-    });
-
-    it('should handle repository errors gracefully', async () => {
-      const searchQuery = 'groceries';
-      const error = new Error('Search failed');
-      mockTransactionRepository.find.mockRejectedValue(error);
-
-      await expect(transactionService.searchTransactions(mockUserId, searchQuery)).rejects.toThrow('Search failed');
-    });
-  });
-});
-*/
-describe('TransactionService', () => {
-  it('should be temporarily disabled due to type compilation issues', () => {
-    expect(true).toBe(true);
   });
 });

@@ -224,31 +224,32 @@ describe('Financial Routes - Working Test', () => {
   });
 
   describe('Route Configuration', () => {
-    it('should have all expected routes', async () => {
-      // Test routes by making actual requests to verify they exist
+    it('should have all expected routes', () => {
+      const routes = app._router.stack
+        .filter((layer: any) => layer.route)
+        .map((layer: any) => ({
+          path: layer.route.path,
+          methods: Object.keys(layer.route.methods),
+        }));
+
       const expectedRoutes = [
-        { path: '/dashboard', method: 'get' },
-        { path: '/reports', method: 'post' },
-        { path: '/budget-analysis', method: 'get' },
-        { path: '/insights', method: 'get' },
-        { path: '/export', method: 'post' },
-        { path: '/summary', method: 'get' },
+        { path: '/dashboard', methods: ['get'] },
+        { path: '/reports', methods: ['post'] },
+        { path: '/budget-analysis', methods: ['get'] },
+        { path: '/insights', methods: ['get'] },
+        { path: '/export', methods: ['post'] },
+        { path: '/summary', methods: ['get'] },
       ];
 
-      for (const route of expectedRoutes) {
-        let response;
-        if (route.method === 'get') {
-          response = await request(app).get(`/api/financial${route.path}`);
-        } else {
-          response = await request(app)
-            .post(`/api/financial${route.path}`)
-            .set('Content-Type', 'application/json')
-            .send({});
-        }
-        
-        // Route exists if we get a response (not 404)
-        expect(response.status).not.toBe(404);
-      }
+      expectedRoutes.forEach(expectedRoute => {
+        const foundRoute = routes.find(
+          (route: any) => route.path === expectedRoute.path
+        );
+        expect(foundRoute).toBeDefined();
+        expect(foundRoute?.methods).toEqual(
+          expect.arrayContaining(expectedRoute.methods)
+        );
+      });
     });
 
     it('should apply authentication to all routes', async () => {
