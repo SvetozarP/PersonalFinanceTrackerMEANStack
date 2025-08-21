@@ -1,6 +1,5 @@
 import mongoose, { Document, Schema } from 'mongoose';
 import bcrypt from 'bcryptjs';
-import uniqueValidator from 'mongoose-unique-validator';
 
 // User interface
 
@@ -85,12 +84,34 @@ userSchema.virtual('fullName').get(function () {
 });
 
 // Hash password before saving
-userSchema.pre('save', async function (next) {
+userSchema.pre('save', async function (next: (error?: Error) => void) {
   if (!this.isModified('password')) return next();
 
   try {
     const salt = await bcrypt.genSalt(12);
     this.password = await bcrypt.hash(this.password, salt);
+    next();
+  } catch (error) {
+    next(error as Error);
+  }
+});
+
+// Check email uniqueness before saving
+userSchema.pre('save', async function (next: (error?: Error) => void) {
+  if (!this.isModified('email')) return next();
+
+  try {
+    const UserModel = this.constructor as mongoose.Model<IUser>;
+    const existingUser = await UserModel.findOne({
+      email: this.email,
+      _id: { $ne: this._id } // Exclude current document when updating
+    });
+
+    if (existingUser) {
+      const error = new Error('Email already exists');
+      (error as any).name = 'ValidationError';
+      return next(error);
+    }
     next();
   } catch (error) {
     next(error as Error);
@@ -103,10 +124,5 @@ userSchema.methods.comparePassword = async function (
 ): Promise<boolean> {
   return bcrypt.compare(candidatePassword, this.password);
 };
-
-// Apply unique validator plugin
-userSchema.plugin(uniqueValidator, {
-  message: 'Error, expected {PATH} to be unique.',
-});
 
 export const User = mongoose.model<IUser>('User', userSchema);

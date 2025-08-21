@@ -25,22 +25,20 @@ export default {
       statements: 80,
     },
   },
-  // Remove setup files to avoid MongoDB connection issues
-  setupFilesAfterEnv: [],
+  // Restore setup files for proper test environment
+  setupFilesAfterEnv: ['<rootDir>/src/__tests__/setup.ts'],
   testTimeout: 30000,
   verbose: true,
   forceExit: true,
   clearMocks: true,
   resetMocks: true,
   restoreMocks: true,
-  // Ignore problematic test files that might cause hanging
   testPathIgnorePatterns: [
-    '<rootDir>/src/__tests__/setup.ts',
-    '<rootDir>/src/__tests__/config/',
-    '<rootDir>/src/__tests__/modules/users/user.model.test.ts',
-    '<rootDir>/src/__tests__/modules/financial/categories/',
-    '<rootDir>/src/__tests__/modules/financial/transactions/',
-    '<rootDir>/src/__tests__/modules/financial/financial.routes.working.test.ts',
-    '<rootDir>/src/__tests__/modules/financial/financial.routes.test.ts',
+    '<rootDir>/src/__tests__/setup.ts'
   ],
+  // Add mock directory configuration
+  moduleDirectories: ['node_modules', 'src'],
+  moduleNameMapper: {
+    '^@/(.*)$': '<rootDir>/src/$1',
+  },
 };

@@ -1,6 +1,5 @@
 import mongoose, { Schema } from 'mongoose';
 import { ICategory, ICategoryModel } from '../interfaces/category.interface';
-import uniqueValidator from 'mongoose-unique-validator';
 
 // Category Schema
 const categorySchema = new Schema<ICategory>(
@@ -104,52 +103,75 @@ categorySchema.virtual('parent', {
   justOne: true,
 });
 
-// Pre-save middleware to update path and level
-categorySchema.pre('save', async function (this: ICategory, next: () => void) {
-  if (this.isModified('parentId')) {
-    if (this.parentId) {
-      // Get parent category to build path
-      const CategoryModel = this.constructor as mongoose.Model<ICategory>;
-      const parent = await CategoryModel.findById(this.parentId);
-      if (parent) {
-        this.path = [...parent.path, parent.name];
-        this.level = parent.level + 1;
+// Pre-save middleware to validate uniqueness and update path and level
+categorySchema.pre('save', async function (this: ICategory, next: (error?: Error) => void) {
+  try {
+    // Check uniqueness before saving
+    const CategoryModel = this.constructor as mongoose.Model<ICategory>;
+    const existingCategory = await CategoryModel.findOne({
+      userId: this.userId,
+      parentId: this.parentId,
+      name: this.name,
+      _id: { $ne: this._id } // Exclude current document when updating
+    });
+
+    if (existingCategory) {
+      const error = new Error('Category name must be unique within the same parent and user');
+      (error as any).name = 'ValidationError';
+      return next(error);
+    }
+
+    // Update path and level if parentId changed
+    if (this.isModified('parentId')) {
+      if (this.parentId) {
+        // Get parent category to build path
+        const parent = await CategoryModel.findById(this.parentId);
+        if (parent) {
+          this.path = [...parent.path, parent.name];
+          this.level = parent.level + 1;
+        } else {
+          // Invalid parent, reset to root
+          this.parentId = undefined;
+          this.path = [];
+          this.level = 0;
+        }
       } else {
-        // Invalid parent, reset to root
-        this.parentId = undefined;
+        // Root directory
         this.path = [];
         this.level = 0;
       }
-    } else {
-      // Root directory
-      this.path = [];
-      this.level = 0;
     }
+    next();
+  } catch (error) {
+    next(error as Error);
   }
-  next();
 });
 
 // Pre-deleteOne middleware to handle children when category is deleted
 categorySchema.pre(
   'deleteOne',
   { document: true, query: false },
-  async function (this: ICategory, next: () => void) {
-    // Move children to parent or make them root categories
-    const CategoryModel = this.constructor as mongoose.Model<ICategory>;
-    const children = await CategoryModel.find({ parentId: this._id });
-    for (const child of children) {
-      if (this.parentId) {
-        // Move to grandparent
-        child.parentId = this.parentId;
-      } else {
-        // Make root category
-        child.parentId = undefined;
-        child.path = [];
-        child.level = 0;
+  async function (this: ICategory, next: (error?: Error) => void) {
+    try {
+      // Move children to parent or make them root categories
+      const CategoryModel = this.constructor as mongoose.Model<ICategory>;
+      const children = await CategoryModel.find({ parentId: this._id });
+      for (const child of children) {
+        if (this.parentId) {
+          // Move to grandparent
+          child.parentId = this.parentId;
+        } else {
+          // Make root category
+          child.parentId = undefined;
+          child.path = [];
+          child.level = 0;
+        }
+        await child.save();
       }
-      await child.save();
+      next();
+    } catch (error) {
+      next(error as Error);
     }
-    next();
   }
 );
 
@@ -194,11 +216,6 @@ categorySchema.statics.getCategoryPath = async function (categoryId: string) {
     fullPath: categoryObj.fullPath,
   };
 };
-
-// Apply unique validator plugin
-categorySchema.plugin(uniqueValidator, {
-  message: 'Error, expected {PATH} to be unique.',
-});
 
 export const Category = mongoose.model<ICategory, ICategoryModel>(
   'Category',

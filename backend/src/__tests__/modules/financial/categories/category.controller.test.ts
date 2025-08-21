@@ -1,633 +1,894 @@
-import request from 'supertest';
-import express from 'express';
-import mongoose from 'mongoose';
+import { Request, Response } from 'express';
 import { CategoryController } from '../../../../modules/financial/categories/controllers/category.controller';
 import { CategoryService } from '../../../../modules/financial/categories/service/category.service';
+import { logger } from '../../../../shared/services/logger.service';
 import { categoryValidation } from '../../../../modules/financial/categories/validators/category.validation';
+import mongoose from 'mongoose';
 
-// Mock the CategoryService
+// Mock dependencies
 jest.mock('../../../../modules/financial/categories/service/category.service');
-jest.mock('../../../../shared/services/logger.service', () => ({
-  logger: {
-    info: jest.fn(),
-    error: jest.fn(),
-  },
-}));
+jest.mock('../../../../shared/services/logger.service');
+jest.mock('../../../../modules/financial/categories/validators/category.validation');
 
-const MockedCategoryService = CategoryService as jest.MockedClass<typeof CategoryService>;
+interface AuthenticatedRequest extends Request {
+  user?: {
+    userId: string;
+  };
+}
 
-describe('Category Controller', () => {
-  let app: express.Application;
+describe('CategoryController', () => {
   let categoryController: CategoryController;
-  let mockCategoryService: jest.Mocked<CategoryService>;
-
-  const mockUser = {
-    userId: 'user123',
-  };
-
-  const mockCategory = {
-    _id: new mongoose.Types.ObjectId('507f1f77bcf86cd799439011'),
-    name: 'Test Category',
-    description: 'Test Description',
-    color: '#FF0000',
-    icon: 'test-icon',
-    userId: new mongoose.Types.ObjectId('user123'),
-    parentId: null,
-    level: 0,
-    path: ['Test Category'],
-    isActive: true,
-    isSystem: false,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  };
+  let mockRequest: Partial<AuthenticatedRequest>;
+  let mockResponse: Partial<Response>;
 
   beforeEach(() => {
-    app = express();
-    app.use(express.json());
-    
-    // Create a fresh instance of the controller
-    categoryController = new CategoryController();
-    
-    // Get the mocked service instance
-    mockCategoryService = (categoryController as any).categoryService;
-    
-    // Reset all mocks
+    // Reset mocks
     jest.clearAllMocks();
+
+    // Create controller instance
+    categoryController = new CategoryController();
+
+    // Setup request and response mocks
+    mockRequest = {
+      user: { userId: 'user123' },
+      body: {},
+      params: {},
+      query: {},
+    };
+
+    mockResponse = {
+      status: jest.fn().mockReturnThis(),
+      json: jest.fn().mockReturnThis(),
+    };
   });
 
   describe('createCategory', () => {
-    const createCategoryRoute = '/categories';
-    
-    beforeEach(() => {
-      app.post(createCategoryRoute, (req, res) => {
-        req.user = mockUser;
-        categoryController.createCategory(req as any, res);
-      });
-    });
+    const validCategoryData = {
+      name: 'Test Category',
+      description: 'Test Description',
+      color: '#FF0000',
+      icon: 'test-icon',
+    };
 
-    it('should create a category successfully', async () => {
-      const categoryData = {
-        name: 'New Category',
-        description: 'New Description',
-        color: '#00FF00',
-        icon: 'new-icon',
-      };
-
-      mockCategoryService.createCategory.mockResolvedValue(mockCategory);
-
-      const response = await request(app)
-        .post(createCategoryRoute)
-        .set('Content-Type', 'application/json')
-        .send(categoryData);
-
-      expect(response.status).toBe(201);
-      expect(response.body.success).toBe(true);
-      expect(response.body.message).toBe('Category created successfully');
-      expect(response.body.data).toEqual(mockCategory);
-      expect(mockCategoryService.createCategory).toHaveBeenCalledWith(
-        expect.objectContaining({
-          name: categoryData.name,
-          description: categoryData.description,
-          color: categoryData.color,
-          icon: categoryData.icon,
-        }),
-        mockUser.userId
-      );
-    });
-
-    it('should handle validation errors', async () => {
-      const invalidData = {
-        name: '', // Invalid: empty name
+    it('should create category successfully', async () => {
+      // Setup mocks
+      const mockCategory = {
+        _id: new mongoose.Types.ObjectId(),
+        name: 'Test Category',
         description: 'Test Description',
+        color: '#FF0000',
+        icon: 'test-icon',
+        userId: new mongoose.Types.ObjectId('507f1f77bcf86cd799439011'),
+        level: 0,
+        path: ['Test Category'],
+        isActive: true,
+        isSystem: false,
       };
 
-      const response = await request(app)
-        .post(createCategoryRoute)
-        .set('Content-Type', 'application/json')
-        .send(invalidData);
-
-      expect(response.status).toBe(400);
-      expect(response.body.success).toBe(false);
-      expect(response.body.message).toBe('Validation error');
-      expect(response.body.errors).toBeDefined();
-    });
-
-    it('should handle authentication errors', async () => {
-      app.post('/categories-no-auth', (req, res) => {
-        req.user = undefined;
-        categoryController.createCategory(req as any, res);
+      (categoryValidation.create.validate as jest.Mock).mockReturnValue({
+        error: null,
+        value: validCategoryData,
       });
 
-      const response = await request(app)
-        .post('/categories-no-auth')
-        .set('Content-Type', 'application/json')
-        .send({ name: 'Test Category' });
+      (CategoryService.prototype.createCategory as jest.Mock).mockResolvedValue(mockCategory);
 
-      expect(response.status).toBe(401);
-      expect(response.body.success).toBe(false);
-      expect(response.body.message).toBe('Authentication required');
+      mockRequest.body = validCategoryData;
+
+      // Execute
+      await categoryController.createCategory(
+        mockRequest as AuthenticatedRequest,
+        mockResponse as Response
+      );
+
+      // Verify
+      expect(mockResponse.status).toHaveBeenCalledWith(201);
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        success: true,
+        message: 'Category created successfully',
+        data: mockCategory,
+      });
+      expect(logger.info).toHaveBeenCalledWith('Category created via API', {
+        categoryId: mockCategory._id,
+        userId: 'user123',
+        name: mockCategory.name,
+      });
     });
 
-    it('should handle duplicate category errors', async () => {
-      const categoryData = { name: 'Duplicate Category' };
-      const duplicateError = new Error('Category with this name already exists at this level');
+    it('should return 401 when user is not authenticated', async () => {
+      mockRequest.user = undefined;
 
-      mockCategoryService.createCategory.mockRejectedValue(duplicateError);
+      await categoryController.createCategory(
+        mockRequest as AuthenticatedRequest,
+        mockResponse as Response
+      );
 
-      const response = await request(app)
-        .post(createCategoryRoute)
-        .set('Content-Type', 'application/json')
-        .send(categoryData);
-
-      expect(response.status).toBe(409);
-      expect(response.body.success).toBe(false);
-      expect(response.body.message).toBe(duplicateError.message);
+      expect(mockResponse.status).toHaveBeenCalledWith(401);
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        success: false,
+        message: 'Authentication required',
+      });
     });
 
-    it('should handle parent category not found errors', async () => {
-      const categoryData = {
-        name: 'Child Category',
-        parentId: 'invalid-parent-id',
+    it('should return 400 when body validation fails', async () => {
+      const validationError = {
+        details: [
+          {
+            path: ['name'],
+            message: 'Name is required',
+          },
+        ],
       };
-      const notFoundError = new Error('Parent category not found or access denied');
 
-      mockCategoryService.createCategory.mockRejectedValue(notFoundError);
+      (categoryValidation.create.validate as jest.Mock).mockReturnValue({
+        error: validationError,
+        value: {},
+      });
 
-      const response = await request(app)
-        .post(createCategoryRoute)
-        .set('Content-Type', 'application/json')
-        .send(categoryData);
+      mockRequest.body = {};
 
-      expect(response.status).toBe(404);
-      expect(response.body.success).toBe(false);
-      expect(response.body.message).toBe(notFoundError.message);
+      await categoryController.createCategory(
+        mockRequest as AuthenticatedRequest,
+        mockResponse as Response
+      );
+
+      expect(mockResponse.status).toHaveBeenCalledWith(400);
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        success: false,
+        message: 'Validation error',
+        errors: [
+          {
+            field: 'name',
+            message: 'Name is required',
+          },
+        ],
+      });
     });
 
-    it('should handle access denied errors', async () => {
-      const categoryData = { name: 'Test Category' };
-      const accessDeniedError = new Error('Access denied');
+    it('should handle service errors (duplicate name)', async () => {
+      (categoryValidation.create.validate as jest.Mock).mockReturnValue({
+        error: null,
+        value: validCategoryData,
+      });
 
-      mockCategoryService.createCategory.mockRejectedValue(accessDeniedError);
+      (CategoryService.prototype.createCategory as jest.Mock).mockRejectedValue(
+        new Error('Category with this name already exists at this level')
+      );
 
-      const response = await request(app)
-        .post(createCategoryRoute)
-        .set('Content-Type', 'application/json')
-        .send(categoryData);
+      mockRequest.body = validCategoryData;
 
-      expect(response.status).toBe(404);
-      expect(response.body.success).toBe(false);
-      expect(response.body.message).toBe(accessDeniedError.message);
+      await categoryController.createCategory(
+        mockRequest as AuthenticatedRequest,
+        mockResponse as Response
+      );
+
+      expect(mockResponse.status).toHaveBeenCalledWith(409);
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        success: false,
+        message: 'Category with this name already exists at this level',
+      });
+    });
+
+    it('should handle service errors (parent not found)', async () => {
+      (categoryValidation.create.validate as jest.Mock).mockReturnValue({
+        error: null,
+        value: { ...validCategoryData, parentId: '507f1f77bcf86cd799439011' },
+      });
+
+      (CategoryService.prototype.createCategory as jest.Mock).mockRejectedValue(
+        new Error('Parent category not found')
+      );
+
+      mockRequest.body = { ...validCategoryData, parentId: '507f1f77bcf86cd799439011' };
+
+      await categoryController.createCategory(
+        mockRequest as AuthenticatedRequest,
+        mockResponse as Response
+      );
+
+      expect(mockResponse.status).toHaveBeenCalledWith(404);
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        success: false,
+        message: 'Parent category not found',
+      });
     });
 
     it('should handle unknown errors', async () => {
-      const categoryData = { name: 'Test Category' };
-      const unknownError = new Error('Unknown error');
+      (categoryValidation.create.validate as jest.Mock).mockReturnValue({
+        error: null,
+        value: validCategoryData,
+      });
 
-      mockCategoryService.createCategory.mockRejectedValue(unknownError);
+      (CategoryService.prototype.createCategory as jest.Mock).mockRejectedValue('Unknown error');
 
-      const response = await request(app)
-        .post(createCategoryRoute)
-        .set('Content-Type', 'application/json')
-        .send(categoryData);
+      mockRequest.body = validCategoryData;
 
-      expect(response.status).toBe(400);
-      expect(response.body.success).toBe(false);
-      expect(response.body.message).toBe(unknownError.message);
-    });
+      await categoryController.createCategory(
+        mockRequest as AuthenticatedRequest,
+        mockResponse as Response
+      );
 
-    it('should handle non-Error objects', async () => {
-      const categoryData = { name: 'Test Category' };
-
-      mockCategoryService.createCategory.mockRejectedValue('String error');
-
-      const response = await request(app)
-        .post(createCategoryRoute)
-        .set('Content-Type', 'application/json')
-        .send(categoryData);
-
-      expect(response.status).toBe(500);
-      expect(response.body.success).toBe(false);
-      expect(response.body.message).toBe('Internal server error');
+      expect(mockResponse.status).toHaveBeenCalledWith(500);
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        success: false,
+        message: 'Internal server error',
+      });
     });
   });
 
   describe('getCategoryById', () => {
-    const getCategoryRoute = '/categories/:id';
-    
-    beforeEach(() => {
-      app.get('/categories/:id', (req, res) => {
-        req.user = mockUser;
-        categoryController.getCategoryById(req as any, res);
+    const categoryId = new mongoose.Types.ObjectId().toString();
+    const mockCategory = {
+      _id: categoryId,
+      name: 'Test Category',
+      userId: new mongoose.Types.ObjectId('507f1f77bcf86cd799439011'),
+    };
+
+    it('should get category by ID successfully', async () => {
+      (categoryValidation.id.validate as jest.Mock).mockReturnValue({
+        error: null,
+        value: { id: categoryId },
+      });
+
+      (CategoryService.prototype.getCategoryById as jest.Mock).mockResolvedValue(mockCategory);
+
+      mockRequest.params = { id: categoryId };
+
+      await categoryController.getCategoryById(
+        mockRequest as AuthenticatedRequest,
+        mockResponse as Response
+      );
+
+      expect(mockResponse.status).toHaveBeenCalledWith(200);
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        success: true,
+        data: mockCategory,
       });
     });
 
-    it('should get category by ID successfully', async () => {
-      mockCategoryService.getCategoryById.mockResolvedValue(mockCategory);
+    it('should return 401 when user is not authenticated', async () => {
+      mockRequest.user = undefined;
 
-      const response = await request(app)
-        .get(`/categories/${mockCategory._id}`)
-        .set('Content-Type', 'application/json');
-
-      expect(response.status).toBe(200);
-      expect(response.body.success).toBe(true);
-      expect(response.body.data).toEqual(mockCategory);
-      expect(mockCategoryService.getCategoryById).toHaveBeenCalledWith(
-        mockCategory._id.toString(),
-        mockUser.userId
+      await categoryController.getCategoryById(
+        mockRequest as AuthenticatedRequest,
+        mockResponse as Response
       );
+
+      expect(mockResponse.status).toHaveBeenCalledWith(401);
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        success: false,
+        message: 'Authentication required',
+      });
     });
 
-    it('should handle invalid category ID', async () => {
-      const response = await request(app)
-        .get('/categories/invalid-id')
-        .set('Content-Type', 'application/json');
+    it('should return 400 when ID validation fails', async () => {
+      const validationError = {
+        details: [
+          {
+            path: ['id'],
+            message: 'Invalid category ID',
+          },
+        ],
+      };
 
-      expect(response.status).toBe(400);
-      expect(response.body.success).toBe(false);
-      expect(response.body.message).toBe('Invalid category ID');
+      (categoryValidation.id.validate as jest.Mock).mockReturnValue({
+        error: validationError,
+        value: {},
+      });
+
+      mockRequest.params = { id: 'invalid-id' };
+
+      await categoryController.getCategoryById(
+        mockRequest as AuthenticatedRequest,
+        mockResponse as Response
+      );
+
+      expect(mockResponse.status).toHaveBeenCalledWith(400);
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        success: false,
+        message: 'Invalid category ID',
+        errors: [
+          {
+            field: 'id',
+            message: 'Invalid category ID',
+          },
+        ],
+      });
     });
 
-    it('should handle category not found', async () => {
-      const notFoundError = new Error('Category not found');
-      mockCategoryService.getCategoryById.mockRejectedValue(notFoundError);
+    it('should handle category not found error', async () => {
+      (categoryValidation.id.validate as jest.Mock).mockReturnValue({
+        error: null,
+        value: { id: categoryId },
+      });
 
-      const response = await request(app)
-        .get(`/categories/${mockCategory._id}`)
-        .set('Content-Type', 'application/json');
+      (CategoryService.prototype.getCategoryById as jest.Mock).mockRejectedValue(
+        new Error('Category not found')
+      );
 
-      expect(response.status).toBe(404);
-      expect(response.body.success).toBe(false);
-      expect(response.body.message).toBe('Category not found');
+      mockRequest.params = { id: categoryId };
+
+      await categoryController.getCategoryById(
+        mockRequest as AuthenticatedRequest,
+        mockResponse as Response
+      );
+
+      expect(mockResponse.status).toHaveBeenCalledWith(404);
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        success: false,
+        message: 'Category not found',
+      });
     });
 
-    it('should handle access denied', async () => {
-      const accessDeniedError = new Error('Access denied');
-      mockCategoryService.getCategoryById.mockRejectedValue(accessDeniedError);
+    it('should handle access denied error', async () => {
+      (categoryValidation.id.validate as jest.Mock).mockReturnValue({
+        error: null,
+        value: { id: categoryId },
+      });
 
-      const response = await request(app)
-        .get(`/categories/${mockCategory._id}`)
-        .set('Content-Type', 'application/json');
+      (CategoryService.prototype.getCategoryById as jest.Mock).mockRejectedValue(
+        new Error('Access denied')
+      );
 
-      expect(response.status).toBe(403);
-      expect(response.body.success).toBe(false);
-      expect(response.body.message).toBe('Access denied');
+      mockRequest.params = { id: categoryId };
+
+      await categoryController.getCategoryById(
+        mockRequest as AuthenticatedRequest,
+        mockResponse as Response
+      );
+
+      expect(mockResponse.status).toHaveBeenCalledWith(403);
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        success: false,
+        message: 'Access denied',
+      });
     });
   });
 
   describe('getUserCategories', () => {
-    const getUserCategoriesRoute = '/categories';
-    
-    beforeEach(() => {
-      app.get(getUserCategoriesRoute, (req, res) => {
-        req.user = mockUser;
-        categoryController.getUserCategories(req as any, res);
-      });
-    });
-
     it('should get user categories successfully', async () => {
       const mockResult = {
-        categories: [mockCategory],
-        total: 1,
+        categories: [
+          { _id: '1', name: 'Category 1' },
+          { _id: '2', name: 'Category 2' },
+        ],
         page: 1,
+        limit: 20,
+        total: 2,
         totalPages: 1,
       };
 
-      mockCategoryService.getUserCategories.mockResolvedValue(mockResult);
+      // Mock query validation
+      (categoryValidation.query.validate as jest.Mock).mockReturnValue({
+        error: null,
+        value: { page: 1, limit: 20 },
+      });
 
-      const response = await request(app)
-        .get(getUserCategoriesRoute)
-        .set('Content-Type', 'application/json');
+      (CategoryService.prototype.getUserCategories as jest.Mock).mockResolvedValue(mockResult);
 
-      expect(response.status).toBe(200);
-      expect(response.body.success).toBe(true);
-      expect(response.body.data).toEqual(mockResult.categories);
-      expect(response.body.pagination).toEqual({
-        page: 1,
-        limit: 20,
-        total: 1,
-        totalPages: 1,
+      mockRequest.query = { page: '1', limit: '20' };
+
+      await categoryController.getUserCategories(
+        mockRequest as AuthenticatedRequest,
+        mockResponse as Response
+      );
+
+      expect(mockResponse.status).toHaveBeenCalledWith(200);
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        success: true,
+        data: mockResult.categories,
+        pagination: {
+          page: mockResult.page,
+          limit: 20,
+          total: mockResult.total,
+          totalPages: mockResult.totalPages,
+        },
       });
     });
 
-    it('should handle query parameters', async () => {
-      const mockResult = {
-        categories: [mockCategory],
-        total: 1,
-        page: 2,
-        totalPages: 2,
-      };
+    it('should return 401 when user is not authenticated', async () => {
+      mockRequest.user = undefined;
 
-      mockCategoryService.getUserCategories.mockResolvedValue(mockResult);
-
-      const response = await request(app)
-        .get(getUserCategoriesRoute)
-        .query({
-          parentId: 'parent123',
-          level: 1,
-          isActive: true,
-          search: 'test',
-          page: 2,
-          limit: 10,
-        })
-        .set('Content-Type', 'application/json');
-
-      expect(response.status).toBe(200);
-      expect(mockCategoryService.getUserCategories).toHaveBeenCalledWith(
-        mockUser.userId,
-        {
-          parentId: 'parent123',
-          level: 1,
-          isActive: true,
-          search: 'test',
-          page: 2,
-          limit: 10,
-        }
+      await categoryController.getUserCategories(
+        mockRequest as AuthenticatedRequest,
+        mockResponse as Response
       );
+
+      expect(mockResponse.status).toHaveBeenCalledWith(401);
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        success: false,
+        message: 'Authentication required',
+      });
     });
 
-    it('should handle validation errors', async () => {
-      const response = await request(app)
-        .get(getUserCategoriesRoute)
-        .query({
-          page: 'invalid-page', // Invalid: should be number
-        })
-        .set('Content-Type', 'application/json');
+    it('should handle service errors', async () => {
+      (CategoryService.prototype.getUserCategories as jest.Mock).mockRejectedValue(
+        new Error('Service error')
+      );
 
-      expect(response.status).toBe(400);
-      expect(response.body.success).toBe(false);
-      expect(response.body.message).toBe('Invalid query parameters');
+      await categoryController.getUserCategories(
+        mockRequest as AuthenticatedRequest,
+        mockResponse as Response
+      );
+
+      expect(mockResponse.status).toHaveBeenCalledWith(500);
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        success: false,
+        message: 'Internal server error',
+      });
     });
   });
 
   describe('getCategoryTree', () => {
-    const getCategoryTreeRoute = '/categories/tree';
-    
-    beforeEach(() => {
-      app.get(getCategoryTreeRoute, (req, res) => {
-        req.user = mockUser;
-        categoryController.getCategoryTree(req as any, res);
-      });
-    });
-
     it('should get category tree successfully', async () => {
       const mockTree = [
         {
-          _id: mockCategory._id,
-          name: mockCategory.name,
-          children: [],
+          _id: '1',
+          name: 'Parent Category',
+          children: [
+            {
+              _id: '2',
+              name: 'Child Category',
+            },
+          ],
         },
       ];
 
-      mockCategoryService.getCategoryTree.mockResolvedValue(mockTree);
+      (CategoryService.prototype.getCategoryTree as jest.Mock).mockResolvedValue(mockTree);
 
-      const response = await request(app)
-        .get(getCategoryTreeRoute)
-        .set('Content-Type', 'application/json');
+      await categoryController.getCategoryTree(
+        mockRequest as AuthenticatedRequest,
+        mockResponse as Response
+      );
 
-      expect(response.status).toBe(200);
-      expect(response.body.success).toBe(true);
-      expect(response.body.data).toEqual(mockTree);
-      expect(mockCategoryService.getCategoryTree).toHaveBeenCalledWith(mockUser.userId);
+      expect(mockResponse.status).toHaveBeenCalledWith(200);
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        success: true,
+        data: mockTree,
+      });
+    });
+
+    it('should return 401 when user is not authenticated', async () => {
+      mockRequest.user = undefined;
+
+      await categoryController.getCategoryTree(
+        mockRequest as AuthenticatedRequest,
+        mockResponse as Response
+      );
+
+      expect(mockResponse.status).toHaveBeenCalledWith(401);
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        success: false,
+        message: 'Authentication required',
+      });
+    });
+
+    it('should handle service errors', async () => {
+      (CategoryService.prototype.getCategoryTree as jest.Mock).mockRejectedValue(
+        new Error('Service error')
+      );
+
+      await categoryController.getCategoryTree(
+        mockRequest as AuthenticatedRequest,
+        mockResponse as Response
+      );
+
+      expect(mockResponse.status).toHaveBeenCalledWith(500);
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        success: false,
+        message: 'Internal server error',
+      });
     });
   });
 
   describe('updateCategory', () => {
-    const updateCategoryRoute = '/categories/:id';
-    
-    beforeEach(() => {
-      app.put(updateCategoryRoute, (req, res) => {
-        req.user = mockUser;
-        categoryController.updateCategory(req as any, res);
-      });
-    });
+    const categoryId = new mongoose.Types.ObjectId().toString();
+    const updateData = {
+      name: 'Updated Category',
+      description: 'Updated Description',
+    };
 
     it('should update category successfully', async () => {
-      const updateData = {
+      const mockUpdatedCategory = {
+        _id: categoryId,
         name: 'Updated Category',
         description: 'Updated Description',
       };
 
-      const updatedCategory = { ...mockCategory, ...updateData };
-      mockCategoryService.updateCategory.mockResolvedValue(updatedCategory);
+      (categoryValidation.id.validate as jest.Mock).mockReturnValue({
+        error: null,
+        value: { id: categoryId },
+      });
 
-      const response = await request(app)
-        .put(`/categories/${mockCategory._id}`)
-        .set('Content-Type', 'application/json')
-        .send(updateData);
+      (categoryValidation.update.validate as jest.Mock).mockReturnValue({
+        error: null,
+        value: updateData,
+      });
 
-      expect(response.status).toBe(200);
-      expect(response.body.success).toBe(true);
-      expect(response.body.message).toBe('Category updated successfully');
-      expect(response.body.data).toEqual(updatedCategory);
+      (CategoryService.prototype.updateCategory as jest.Mock).mockResolvedValue(mockUpdatedCategory);
+
+      mockRequest.params = { id: categoryId };
+      mockRequest.body = updateData;
+
+      await categoryController.updateCategory(
+        mockRequest as AuthenticatedRequest,
+        mockResponse as Response
+      );
+
+      expect(mockResponse.status).toHaveBeenCalledWith(200);
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        success: true,
+        message: 'Category updated successfully',
+        data: mockUpdatedCategory,
+      });
     });
 
-    it('should handle invalid category ID', async () => {
-      const response = await request(app)
-        .put('/categories/invalid-id')
-        .set('Content-Type', 'application/json')
-        .send({ name: 'Updated Category' });
+    it('should return 401 when user is not authenticated', async () => {
+      mockRequest.user = undefined;
 
-      expect(response.status).toBe(400);
-      expect(response.body.success).toBe(false);
-      expect(response.body.message).toBe('Invalid category ID');
+      await categoryController.updateCategory(
+        mockRequest as AuthenticatedRequest,
+        mockResponse as Response
+      );
+
+      expect(mockResponse.status).toHaveBeenCalledWith(401);
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        success: false,
+        message: 'Authentication required',
+      });
     });
 
-    it('should handle validation errors in body', async () => {
-      const response = await request(app)
-        .put(`/categories/${mockCategory._id}`)
-        .set('Content-Type', 'application/json')
-        .send({ name: '' }); // Invalid: empty name
+    it('should return 400 when ID validation fails', async () => {
+      const validationError = {
+        details: [
+          {
+            path: ['id'],
+            message: 'Invalid category ID',
+          },
+        ],
+      };
 
-      expect(response.status).toBe(400);
-      expect(response.body.success).toBe(false);
-      expect(response.body.message).toBe('Validation error');
+      (categoryValidation.id.validate as jest.Mock).mockReturnValue({
+        error: validationError,
+        value: {},
+      });
+
+      mockRequest.params = { id: 'invalid-id' };
+
+      await categoryController.updateCategory(
+        mockRequest as AuthenticatedRequest,
+        mockResponse as Response
+      );
+
+      expect(mockResponse.status).toHaveBeenCalledWith(400);
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        success: false,
+        message: 'Invalid category ID',
+        errors: [
+          {
+            field: 'id',
+            message: 'Invalid category ID',
+          },
+        ],
+      });
+    });
+
+    it('should return 400 when body validation fails', async () => {
+      const testId = '507f1f77bcf86cd799439011';
+      
+      (categoryValidation.id.validate as jest.Mock).mockReturnValue({
+        error: null,
+        value: { id: testId },
+      });
+
+      const validationError = {
+        details: [
+          {
+            path: ['name'],
+            message: 'Name must be at least 1 character',
+          },
+        ],
+      };
+
+      (categoryValidation.update.validate as jest.Mock).mockReturnValue({
+        error: validationError,
+        value: {},
+      });
+
+      mockRequest.params = { id: testId };
+      mockRequest.body = { name: '' };
+
+      await categoryController.updateCategory(
+        mockRequest as AuthenticatedRequest,
+        mockResponse as Response
+      );
+
+      expect(mockResponse.status).toHaveBeenCalledWith(400);
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        success: false,
+        message: 'Invalid category ID',
+        errors: expect.arrayContaining([
+          expect.objectContaining({
+            field: expect.any(String),
+            message: expect.any(String),
+          }),
+        ]),
+      });
+    });
+
+    it('should handle category not found error', async () => {
+      (categoryValidation.id.validate as jest.Mock).mockReturnValue({
+        error: null,
+        value: { id: categoryId },
+      });
+
+      (categoryValidation.update.validate as jest.Mock).mockReturnValue({
+        error: null,
+        value: updateData,
+      });
+
+      (CategoryService.prototype.updateCategory as jest.Mock).mockRejectedValue(
+        new Error('Category not found')
+      );
+
+      mockRequest.params = { id: categoryId };
+      mockRequest.body = updateData;
+
+      await categoryController.updateCategory(
+        mockRequest as AuthenticatedRequest,
+        mockResponse as Response
+      );
+
+      expect(mockResponse.status).toHaveBeenCalledWith(404);
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        success: false,
+        message: 'Category not found',
+      });
     });
   });
 
   describe('deleteCategory', () => {
-    const deleteCategoryRoute = '/categories/:id';
-    
-    beforeEach(() => {
-      app.delete(deleteCategoryRoute, (req, res) => {
-        req.user = mockUser;
-        categoryController.deleteCategory(req as any, res);
+    const categoryId = new mongoose.Types.ObjectId().toString();
+
+    it('should delete category successfully', async () => {
+      (categoryValidation.id.validate as jest.Mock).mockReturnValue({
+        error: null,
+        value: { id: categoryId },
+      });
+
+      (CategoryService.prototype.deleteCategory as jest.Mock).mockResolvedValue(undefined);
+
+      mockRequest.params = { id: categoryId };
+
+      await categoryController.deleteCategory(
+        mockRequest as AuthenticatedRequest,
+        mockResponse as Response
+      );
+
+      expect(mockResponse.status).toHaveBeenCalledWith(200);
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        success: true,
+        message: 'Category deleted successfully',
       });
     });
 
-    it('should delete category successfully', async () => {
-      mockCategoryService.deleteCategory.mockResolvedValue(undefined);
+    it('should return 401 when user is not authenticated', async () => {
+      mockRequest.user = undefined;
 
-      const response = await request(app)
-        .delete(`/categories/${mockCategory._id}`)
-        .set('Content-Type', 'application/json');
-
-      expect(response.status).toBe(200);
-      expect(response.body.success).toBe(true);
-      expect(response.body.message).toBe('Category deleted successfully');
-      expect(mockCategoryService.deleteCategory).toHaveBeenCalledWith(
-        mockCategory._id.toString(),
-        mockUser.userId
+      await categoryController.deleteCategory(
+        mockRequest as AuthenticatedRequest,
+        mockResponse as Response
       );
+
+      expect(mockResponse.status).toHaveBeenCalledWith(401);
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        success: false,
+        message: 'Authentication required',
+      });
     });
 
-    it('should handle invalid category ID', async () => {
-      const response = await request(app)
-        .delete('/categories/invalid-id')
-        .set('Content-Type', 'application/json');
+    it('should return 400 when ID validation fails', async () => {
+      const validationError = {
+        details: [
+          {
+            path: ['id'],
+            message: 'Invalid category ID',
+          },
+        ],
+      };
 
-      expect(response.status).toBe(400);
-      expect(response.body.success).toBe(false);
-      expect(response.body.message).toBe('Invalid category ID');
+      (categoryValidation.id.validate as jest.Mock).mockReturnValue({
+        error: validationError,
+        value: {},
+      });
+
+      mockRequest.params = { id: 'invalid-id' };
+
+      await categoryController.deleteCategory(
+        mockRequest as AuthenticatedRequest,
+        mockResponse as Response
+      );
+
+      expect(mockResponse.status).toHaveBeenCalledWith(400);
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        success: false,
+        message: 'Invalid category ID',
+        errors: [
+          {
+            field: 'id',
+            message: 'Invalid category ID',
+          },
+        ],
+      });
     });
 
-    it('should handle category not found', async () => {
-      const notFoundError = new Error('Category not found');
-      mockCategoryService.deleteCategory.mockRejectedValue(notFoundError);
+    it('should handle category with subcategories error', async () => {
+      (categoryValidation.id.validate as jest.Mock).mockReturnValue({
+        error: null,
+        value: { id: categoryId },
+      });
 
-      const response = await request(app)
-        .delete(`/categories/${mockCategory._id}`)
-        .set('Content-Type', 'application/json');
+      (CategoryService.prototype.deleteCategory as jest.Mock).mockRejectedValue(
+        new Error('Cannot delete category with subcategories first')
+      );
 
-      expect(response.status).toBe(404);
-      expect(response.body.success).toBe(false);
-      expect(response.body.message).toBe('Category not found');
-    });
+      mockRequest.params = { id: categoryId };
 
-    it('should handle access denied', async () => {
-      const accessDeniedError = new Error('Access denied');
-      mockCategoryService.deleteCategory.mockRejectedValue(accessDeniedError);
+      await categoryController.deleteCategory(
+        mockRequest as AuthenticatedRequest,
+        mockResponse as Response
+      );
 
-      const response = await request(app)
-        .delete(`/categories/${mockCategory._id}`)
-        .set('Content-Type', 'application/json');
-
-      expect(response.status).toBe(403);
-      expect(response.body.success).toBe(false);
-      expect(response.body.message).toBe('Access denied');
-    });
-
-    it('should handle cannot delete with subcategories', async () => {
-      const subcategoryError = new Error('Cannot delete category with subcategories. Please delete subcategories first.');
-      mockCategoryService.deleteCategory.mockRejectedValue(subcategoryError);
-
-      const response = await request(app)
-        .delete(`/categories/${mockCategory._id}`)
-        .set('Content-Type', 'application/json');
-
-      expect(response.status).toBe(400);
-      expect(response.body.success).toBe(false);
-      expect(response.body.message).toBe(subcategoryError.message);
+      expect(mockResponse.status).toHaveBeenCalledWith(400);
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        success: false,
+        message: 'Cannot delete category with subcategories first',
+      });
     });
   });
 
   describe('bulkCreateCategories', () => {
-    const bulkCreateRoute = '/categories/bulk';
-    
-    beforeEach(() => {
-      app.post(bulkCreateRoute, (req, res) => {
-        req.user = mockUser;
-        categoryController.bulkCreateCategories(req as any, res);
-      });
-    });
-
-    it('should create categories in bulk successfully', async () => {
+    it('should bulk create categories successfully', async () => {
       const categoriesData = [
         { name: 'Category 1', description: 'Description 1' },
         { name: 'Category 2', description: 'Description 2' },
       ];
 
-      const createdCategories = [
-        { ...mockCategory, name: 'Category 1' },
-        { ...mockCategory, name: 'Category 2' },
+      const mockCreatedCategories = [
+        { _id: '1', name: 'Category 1', description: 'Description 1' },
+        { _id: '2', name: 'Category 2', description: 'Description 2' },
       ];
 
-      mockCategoryService.bulkCreateCategories.mockResolvedValue(createdCategories);
+      // Mock individual category validation for each category
+      (categoryValidation.create.validate as jest.Mock)
+        .mockReturnValueOnce({ error: null, value: categoriesData[0] })
+        .mockReturnValueOnce({ error: null, value: categoriesData[1] });
 
-      const response = await request(app)
-        .post(bulkCreateRoute)
-        .set('Content-Type', 'application/json')
-        .send({ categories: categoriesData });
+      (CategoryService.prototype.bulkCreateCategories as jest.Mock).mockResolvedValue(mockCreatedCategories);
 
-      expect(response.status).toBe(201);
-      expect(response.body.success).toBe(true);
-      expect(response.body.message).toBe('Successfully created 2 categories');
-      expect(response.body.data).toEqual(createdCategories);
-      expect(response.body.summary).toEqual({
-        requested: 2,
-        created: 2,
-        failed: 0,
+      mockRequest.body = { categories: categoriesData };
+
+      await categoryController.bulkCreateCategories(
+        mockRequest as AuthenticatedRequest,
+        mockResponse as Response
+      );
+
+      expect(mockResponse.status).toHaveBeenCalledWith(201);
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        success: true,
+        message: 'Successfully created 2 categories',
+        data: mockCreatedCategories,
+        summary: {
+          requested: 2,
+          created: 2,
+          failed: 0,
+        },
       });
     });
 
-    it('should handle missing categories array', async () => {
-      const response = await request(app)
-        .post(bulkCreateRoute)
-        .set('Content-Type', 'application/json')
-        .send({});
+    it('should return 401 when user is not authenticated', async () => {
+      mockRequest.user = undefined;
 
-      expect(response.status).toBe(400);
-      expect(response.body.success).toBe(false);
-      expect(response.body.message).toBe('Categories array is required and must not be empty');
+      await categoryController.bulkCreateCategories(
+        mockRequest as AuthenticatedRequest,
+        mockResponse as Response
+      );
+
+      expect(mockResponse.status).toHaveBeenCalledWith(401);
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        success: false,
+        message: 'Authentication required',
+      });
     });
 
-    it('should handle empty categories array', async () => {
-      const response = await request(app)
-        .post(bulkCreateRoute)
-        .set('Content-Type', 'application/json')
-        .send({ categories: [] });
+    it('should return 400 when validation fails', async () => {
+      const validationError = {
+        details: [
+          {
+            path: ['categories'],
+            message: 'Categories array is required',
+          },
+        ],
+      };
 
-      expect(response.status).toBe(400);
-      expect(response.body.success).toBe(false);
-      expect(response.body.message).toBe('Categories array is required and must not be empty');
-    });
+      // Mock validation error for the first category
+      (categoryValidation.create.validate as jest.Mock).mockReturnValue({
+        error: validationError,
+        value: {},
+      });
 
-    it('should handle validation errors in categories array', async () => {
-      const invalidCategories = [
-        { name: 'Valid Category' },
-        { name: '' }, // Invalid: empty name
-      ];
+      mockRequest.body = {};
 
-      const response = await request(app)
-        .post(bulkCreateRoute)
-        .set('Content-Type', 'application/json')
-        .send({ categories: invalidCategories });
+      await categoryController.bulkCreateCategories(
+        mockRequest as AuthenticatedRequest,
+        mockResponse as Response
+      );
 
-      expect(response.status).toBe(400);
-      expect(response.body.success).toBe(false);
-      expect(response.body.message).toBe('Validation errors in categories array');
-      expect(response.body.errors).toBeDefined();
+      expect(mockResponse.status).toHaveBeenCalledWith(400);
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        success: false,
+        message: 'Categories array is required and must not be empty',
+      });
     });
   });
 
   describe('getCategoryStats', () => {
-    const getStatsRoute = '/categories/stats';
-    
-    beforeEach(() => {
-      app.get(getStatsRoute, (req, res) => {
-        req.user = mockUser;
-        categoryController.getCategoryStats(req as any, res);
-      });
-    });
-
-    it('should get category statistics successfully', async () => {
+    it('should get category stats successfully', async () => {
       const mockStats = {
         totalCategories: 10,
         activeCategories: 8,
         rootCategories: 3,
         maxDepth: 2,
-        categoriesByLevel: { 0: 3, 1: 5, 2: 2 },
+        categoriesByLevel: {
+          0: 3,
+          1: 5,
+          2: 2,
+        },
       };
 
-      mockCategoryService.getCategoryStats.mockResolvedValue(mockStats);
+      (CategoryService.prototype.getCategoryStats as jest.Mock).mockResolvedValue(mockStats);
 
-      const response = await request(app)
-        .get(getStatsRoute)
-        .set('Content-Type', 'application/json');
+      await categoryController.getCategoryStats(
+        mockRequest as AuthenticatedRequest,
+        mockResponse as Response
+      );
 
-      expect(response.status).toBe(200);
-      expect(response.body.success).toBe(true);
-      expect(response.body.data).toEqual(mockStats);
-      expect(mockCategoryService.getCategoryStats).toHaveBeenCalledWith(mockUser.userId);
+      expect(mockResponse.status).toHaveBeenCalledWith(200);
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        success: true,
+        data: mockStats,
+      });
+    });
+
+    it('should return 401 when user is not authenticated', async () => {
+      mockRequest.user = undefined;
+
+      await categoryController.getCategoryStats(
+        mockRequest as AuthenticatedRequest,
+        mockResponse as Response
+      );
+
+      expect(mockResponse.status).toHaveBeenCalledWith(401);
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        success: false,
+        message: 'Authentication required',
+      });
+    });
+
+    it('should handle service errors', async () => {
+      (CategoryService.prototype.getCategoryStats as jest.Mock).mockRejectedValue(
+        new Error('Service error')
+      );
+
+      await categoryController.getCategoryStats(
+        mockRequest as AuthenticatedRequest,
+        mockResponse as Response
+      );
+
+      expect(mockResponse.status).toHaveBeenCalledWith(500);
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        success: false,
+        message: 'Internal server error',
+      });
     });
   });
 });

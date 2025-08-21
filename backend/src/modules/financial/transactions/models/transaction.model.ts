@@ -7,7 +7,6 @@ import {
   PaymentMethod,
   RecurrencePattern,
 } from '../interfaces/transaction.interface';
-import uniqueValidator from 'mongoose-unique-validator';
 
 // Transaction Schema
 const transactionSchema = new Schema<ITransaction>(
@@ -558,11 +557,6 @@ function calculateNextOccurrence(
 
   return nextDate;
 }
-
-// Apply unique validator plugin
-transactionSchema.plugin(uniqueValidator, {
-  message: 'Error, expected {PATH} to be unique.',
-});
 
 export const Transaction = mongoose.model<ITransaction, ITransactionModel>(
   'Transaction',

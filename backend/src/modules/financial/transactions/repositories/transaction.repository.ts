@@ -177,25 +177,27 @@ export class TransactionRepository extends BaseRepository<ITransaction> {
         minAmount,
         maxAmount,
         tags,
-        populate = ['categoryId', 'subcategoryId'],
+        populate = [],
       } = options;
 
       const filter: Record<string, unknown> = {
         userId,
         date: { $gte: startDate, $lte: endDate } as Record<string, unknown>,
         isDeleted: false,
-        amount: {} as Record<string, unknown>,
       };
 
       if (accountId) filter.accountId = accountId;
       if (categoryId) filter.categoryId = categoryId;
       if (type) filter.type = type;
       if (status) filter.status = status;
-      if (minAmount !== undefined) {
-        (filter.amount as Record<string, unknown>).$gte = minAmount;
-      }
-      if (maxAmount !== undefined) {
-        (filter.amount as Record<string, unknown>).$lte = maxAmount;
+      if (minAmount !== undefined || maxAmount !== undefined) {
+        filter.amount = {} as Record<string, unknown>;
+        if (minAmount !== undefined) {
+          (filter.amount as Record<string, unknown>).$gte = minAmount;
+        }
+        if (maxAmount !== undefined) {
+          (filter.amount as Record<string, unknown>).$lte = maxAmount;
+        }
       }
       if (tags && tags.length > 0) filter.tags = { $in: tags };
 
@@ -765,6 +767,7 @@ export class TransactionRepository extends BaseRepository<ITransaction> {
       endDate?: Date;
       page?: number;
       limit?: number;
+      populate?: string[];
     } = {}
   ): Promise<{
     transactions: ITransaction[];
@@ -783,13 +786,14 @@ export class TransactionRepository extends BaseRepository<ITransaction> {
         limit = 10,
       } = options;
 
-      // const textSearch = {
-      //   $text: { $search: searchQuery },
-      // };
-
       const filter: Record<string, unknown> = {
         userId,
         isDeleted: false,
+        $or: [
+          { title: { $regex: searchQuery, $options: 'i' } },
+          { description: { $regex: searchQuery, $options: 'i' } },
+          { tags: { $in: [new RegExp(searchQuery, 'i')] } }
+        ]
       };
 
       if (accountId) filter.accountId = accountId;
@@ -807,8 +811,8 @@ export class TransactionRepository extends BaseRepository<ITransaction> {
       const [transactions, total] = await Promise.all([
         this.model
           .find(filter)
-          .populate(['categoryId', 'subcategoryId'])
-          .sort({ score: { $meta: 'textScore' }, date: -1 })
+          .populate(options.populate || [])
+          .sort({ date: -1, createdAt: -1 })
           .skip(skip)
           .limit(limit),
         this.model.countDocuments(filter),

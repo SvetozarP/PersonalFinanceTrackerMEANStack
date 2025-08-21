@@ -13,3 +13,4 @@ describe('Financial Routes - JS Test', () => {
     expect(typeof app.use).toBe('function');
   });
 });
+

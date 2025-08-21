@@ -19,7 +19,7 @@ describe('TransactionService', () => {
   let transactionService: TransactionService;
   let mockTransactionRepository: jest.Mocked<TransactionRepository>;
 
-  const mockUserId = 'user123';
+  const mockUserId = '507f1f77bcf86cd799439010';
   const mockTransactionId = '507f1f77bcf86cd799439011';
   const mockCategoryId = '507f1f77bcf86cd799439012';
   const mockAccountId = '507f1f77bcf86cd799439013';
@@ -88,7 +88,7 @@ describe('TransactionService', () => {
     };
 
     it('should create a transaction successfully', async () => {
-      const newTransaction = { ...mockTransaction, ...transactionData };
+      const newTransaction = { ...mockTransaction, ...transactionData } as any;
       mockTransactionRepository.create.mockResolvedValue(newTransaction);
 
       const result = await transactionService.createTransaction(transactionData as any, mockUserId);
@@ -116,14 +116,20 @@ describe('TransactionService', () => {
         recurrenceEndDate: new Date('2024-12-31'),
       };
 
-      const newTransaction = { ...mockTransaction, ...recurringData };
+      const newTransaction = { ...mockTransaction, ...recurringData } as any;
       mockTransactionRepository.create.mockResolvedValue(newTransaction);
+      mockTransactionRepository.createRecurringSeries = jest.fn().mockResolvedValue([mockTransaction]);
 
       const result = await transactionService.createTransaction(recurringData as any, mockUserId);
 
       expect(result).toEqual(newTransaction);
       expect(result.isRecurring).toBe(true);
       expect(result.recurrencePattern).toBe(RecurrencePattern.MONTHLY);
+      expect(mockTransactionRepository.createRecurringSeries).toHaveBeenCalledWith(
+        newTransaction,
+        RecurrencePattern.MONTHLY,
+        recurringData.recurrenceEndDate
+      );
     });
   });
 
@@ -148,7 +154,7 @@ describe('TransactionService', () => {
     it('should throw error when transaction belongs to different user', async () => {
       const differentUserTransaction = {
         ...mockTransaction,
-        userId: new mongoose.Types.ObjectId('different-user'),
+        userId: new mongoose.Types.ObjectId('507f1f77bcf86cd799439020'),
       } as unknown as ITransaction;
 
       mockTransactionRepository.findById.mockResolvedValue(differentUserTransaction);
@@ -323,7 +329,7 @@ describe('TransactionService', () => {
     it('should throw error when transaction belongs to different user', async () => {
       const differentUserTransaction = {
         ...mockTransaction,
-        userId: new mongoose.Types.ObjectId('different-user'),
+        userId: new mongoose.Types.ObjectId('507f1f77bcf86cd799439020'),
       } as unknown as ITransaction;
 
       mockTransactionRepository.findById.mockResolvedValue(differentUserTransaction);
@@ -367,7 +373,7 @@ describe('TransactionService', () => {
     it('should throw error when transaction belongs to different user', async () => {
       const differentUserTransaction = {
         ...mockTransaction,
-        userId: new mongoose.Types.ObjectId('different-user'),
+        userId: new mongoose.Types.ObjectId('507f1f77bcf86cd799439020'),
       } as unknown as ITransaction;
 
       mockTransactionRepository.findById.mockResolvedValue(differentUserTransaction);

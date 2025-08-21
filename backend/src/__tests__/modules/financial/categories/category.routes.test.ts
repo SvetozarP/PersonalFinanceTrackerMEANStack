@@ -483,6 +483,7 @@ describe('Category Routes', () => {
 
       expect(response.body).toHaveProperty('error');
     });
+
   });
 
   describe('Category Hierarchy Validation', () => {
@@ -523,3 +524,21 @@ describe('Category Routes', () => {
     expect(true).toBe(true);
   });
 });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

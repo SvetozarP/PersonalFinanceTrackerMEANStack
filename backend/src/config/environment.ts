@@ -35,7 +35,7 @@ export interface EnvironmentConfig {
   RATE_LIMIT_MAX_REQUESTS: number;
 }
 
-class EnvironmentService {
+export class EnvironmentService {
   private config: EnvironmentConfig;
 
   constructor() {

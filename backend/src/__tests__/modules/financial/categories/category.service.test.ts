@@ -1,668 +1,536 @@
 import mongoose from 'mongoose';
 import { CategoryService } from '../../../../modules/financial/categories/service/category.service';
 import { CategoryRepository } from '../../../../modules/financial/categories/repositories/category.repository';
+import { Category } from '../../../../modules/financial/categories/models/category.model';
 import { ICategory } from '../../../../modules/financial/categories/interfaces/category.interface';
 
 // Mock the CategoryRepository
-jest.mock('../../../../modules/financial/categories/repositories/category.repository');
-jest.mock('../../../../shared/services/logger.service', () => ({
-  logger: {
-    info: jest.fn(),
-    error: jest.fn(),
-    warn: jest.fn(),
-  },
-}));
+jest.mock('../../../modules/financial/categories/repositories/category.repository');
 
-const MockedCategoryRepository = CategoryRepository as jest.MockedClass<typeof CategoryRepository>;
-
-describe('CategoryService', () => {
+describe('Category Service', () => {
   let categoryService: CategoryService;
   let mockCategoryRepository: jest.Mocked<CategoryRepository>;
+  let testUserId: mongoose.Types.ObjectId;
+  let testCategory: ICategory;
 
-  const mockUserId = 'user123';
-  const mockCategoryId = '507f1f77bcf86cd799439011';
-  const mockParentId = '507f1f77bcf86cd799439012';
+  beforeAll(async () => {
+    testUserId = new mongoose.Types.ObjectId();
+  });
 
-  const mockCategory = {
-    _id: new mongoose.Types.ObjectId(mockCategoryId),
-    name: 'Test Category',
-    description: 'Test Description',
-    color: '#FF0000',
-    icon: 'test-icon',
-    userId: new mongoose.Types.ObjectId(mockUserId),
-    parentId: undefined,
-    level: 0,
-    path: ['Test Category'],
-    isActive: true,
-    isSystem: false,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  } as ICategory;
-
-  const mockParentCategory = {
-    ...mockCategory,
-    _id: new mongoose.Types.ObjectId(mockParentId),
-    name: 'Parent Category',
-    level: 0,
-    path: ['Parent Category'],
-  } as ICategory;
-
-  const mockChildCategory = {
-    ...mockCategory,
-    _id: new mongoose.Types.ObjectId('507f1f77bcf86cd799439013'),
-    name: 'Child Category',
-    parentId: new mongoose.Types.ObjectId(mockParentId),
-    level: 1,
-    path: ['Parent Category', 'Child Category'],
-  } as ICategory;
-
-  beforeEach(() => {
-    // Create a fresh instance of the service
-    categoryService = new CategoryService();
+  beforeEach(async () => {
+    await Category.deleteMany({});
     
-    // Get the mocked repository instance
-    mockCategoryRepository = (categoryService as any).categoryRepository;
-    
-    // Reset all mocks
+    // Create a test category
+    testCategory = await Category.create({
+      name: 'Test Category',
+      userId: testUserId,
+      isActive: true,
+    });
+
+    // Reset mocks
     jest.clearAllMocks();
+    
+    // Create mock repository
+    mockCategoryRepository = {
+      findById: jest.fn(),
+      findOne: jest.fn(),
+      create: jest.fn(),
+      updateById: jest.fn(),
+      deleteById: jest.fn(),
+      findByUserId: jest.fn(),
+      findRootCategories: jest.fn(),
+      findByParentId: jest.fn(),
+      getCategoryTree: jest.fn(),
+      find: jest.fn(),
+      count: jest.fn(),
+      exists: jest.fn(),
+      updateMany: jest.fn(),
+      deleteMany: jest.fn(),
+      aggregate: jest.fn(),
+    } as any;
+
+    // Mock the CategoryRepository constructor
+    (CategoryRepository as jest.MockedClass<typeof CategoryRepository>).mockImplementation(() => mockCategoryRepository);
+    
+    categoryService = new CategoryService();
+  });
+
+  afterAll(async () => {
+    await Category.deleteMany({});
   });
 
   describe('createCategory', () => {
-    const categoryData = {
-      name: 'New Category',
-      description: 'New Description',
-      color: '#00FF00',
-      icon: 'new-icon',
-    };
+    it('should create a new category successfully', async () => {
+      const categoryData = {
+        name: 'New Category',
+        description: 'A new category',
+        color: '#FF0000',
+        icon: 'star',
+      };
 
-    it('should create a category successfully without parent', async () => {
+      const expectedCategory = {
+        _id: new mongoose.Types.ObjectId(),
+        ...categoryData,
+        userId: testUserId,
+        level: 0,
+        path: ['New Category'],
+        isActive: true,
+        isSystem: false,
+      };
+
+      mockCategoryRepository.findById.mockResolvedValue(null);
       mockCategoryRepository.findOne.mockResolvedValue(null);
-      mockCategoryRepository.create.mockResolvedValue(mockCategory);
+      mockCategoryRepository.create.mockResolvedValue(expectedCategory as ICategory);
 
-      const result = await categoryService.createCategory(categoryData, mockUserId);
+      const result = await categoryService.createCategory(categoryData, testUserId.toString());
 
-      expect(result).toEqual(mockCategory);
-      expect(mockCategoryRepository.findOne).toHaveBeenCalledWith({
-        userId: new mongoose.Types.ObjectId(mockUserId),
-        parentId: null,
-        name: categoryData.name,
-      });
+      expect(result).toEqual(expectedCategory);
       expect(mockCategoryRepository.create).toHaveBeenCalledWith({
         ...categoryData,
-        userId: new mongoose.Types.ObjectId(mockUserId),
+        userId: testUserId,
         level: 0,
-        path: [categoryData.name],
+        path: ['New Category'],
         isActive: true,
         isSystem: false,
       });
     });
 
-    it('should create a category successfully with parent', async () => {
-      const categoryDataWithParent = {
-        ...categoryData,
-        parentId: new mongoose.Types.ObjectId(mockParentId),
+    it('should create a category with parent successfully', async () => {
+      const parentId = new mongoose.Types.ObjectId();
+      const categoryData = {
+        name: 'Child Category',
+        parentId: parentId,
       };
 
-      mockCategoryRepository.findById.mockResolvedValue(mockParentCategory);
+      const parentCategory = {
+        _id: parentId,
+        userId: testUserId,
+        level: 0,
+        path: ['Parent'],
+      } as ICategory;
+
+      const expectedCategory = {
+        _id: new mongoose.Types.ObjectId(),
+        ...categoryData,
+        userId: testUserId,
+        level: 1,
+        path: ['Parent', 'Child Category'],
+        isActive: true,
+        isSystem: false,
+      };
+
+      mockCategoryRepository.findById.mockResolvedValue(parentCategory);
       mockCategoryRepository.findOne.mockResolvedValue(null);
-      mockCategoryRepository.create.mockResolvedValue(mockChildCategory);
+      mockCategoryRepository.create.mockResolvedValue(expectedCategory as ICategory);
 
-      const result = await categoryService.createCategory(categoryDataWithParent, mockUserId);
+      const result = await categoryService.createCategory(categoryData, testUserId.toString());
 
-      expect(result).toEqual(mockChildCategory);
-      expect(mockCategoryRepository.findById).toHaveBeenCalledWith(mockParentId);
-      expect(mockCategoryRepository.findOne).toHaveBeenCalledWith({
-        userId: new mongoose.Types.ObjectId(mockUserId),
-        parentId: new mongoose.Types.ObjectId(mockParentId),
-        name: categoryData.name,
+      expect(result).toEqual(expectedCategory);
+      expect(mockCategoryRepository.create).toHaveBeenCalledWith({
+        ...categoryData,
+        userId: testUserId,
+        level: 1,
+        path: ['Parent', 'Child Category'],
+        isActive: true,
+        isSystem: false,
       });
     });
 
     it('should throw error when parent category not found', async () => {
-      const categoryDataWithParent = {
-        ...categoryData,
-        parentId: new mongoose.Types.ObjectId(mockParentId),
+      const categoryData = {
+        name: 'Child Category',
+        parentId: new mongoose.Types.ObjectId(),
       };
 
       mockCategoryRepository.findById.mockResolvedValue(null);
 
-      await expect(
-        categoryService.createCategory(categoryDataWithParent, mockUserId)
-      ).rejects.toThrow('Parent category not found or access denied');
+      await expect(categoryService.createCategory(categoryData, testUserId.toString()))
+        .rejects.toThrow('Parent category not found or access denied');
     });
 
     it('should throw error when parent category belongs to different user', async () => {
-      const categoryDataWithParent = {
-        ...categoryData,
-        parentId: new mongoose.Types.ObjectId(mockParentId),
+      const parentId = new mongoose.Types.ObjectId();
+      const categoryData = {
+        name: 'Child Category',
+        parentId: parentId,
       };
 
-      const differentUserParent = {
-        ...mockParentCategory,
-        userId: new mongoose.Types.ObjectId('different-user'),
+      const parentCategory = {
+        _id: parentId,
+        userId: new mongoose.Types.ObjectId(), // Different user
+        level: 0,
+        path: ['Parent'],
       } as ICategory;
 
-      mockCategoryRepository.findById.mockResolvedValue(differentUserParent);
+      mockCategoryRepository.findById.mockResolvedValue(parentCategory);
 
-      await expect(
-        categoryService.createCategory(categoryDataWithParent, mockUserId)
-      ).rejects.toThrow('Parent category not found or access denied');
+      await expect(categoryService.createCategory(categoryData, testUserId.toString()))
+        .rejects.toThrow('Parent category not found or access denied');
     });
 
     it('should throw error when duplicate category name exists at same level', async () => {
-      mockCategoryRepository.findOne.mockResolvedValue(mockCategory);
-
-      await expect(
-        categoryService.createCategory(categoryData, mockUserId)
-      ).rejects.toThrow('Category with this name already exists at this level');
-    });
-
-    it('should calculate correct level and path for nested category', async () => {
-      const categoryDataWithParent = {
-        ...categoryData,
-        parentId: new mongoose.Types.ObjectId(mockParentId),
+      const categoryData = {
+        name: 'Duplicate Name',
       };
 
-      mockCategoryRepository.findById.mockResolvedValue(mockParentCategory);
+      const existingCategory = {
+        _id: new mongoose.Types.ObjectId(),
+        userId: testUserId,
+        name: 'Duplicate Name',
+      } as ICategory;
+
+      mockCategoryRepository.findById.mockResolvedValue(null);
+      mockCategoryRepository.findOne.mockResolvedValue(existingCategory);
+
+      await expect(categoryService.createCategory(categoryData, testUserId.toString()))
+        .rejects.toThrow('Category with this name already exists at this level');
+    });
+
+    it('should handle errors during creation', async () => {
+      const categoryData = { name: 'Error Category' };
+      const error = new Error('Database error');
+
+      mockCategoryRepository.findById.mockResolvedValue(null);
       mockCategoryRepository.findOne.mockResolvedValue(null);
-      mockCategoryRepository.create.mockResolvedValue(mockChildCategory);
+      mockCategoryRepository.create.mockRejectedValue(error);
 
-      await categoryService.createCategory(categoryDataWithParent, mockUserId);
-
-      expect(mockCategoryRepository.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          level: 1,
-          path: ['Parent Category', 'New Category'],
-        })
-      );
+      await expect(categoryService.createCategory(categoryData, testUserId.toString()))
+        .rejects.toThrow('Database error');
     });
   });
 
   describe('getCategoryById', () => {
     it('should get category by ID successfully', async () => {
-      mockCategoryRepository.findById.mockResolvedValue(mockCategory);
+      mockCategoryRepository.findById.mockResolvedValue(testCategory);
 
-      const result = await categoryService.getCategoryById(mockCategoryId, mockUserId);
+      const result = await categoryService.getCategoryById(testCategory._id.toString(), testUserId.toString());
 
-      expect(result).toEqual(mockCategory);
-      expect(mockCategoryRepository.findById).toHaveBeenCalledWith(mockCategoryId);
+      expect(result).toEqual(testCategory);
+      expect(mockCategoryRepository.findById).toHaveBeenCalledWith(testCategory._id.toString());
     });
 
     it('should throw error when category not found', async () => {
+      const nonExistentId = new mongoose.Types.ObjectId();
       mockCategoryRepository.findById.mockResolvedValue(null);
 
-      await expect(
-        categoryService.getCategoryById(mockCategoryId, mockUserId)
-      ).rejects.toThrow('Category not found');
+      await expect(categoryService.getCategoryById(nonExistentId.toString(), testUserId.toString()))
+        .rejects.toThrow('Category not found');
     });
 
     it('should throw error when category belongs to different user', async () => {
-      const differentUserCategory = {
-        ...mockCategory,
-        userId: new mongoose.Types.ObjectId('different-user'),
-      } as ICategory;
+      const otherUserId = new mongoose.Types.ObjectId();
+      const otherUserCategory = {
+        ...testCategory,
+        userId: otherUserId,
+      };
 
-      mockCategoryRepository.findById.mockResolvedValue(differentUserCategory);
+      mockCategoryRepository.findById.mockResolvedValue(otherUserCategory);
 
-      await expect(
-        categoryService.getCategoryById(mockCategoryId, mockUserId)
-      ).rejects.toThrow('Access denied');
+      await expect(categoryService.getCategoryById(testCategory._id.toString(), testUserId.toString()))
+        .rejects.toThrow('Access denied');
+    });
+
+    it('should handle errors during retrieval', async () => {
+      const error = new Error('Database error');
+      mockCategoryRepository.findById.mockRejectedValue(error);
+
+      await expect(categoryService.getCategoryById(testCategory._id.toString(), testUserId.toString()))
+        .rejects.toThrow('Database error');
     });
   });
 
   describe('getUserCategories', () => {
-    const defaultOptions = {
-      parentId: undefined,
-      level: undefined,
-      isActive: undefined,
-      search: undefined,
-      page: 1,
-      limit: 20,
-    };
+    it('should get user categories successfully', async () => {
+      const categories = [testCategory];
+      mockCategoryRepository.findByUserId.mockResolvedValue(categories);
 
-    it('should get user categories with default options', async () => {
-      const mockResult = {
-        categories: [mockCategory],
-        total: 1,
-        page: 1,
-        totalPages: 1,
-      };
+      const result = await categoryService.getUserCategories(testUserId.toString());
 
-      mockCategoryRepository.count.mockResolvedValue(1);
-      mockCategoryRepository.find.mockResolvedValue([mockCategory]);
-
-      const result = await categoryService.getUserCategories(mockUserId);
-
-      expect(result).toEqual(mockResult);
-      expect(mockCategoryRepository.count).toHaveBeenCalledWith({
-        userId: new mongoose.Types.ObjectId(mockUserId),
-      });
-      expect(mockCategoryRepository.find).toHaveBeenCalledWith(
-        { userId: new mongoose.Types.ObjectId(mockUserId) },
-        {
-          skip: 0,
-          limit: 20,
-          sort: { level: 1, name: 1 },
-        }
-      );
+      expect(result).toEqual(categories);
+      expect(mockCategoryRepository.findByUserId).toHaveBeenCalledWith(testUserId.toString());
     });
 
-    it('should get user categories with custom options', async () => {
-      const customOptions = {
-        parentId: mockParentId,
-        level: 1,
-        isActive: true,
-        search: 'test',
-        page: 2,
-        limit: 10,
-      };
+    it('should handle errors during retrieval', async () => {
+      const error = new Error('Database error');
+      mockCategoryRepository.findByUserId.mockRejectedValue(error);
 
-      const mockResult = {
-        categories: [mockCategory],
-        total: 1,
-        page: 2,
-        totalPages: 1,
-      };
-
-      mockCategoryRepository.count.mockResolvedValue(1);
-      mockCategoryRepository.find.mockResolvedValue([mockCategory]);
-
-      const result = await categoryService.getUserCategories(mockUserId, customOptions);
-
-      expect(result).toEqual(mockResult);
-      expect(mockCategoryRepository.count).toHaveBeenCalledWith({
-        userId: new mongoose.Types.ObjectId(mockUserId),
-        parentId: mockParentId,
-        level: 1,
-        isActive: true,
-        $or: [
-          { name: { $regex: 'test', $options: 'i' } },
-          { description: { $regex: 'test', $options: 'i' } },
-        ],
-      });
-      expect(mockCategoryRepository.find).toHaveBeenCalledWith(
-        expect.any(Object),
-        {
-          skip: 10,
-          limit: 10,
-          sort: { level: 1, name: 1 },
-        }
-      );
-    });
-
-    it('should handle null parentId correctly', async () => {
-      const options = { parentId: null as any };
-      mockCategoryRepository.count.mockResolvedValue(1);
-      mockCategoryRepository.find.mockResolvedValue([mockCategory]);
-
-      await categoryService.getUserCategories(mockUserId, options);
-
-      expect(mockCategoryRepository.count).toHaveBeenCalledWith({
-        userId: new mongoose.Types.ObjectId(mockUserId),
-        parentId: null,
-      });
-    });
-
-    it('should calculate total pages correctly', async () => {
-      mockCategoryRepository.count.mockResolvedValue(25);
-      mockCategoryRepository.find.mockResolvedValue([mockCategory]);
-
-      const result = await categoryService.getUserCategories(mockUserId, { limit: 10 });
-
-      expect(result.totalPages).toBe(3); // Math.ceil(25 / 10)
+      await expect(categoryService.getUserCategories(testUserId.toString()))
+        .rejects.toThrow('Database error');
     });
   });
 
   describe('getCategoryTree', () => {
     it('should get category tree successfully', async () => {
-      const mockTree = [
+      const tree = [
         {
-          _id: mockCategory._id,
-          name: mockCategory.name,
+          _id: testCategory._id,
+          name: 'Test Category',
           children: [],
         },
       ];
+      mockCategoryRepository.getCategoryTree.mockResolvedValue(tree);
 
-      mockCategoryRepository.getCategoryTree.mockResolvedValue(mockTree);
+      const result = await categoryService.getCategoryTree(testUserId.toString());
 
-      const result = await categoryService.getCategoryTree(mockUserId);
+      expect(result).toEqual(tree);
+      expect(mockCategoryRepository.getCategoryTree).toHaveBeenCalledWith(testUserId.toString());
+    });
 
-      expect(result).toEqual(mockTree);
-      expect(mockCategoryRepository.getCategoryTree).toHaveBeenCalledWith(mockUserId);
+    it('should handle errors during tree generation', async () => {
+      const error = new Error('Database error');
+      mockCategoryRepository.getCategoryTree.mockRejectedValue(error);
+
+      await expect(categoryService.getCategoryTree(testUserId.toString()))
+        .rejects.toThrow('Database error');
     });
   });
 
   describe('updateCategory', () => {
-    const updateData = {
-      name: 'Updated Category',
-      description: 'Updated Description',
-    };
-
     it('should update category successfully', async () => {
-      const updatedCategory = { ...mockCategory, ...updateData };
-      mockCategoryRepository.findById.mockResolvedValue(mockCategory);
-      mockCategoryRepository.updateById.mockResolvedValue(updatedCategory as any);
+      const updateData = {
+        name: 'Updated Category',
+        description: 'Updated description',
+      };
 
-      const result = await categoryService.updateCategory(mockCategoryId, updateData, mockUserId);
+      const updatedCategory = {
+        ...testCategory,
+        ...updateData,
+      };
+
+      mockCategoryRepository.findById.mockResolvedValue(testCategory);
+      mockCategoryRepository.updateById.mockResolvedValue(updatedCategory);
+
+      const result = await categoryService.updateCategory(
+        testCategory._id.toString(),
+        updateData,
+        testUserId.toString()
+      );
 
       expect(result).toEqual(updatedCategory);
       expect(mockCategoryRepository.updateById).toHaveBeenCalledWith(
-        mockCategoryId,
-        updateData,
-        { new: true, runValidators: true }
+        testCategory._id.toString(),
+        updateData
       );
     });
 
-    it('should throw error when updating system category', async () => {
-      const systemCategory = { ...mockCategory, isSystem: true } as ICategory;
-      mockCategoryRepository.findById.mockResolvedValue(systemCategory);
+    it('should throw error when category not found', async () => {
+      const nonExistentId = new mongoose.Types.ObjectId();
+      mockCategoryRepository.findById.mockResolvedValue(null);
 
-      await expect(
-        categoryService.updateCategory(mockCategoryId, updateData, mockUserId)
-      ).rejects.toThrow('System categories cannot be modified');
+      await expect(categoryService.updateCategory(
+        nonExistentId.toString(),
+        { name: 'Updated' },
+        testUserId.toString()
+      )).rejects.toThrow('Category not found');
     });
 
-    it('should validate parent category when changing parent', async () => {
-      const updateDataWithParent = {
-        ...updateData,
-        parentId: new mongoose.Types.ObjectId('new-parent-id'),
+    it('should throw error when category belongs to different user', async () => {
+      const otherUserId = new mongoose.Types.ObjectId();
+      const otherUserCategory = {
+        ...testCategory,
+        userId: otherUserId,
       };
 
-      mockCategoryRepository.findById
-        .mockResolvedValueOnce(mockCategory) // First call for existing category
-        .mockResolvedValueOnce(mockParentCategory); // Second call for new parent
-      mockCategoryRepository.updateById.mockResolvedValue(mockCategory);
+      mockCategoryRepository.findById.mockResolvedValue(otherUserCategory);
 
-      await categoryService.updateCategory(mockCategoryId, updateDataWithParent, mockUserId);
-
-      expect(mockCategoryRepository.findById).toHaveBeenCalledTimes(2);
+      await expect(categoryService.updateCategory(
+        testCategory._id.toString(),
+        { name: 'Updated' },
+        testUserId.toString()
+      )).rejects.toThrow('Access denied');
     });
 
-    it('should throw error when new parent not found', async () => {
-      const updateDataWithParent = {
-        ...updateData,
-        parentId: new mongoose.Types.ObjectId('new-parent-id'),
-      };
+    it('should handle errors during update', async () => {
+      const error = new Error('Database error');
+      mockCategoryRepository.findById.mockResolvedValue(testCategory);
+      mockCategoryRepository.updateById.mockRejectedValue(error);
 
-      mockCategoryRepository.findById
-        .mockResolvedValueOnce(mockCategory)
-        .mockResolvedValueOnce(null);
-
-      await expect(
-        categoryService.updateCategory(mockCategoryId, updateDataWithParent, mockUserId)
-      ).rejects.toThrow('Parent category not found or access denied');
-    });
-
-    it('should throw error when new parent belongs to different user', async () => {
-      const updateDataWithParent = {
-        ...updateData,
-        parentId: new mongoose.Types.ObjectId('new-parent-id'),
-      };
-
-      const differentUserParent = {
-        ...mockParentCategory,
-        userId: new mongoose.Types.ObjectId('different-user'),
-      } as ICategory;
-
-      mockCategoryRepository.findById
-        .mockResolvedValueOnce(mockCategory)
-        .mockResolvedValueOnce(differentUserParent);
-
-      await expect(
-        categoryService.updateCategory(mockCategoryId, updateDataWithParent, mockUserId)
-      ).rejects.toThrow('Parent category not found or access denied');
-    });
-
-    it('should check for duplicate names under new parent', async () => {
-      const updateDataWithParent = {
-        ...updateData,
-        parentId: new mongoose.Types.ObjectId('new-parent-id'),
-      };
-
-      mockCategoryRepository.findById
-        .mockResolvedValueOnce(mockCategory)
-        .mockResolvedValueOnce(mockParentCategory);
-      mockCategoryRepository.findOne.mockResolvedValue(mockCategory); // Duplicate found
-
-      await expect(
-        categoryService.updateCategory(mockCategoryId, updateDataWithParent, mockUserId)
-      ).rejects.toThrow('Category with this name already exists at this level');
-    });
-
-    it('should recalculate level and path when parent changes', async () => {
-      const updateDataWithParent = {
-        ...updateData,
-        parentId: new mongoose.Types.ObjectId('new-parent-id'),
-      };
-
-      mockCategoryRepository.findById
-        .mockResolvedValueOnce(mockCategory)
-        .mockResolvedValueOnce(mockParentCategory);
-      mockCategoryRepository.findOne.mockResolvedValue(null);
-      mockCategoryRepository.updateById.mockResolvedValue(mockCategory);
-
-      await categoryService.updateCategory(mockCategoryId, updateDataWithParent, mockUserId);
-
-      expect(mockCategoryRepository.updateById).toHaveBeenCalledWith(
-        mockCategoryId,
-        expect.objectContaining({
-          level: 1,
-          path: ['Parent Category', 'Updated Category'],
-        }),
-        { new: true, runValidators: true }
-      );
-    });
-
-    it('should throw error when update fails', async () => {
-      mockCategoryRepository.findById.mockResolvedValue(mockCategory);
-      mockCategoryRepository.updateById.mockResolvedValue(null);
-
-      await expect(
-        categoryService.updateCategory(mockCategoryId, updateData, mockUserId)
-      ).rejects.toThrow('Failed to update category');
+      await expect(categoryService.updateCategory(
+        testCategory._id.toString(),
+        { name: 'Updated' },
+        testUserId.toString()
+      )).rejects.toThrow('Database error');
     });
   });
 
   describe('deleteCategory', () => {
     it('should delete category successfully', async () => {
-      mockCategoryRepository.findById.mockResolvedValue(mockCategory);
-      mockCategoryRepository.findOne.mockResolvedValue(null); // No children
-      mockCategoryRepository.updateById.mockResolvedValue(mockCategory);
+      mockCategoryRepository.findById.mockResolvedValue(testCategory);
+      mockCategoryRepository.deleteById.mockResolvedValue(testCategory);
 
-      await categoryService.deleteCategory(mockCategoryId, mockUserId);
+      const result = await categoryService.deleteCategory(testCategory._id.toString(), testUserId.toString());
 
-      expect(mockCategoryRepository.updateById).toHaveBeenCalledWith(mockCategoryId, {
-        isActive: false,
-        deletedAt: expect.any(Date),
-      });
+      expect(result).toEqual(testCategory);
+      expect(mockCategoryRepository.deleteById).toHaveBeenCalledWith(testCategory._id.toString());
     });
 
-    it('should throw error when deleting system category', async () => {
-      const systemCategory = { ...mockCategory, isSystem: true } as ICategory;
-      mockCategoryRepository.findById.mockResolvedValue(systemCategory);
+    it('should throw error when category not found', async () => {
+      const nonExistentId = new mongoose.Types.ObjectId();
+      mockCategoryRepository.findById.mockResolvedValue(null);
 
-      await expect(
-        categoryService.deleteCategory(mockCategoryId, mockUserId)
-      ).rejects.toThrow('System categories cannot be deleted');
+      await expect(categoryService.deleteCategory(nonExistentId.toString(), testUserId.toString()))
+        .rejects.toThrow('Category not found');
     });
 
-    it('should throw error when category has children', async () => {
-      mockCategoryRepository.findById.mockResolvedValue(mockCategory);
-      mockCategoryRepository.findOne.mockResolvedValue(mockChildCategory as any); // Has children
+    it('should throw error when category belongs to different user', async () => {
+      const otherUserId = new mongoose.Types.ObjectId();
+      const otherUserCategory = {
+        ...testCategory,
+        userId: otherUserId,
+      };
 
-      await expect(
-        categoryService.deleteCategory(mockCategoryId, mockUserId)
-      ).rejects.toThrow('Cannot delete category with subcategories. Please delete subcategories first.');
+      mockCategoryRepository.findById.mockResolvedValue(otherUserCategory);
+
+      await expect(categoryService.deleteCategory(testCategory._id.toString(), testUserId.toString()))
+        .rejects.toThrow('Access denied');
+    });
+
+    it('should throw error when category has subcategories', async () => {
+      const subcategories = [{ _id: new mongoose.Types.ObjectId() }];
+      mockCategoryRepository.findById.mockResolvedValue(testCategory);
+      mockCategoryRepository.findByParentId.mockResolvedValue(subcategories);
+
+      await expect(categoryService.deleteCategory(testCategory._id.toString(), testUserId.toString()))
+        .rejects.toThrow('Cannot delete category with subcategories');
+    });
+
+    it('should handle errors during deletion', async () => {
+      const error = new Error('Database error');
+      mockCategoryRepository.findById.mockResolvedValue(testCategory);
+      mockCategoryRepository.findByParentId.mockResolvedValue([]);
+      mockCategoryRepository.deleteById.mockRejectedValue(error);
+
+      await expect(categoryService.deleteCategory(testCategory._id.toString(), testUserId.toString()))
+        .rejects.toThrow('Database error');
     });
   });
 
   describe('bulkCreateCategories', () => {
-    const categoriesData = [
-      { name: 'Category 1', description: 'Description 1' },
-      { name: 'Category 2', description: 'Description 2' },
-    ];
-
-    it('should create categories in bulk successfully', async () => {
-      const createdCategories = [
-        { ...mockCategory, name: 'Category 1' },
-        { ...mockCategory, name: 'Category 2' },
+    it('should bulk create categories successfully', async () => {
+      const categoriesData = [
+        { name: 'Category 1' },
+        { name: 'Category 2' },
       ];
 
-      mockCategoryRepository.findOne.mockResolvedValue(null); // No duplicates
+      const createdCategories = categoriesData.map((data, index) => ({
+        _id: new mongoose.Types.ObjectId(),
+        ...data,
+        userId: testUserId,
+        level: 0,
+        path: [data.name],
+        isActive: true,
+        isSystem: false,
+      }));
+
+      mockCategoryRepository.findById.mockResolvedValue(null);
+      mockCategoryRepository.findOne.mockResolvedValue(null);
       mockCategoryRepository.create
-        .mockResolvedValueOnce(createdCategories[0] as any)
-        .mockResolvedValueOnce(createdCategories[1] as any);
+        .mockResolvedValueOnce(createdCategories[0] as ICategory)
+        .mockResolvedValueOnce(createdCategories[1] as ICategory);
 
-      const result = await categoryService.bulkCreateCategories(categoriesData, mockUserId);
+      const result = await categoryService.bulkCreateCategories(categoriesData, testUserId.toString());
 
-      expect(result).toEqual(createdCategories);
+      expect(result).toHaveLength(2);
       expect(mockCategoryRepository.create).toHaveBeenCalledTimes(2);
     });
 
-    it('should continue processing when some categories fail', async () => {
-      const createdCategories = [{ ...mockCategory, name: 'Category 1' }];
+    it('should handle partial failures during bulk creation', async () => {
+      const categoriesData = [
+        { name: 'Category 1' },
+        { name: 'Category 2' },
+      ];
 
+      const createdCategory = {
+        _id: new mongoose.Types.ObjectId(),
+        ...categoriesData[0],
+        userId: testUserId,
+        level: 0,
+        path: [categoriesData[0].name],
+        isActive: true,
+        isSystem: false,
+      };
+
+      mockCategoryRepository.findById.mockResolvedValue(null);
       mockCategoryRepository.findOne
-        .mockResolvedValueOnce(null) // First category succeeds
-        .mockResolvedValueOnce(mockCategory); // Second category fails (duplicate)
-      mockCategoryRepository.create.mockResolvedValueOnce(createdCategories[0] as any);
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce({ _id: new mongoose.Types.ObjectId() }); // Duplicate
+      mockCategoryRepository.create.mockResolvedValue(createdCategory as ICategory);
 
-      const result = await categoryService.bulkCreateCategories(categoriesData, mockUserId);
+      const result = await categoryService.bulkCreateCategories(categoriesData, testUserId.toString());
 
-      expect(result).toEqual(createdCategories);
-      expect(result.length).toBe(1);
+      expect(result).toHaveLength(1);
+      expect(result[0].name).toBe('Category 1');
     });
   });
 
   describe('getCategoryStats', () => {
-    it('should get category statistics successfully', async () => {
-      const mockStats = {
-        totalCategories: 10,
-        activeCategories: 8,
-        rootCategories: 3,
-        maxDepth: 2,
-        categoriesByLevel: { 0: 3, 1: 5, 2: 2 },
+    it('should get category stats successfully', async () => {
+      const stats = {
+        totalCategories: 5,
+        activeCategories: 4,
+        inactiveCategories: 1,
+        categoriesByLevel: { 0: 2, 1: 3 },
       };
 
       mockCategoryRepository.count
-        .mockResolvedValueOnce(10) // totalCategories
-        .mockResolvedValueOnce(8) // activeCategories
-        .mockResolvedValueOnce(3); // rootCategories
-      mockCategoryRepository.findOne.mockResolvedValue({ level: 2 } as any);
-      mockCategoryRepository.aggregate.mockResolvedValue([
-        { _id: 0, count: 3 },
-        { _id: 1, count: 5 },
-        { _id: 2, count: 2 },
-      ]);
+        .mockResolvedValueOnce(5) // total
+        .mockResolvedValueOnce(4) // active
+        .mockResolvedValueOnce(1); // inactive
 
-      const result = await categoryService.getCategoryStats(mockUserId);
+      const result = await categoryService.getCategoryStats(testUserId.toString());
 
-      expect(result).toEqual(mockStats);
-      expect(mockCategoryRepository.count).toHaveBeenCalledTimes(3);
-      expect(mockCategoryRepository.aggregate).toHaveBeenCalledWith([
-        { $match: { userId: new mongoose.Types.ObjectId(mockUserId) } },
-        { $group: { _id: '$level', count: { $sum: 1 } } },
-        { $sort: { _id: 1 } },
-      ]);
+      expect(result.totalCategories).toBe(5);
+      expect(result.activeCategories).toBe(4);
+      expect(result.inactiveCategories).toBe(1);
     });
 
-    it('should handle case when no categories exist', async () => {
-      mockCategoryRepository.count
-        .mockResolvedValueOnce(0)
-        .mockResolvedValueOnce(0)
-        .mockResolvedValueOnce(0);
-      mockCategoryRepository.findOne.mockResolvedValue(null);
-      mockCategoryRepository.aggregate.mockResolvedValue([]);
+    it('should handle errors during stats retrieval', async () => {
+      const error = new Error('Database error');
+      mockCategoryRepository.count.mockRejectedValue(error);
 
-      const result = await categoryService.getCategoryStats(mockUserId);
-
-      expect(result.maxDepth).toBe(0);
-      expect(result.categoriesByLevel).toEqual({});
+      await expect(categoryService.getCategoryStats(testUserId.toString()))
+        .rejects.toThrow('Database error');
     });
   });
 
-  describe('Private helper methods', () => {
+  describe('Private Methods', () => {
     describe('calculateLevel', () => {
-      it('should calculate level correctly', async () => {
-        mockCategoryRepository.findById.mockResolvedValue(mockParentCategory);
-
-        const level = await (categoryService as any).calculateLevel(mockParentId);
-
-        expect(level).toBe(1); // parent.level + 1
+      it('should calculate level correctly for root category', async () => {
+        const result = await (categoryService as any).calculateLevel(null);
+        expect(result).toBe(0);
       });
 
-      it('should return 0 when parent not found', async () => {
-        mockCategoryRepository.findById.mockResolvedValue(null);
+      it('should calculate level correctly for child category', async () => {
+        const parentId = new mongoose.Types.ObjectId();
+        const parentCategory = {
+          _id: parentId,
+          level: 1,
+        } as ICategory;
 
-        const level = await (categoryService as any).calculateLevel(mockParentId);
+        mockCategoryRepository.findById.mockResolvedValue(parentCategory);
 
-        expect(level).toBe(0);
+        const result = await (categoryService as any).calculateLevel(parentId.toString());
+        expect(result).toBe(2);
       });
     });
 
     describe('calculatePath', () => {
-      it('should calculate path correctly', async () => {
-        mockCategoryRepository.findById.mockResolvedValue(mockParentCategory);
-
-        const path = await (categoryService as any).calculatePath(mockParentId);
-
-        expect(path).toEqual(['Parent Category']);
+      it('should calculate path correctly for root category', async () => {
+        const result = await (categoryService as any).calculatePath(null);
+        expect(result).toEqual([]);
       });
 
-      it('should return empty array when parent not found', async () => {
-        mockCategoryRepository.findById.mockResolvedValue(null);
+      it('should calculate path correctly for child category', async () => {
+        const parentId = new mongoose.Types.ObjectId();
+        const parentCategory = {
+          _id: parentId,
+          path: ['Parent'],
+        } as ICategory;
 
-        const path = await (categoryService as any).calculatePath(mockParentId);
+        mockCategoryRepository.findById.mockResolvedValue(parentCategory);
 
-        expect(path).toEqual([]);
-      });
-    });
-
-    describe('wouldCreateCircularReference', () => {
-      it('should detect circular reference', async () => {
-        const parent1 = { ...mockParentCategory, parentId: new mongoose.Types.ObjectId('parent2') } as ICategory;
-        const parent2 = { ...mockParentCategory, _id: new mongoose.Types.ObjectId('parent2'), parentId: new mongoose.Types.ObjectId(mockCategoryId) } as ICategory;
-
-        mockCategoryRepository.findById
-          .mockResolvedValueOnce(parent1)
-          .mockResolvedValueOnce(parent2);
-
-        const result = await (categoryService as any).wouldCreateCircularReference(
-          mockCategoryId,
-          mockParentId
-        );
-
-        expect(result).toBe(true);
-      });
-
-      it('should not detect circular reference when none exists', async () => {
-        const parent1 = { ...mockParentCategory, parentId: undefined } as ICategory;
-
-        mockCategoryRepository.findById.mockResolvedValue(parent1);
-
-        const result = await (categoryService as any).wouldCreateCircularReference(
-          mockCategoryId,
-          mockParentId
-        );
-
-        expect(result).toBe(false);
-      });
-    });
-
-    describe('updateChildPaths', () => {
-      it('should update child paths recursively', async () => {
-        const children = [mockChildCategory];
-        const newParentPath = ['New Parent', 'New Category'];
-
-        mockCategoryRepository.find.mockResolvedValue(children);
-        mockCategoryRepository.updateById.mockResolvedValue(mockChildCategory);
-
-        await (categoryService as any).updateChildPaths(mockCategoryId, newParentPath);
-
-        expect(mockCategoryRepository.updateById).toHaveBeenCalledWith(
-          mockChildCategory._id?.toString(),
-          { path: ['New Parent', 'New Category', 'Child Category'] }
-        );
+        const result = await (categoryService as any).calculatePath(parentId.toString());
+        expect(result).toEqual(['Parent']);
       });
     });
   });

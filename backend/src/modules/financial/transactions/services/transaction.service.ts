@@ -119,6 +119,7 @@ export class TransactionService {
       status?: TransactionStatus;
       categoryId?: string;
       subcategoryId?: string;
+      accountId?: string;
       paymentMethod?: string;
       isRecurring?: boolean;
       source?: string;
@@ -147,6 +148,7 @@ export class TransactionService {
         status,
         categoryId,
         subcategoryId,
+        accountId,
         paymentMethod,
         isRecurring,
         source,
@@ -171,6 +173,8 @@ export class TransactionService {
         query.categoryId = new mongoose.Types.ObjectId(categoryId);
       if (subcategoryId)
         query.subcategoryId = new mongoose.Types.ObjectId(subcategoryId);
+      if (accountId)
+        query.accountId = new mongoose.Types.ObjectId(accountId);
       if (paymentMethod) query.paymentMethod = paymentMethod;
       if (isRecurring !== undefined) query.isRecurring = isRecurring;
       if (source) query.source = source;

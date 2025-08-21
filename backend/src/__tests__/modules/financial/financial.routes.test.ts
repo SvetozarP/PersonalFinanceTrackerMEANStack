@@ -1,113 +1,107 @@
 import request from 'supertest';
 import express from 'express';
+import financialRoutes from '../../../modules/financial/financial.routes';
+import { FinancialService } from '../../../modules/financial/financial.service';
+import { authenticateToken } from '../../../modules/auth/auth.middleware';
+import mongoose from 'mongoose';
 
-// Mock the auth middleware
-const mockAuthMiddleware = jest.fn((req, res, next) => next());
+// Mock the FinancialService
+jest.mock('../../../modules/financial/financial.service');
+jest.mock('../../../modules/auth/auth.middleware');
 
-// Create mock controller
-const mockController = {
-  getFinancialDashboard: jest.fn().mockImplementation((req, res) => {
-    res.status(200).json({
-      success: true,
-      data: { balance: 1000, income: 2000, expenses: 1000 },
-    });
-  }),
-  generateFinancialReport: jest.fn().mockImplementation((req, res) => {
-    res.status(200).json({
-      success: true,
-      data: { reportType: 'monthly', data: {} },
-    });
-  }),
-  getBudgetAnalysis: jest.fn().mockImplementation((req, res) => {
-    res.status(200).json({
-      success: true,
-      data: { budget: 1500, spent: 1000, remaining: 500 },
-    });
-  }),
-  getFinancialInsights: jest.fn().mockImplementation((req, res) => {
-    res.status(200).json({
-      success: true,
-      data: { insights: ['High spending on food'], trends: [] },
-    });
-  }),
-  exportFinancialData: jest.fn().mockImplementation((req, res) => {
-    res.status(200).json({
-      success: true,
-      data: { filename: 'export.csv', data: [] },
-    });
-  }),
-  getFinancialSummary: jest.fn().mockImplementation((req, res) => {
-    res.status(200).json({
-      success: true,
-      data: { summary: 'Monthly summary', period: 'month' },
-    });
-  }),
-};
-
-// Create mock routes
-const createMockRoutes = () => {
-  const router = express.Router();
-  
-  // Apply auth middleware
-  router.use(mockAuthMiddleware);
-  
-  // Define routes
-  router.get('/dashboard', mockController.getFinancialDashboard);
-  router.post('/reports', mockController.generateFinancialReport);
-  router.get('/budget-analysis', mockController.getBudgetAnalysis);
-  router.get('/insights', mockController.getFinancialInsights);
-  router.post('/export', mockController.exportFinancialData);
-  router.get('/summary', mockController.getFinancialSummary);
-  
-  return router;
-};
-
-describe('Financial Routes - Working Test', () => {
+describe('Financial Routes', () => {
   let app: express.Application;
+  let mockFinancialService: jest.Mocked<FinancialService>;
+  let testUserId: string;
 
-  beforeEach(() => {
-    app = express();
-    app.use(express.json());
-    app.use('/api/financial', createMockRoutes());
-    
+  beforeAll(async () => {
+    testUserId = new mongoose.Types.ObjectId().toString();
+  });
+
+  beforeEach(async () => {
     // Reset mocks
     jest.clearAllMocks();
+    
+    // Create mock service
+    mockFinancialService = {
+      getFinancialDashboard: jest.fn(),
+      generateFinancialReport: jest.fn(),
+      getFinancialInsights: jest.fn(),
+      getBudgetAnalysis: jest.fn(),
+      exportFinancialData: jest.fn(),
+    } as any;
+
+    // Mock the FinancialService constructor
+    (FinancialService as jest.MockedClass<typeof FinancialService>).mockImplementation(() => mockFinancialService);
+    
+    // Mock auth middleware to always pass
+    (authenticateToken as jest.Mock).mockImplementation((req, res, next) => {
+      req.user = { userId: testUserId };
+      next();
+    });
+
+    // Create Express app
+    app = express();
+    app.use(express.json());
+    app.use('/api/financial', financialRoutes);
   });
 
-  describe('GET /dashboard', () => {
-    it('should return financial dashboard data', async () => {
+  describe('GET /api/financial/dashboard', () => {
+    it('should get financial dashboard successfully', async () => {
+      const dashboardData = {
+        totalIncome: 5000,
+        totalExpenses: 3000,
+        netAmount: 2000,
+        categories: [
+          { name: 'Food', amount: 500, percentage: 16.67 },
+          { name: 'Transport', amount: 300, percentage: 10 },
+        ],
+        recentTransactions: [
+          { title: 'Groceries', amount: 50, date: new Date() },
+        ],
+      };
+
+      mockFinancialService.getFinancialDashboard.mockResolvedValue(dashboardData as any);
+
       const response = await request(app)
         .get('/api/financial/dashboard')
-        .set('Content-Type', 'application/json');
+        .expect(200);
 
-      expect(response.status).toBe(200);
-      expect(response.body.success).toBe(true);
-      expect(response.body.data).toHaveProperty('balance');
-      expect(response.body.data).toHaveProperty('income');
-      expect(response.body.data).toHaveProperty('expenses');
+      expect(response.body).toEqual(dashboardData);
+      expect(mockFinancialService.getFinancialDashboard).toHaveBeenCalledWith(testUserId, {});
     });
 
-    it('should apply authentication middleware', async () => {
-      await request(app).get('/api/financial/dashboard');
-      expect(mockAuthMiddleware).toHaveBeenCalled();
-    });
+    it('should get financial dashboard with date range', async () => {
+      const dashboardData = { totalIncome: 2000, totalExpenses: 1500, netAmount: 500 };
+      const queryParams = { startDate: '2024-01-01', endDate: '2024-01-31' };
 
-    it('should handle query parameters', async () => {
+      mockFinancialService.getFinancialDashboard.mockResolvedValue(dashboardData as any);
+
       const response = await request(app)
         .get('/api/financial/dashboard')
-        .query({
-          startDate: '2024-01-01',
-          endDate: '2024-01-31',
-          accountId: 'account123',
-        })
-        .set('Content-Type', 'application/json');
+        .query(queryParams)
+        .expect(200);
 
-      expect(response.status).toBe(200);
+      expect(response.body).toEqual(dashboardData);
+      expect(mockFinancialService.getFinancialDashboard).toHaveBeenCalledWith(testUserId, queryParams);
+    });
+
+    it('should return 500 when service throws error', async () => {
+      const error = new Error('Service error');
+
+      mockFinancialService.getFinancialDashboard.mockRejectedValue(error);
+
+      const response = await request(app)
+        .get('/api/financial/dashboard')
+        .expect(500);
+
+      expect(response.body).toHaveProperty('error');
+      expect(mockFinancialService.getFinancialDashboard).toHaveBeenCalledWith(testUserId, {});
     });
   });
 
-  describe('POST /reports', () => {
-    it('should generate financial report', async () => {
+  describe('POST /api/financial/report', () => {
+    it('should generate financial report successfully', async () => {
       const reportData = {
         reportType: 'monthly',
         startDate: '2024-01-01',
@@ -117,67 +111,210 @@ describe('Financial Routes - Working Test', () => {
         includeProjections: false,
       };
 
-      const response = await request(app)
-        .post('/api/financial/reports')
-        .set('Content-Type', 'application/json')
-        .send(reportData);
+      const generatedReport = {
+        reportId: new mongoose.Types.ObjectId().toString(),
+        reportType: 'monthly',
+        period: { start: '2024-01-01', end: '2024-01-31' },
+        summary: { totalIncome: 5000, totalExpenses: 3000, netAmount: 2000 },
+        categories: [{ name: 'Food', amount: 500 }],
+        trends: [{ month: 'January', netAmount: 2000 }],
+      };
 
-      expect(response.status).toBe(200);
-      expect(response.body.success).toBe(true);
-      expect(response.body.data).toHaveProperty('reportType');
+      mockFinancialService.generateFinancialReport.mockResolvedValue(generatedReport as any);
+
+      const response = await request(app)
+        .post('/api/financial/report')
+        .send(reportData)
+        .expect(200);
+
+      expect(response.body).toEqual(generatedReport);
+      expect(mockFinancialService.generateFinancialReport).toHaveBeenCalledWith(reportData, testUserId);
     });
 
-    it('should apply authentication middleware', async () => {
-      await request(app)
-        .post('/api/financial/reports')
-        .set('Content-Type', 'application/json')
-        .send({ reportType: 'monthly' });
+    it('should return 400 when report type is missing', async () => {
+      const invalidData = {
+        startDate: '2024-01-01',
+        endDate: '2024-01-31',
+      };
 
-      expect(mockAuthMiddleware).toHaveBeenCalled();
+      const response = await request(app)
+        .post('/api/financial/report')
+        .send(invalidData)
+        .expect(400);
+
+      expect(response.body).toHaveProperty('error');
+      expect(mockFinancialService.generateFinancialReport).not.toHaveBeenCalled();
+    });
+
+    it('should return 400 when start date is missing', async () => {
+      const invalidData = {
+        reportType: 'monthly',
+        endDate: '2024-01-31',
+      };
+
+      const response = await request(app)
+        .post('/api/financial/report')
+        .send(invalidData)
+        .expect(400);
+
+      expect(response.body).toHaveProperty('error');
+      expect(mockFinancialService.generateFinancialReport).not.toHaveBeenCalled();
+    });
+
+    it('should return 400 when end date is missing', async () => {
+      const invalidData = {
+        reportType: 'monthly',
+        startDate: '2024-01-01',
+      };
+
+      const response = await request(app)
+        .post('/api/financial/report')
+        .send(invalidData)
+        .expect(400);
+
+      expect(response.body).toHaveProperty('error');
+      expect(mockFinancialService.generateFinancialReport).not.toHaveBeenCalled();
+    });
+
+    it('should return 500 when service throws error', async () => {
+      const reportData = {
+        reportType: 'monthly',
+        startDate: '2024-01-01',
+        endDate: '2024-01-31',
+      };
+      const error = new Error('Service error');
+
+      mockFinancialService.generateFinancialReport.mockRejectedValue(error);
+
+      const response = await request(app)
+        .post('/api/financial/report')
+        .send(reportData)
+        .expect(500);
+
+      expect(response.body).toHaveProperty('error');
+      expect(mockFinancialService.generateFinancialReport).toHaveBeenCalledWith(reportData, testUserId);
     });
   });
 
-  describe('GET /budget-analysis', () => {
-    it('should return budget analysis', async () => {
-      const response = await request(app)
-        .get('/api/financial/budget-analysis')
-        .set('Content-Type', 'application/json');
+  describe('GET /api/financial/insights', () => {
+    it('should get financial insights successfully', async () => {
+      const insightsData = {
+        period: 'month',
+        includePredictions: true,
+      };
 
-      expect(response.status).toBe(200);
-      expect(response.body.success).toBe(true);
-      expect(response.body.data).toHaveProperty('budget');
-      expect(response.body.data).toHaveProperty('spent');
-      expect(response.body.data).toHaveProperty('remaining');
-    });
+      const insights = {
+        spendingPatterns: [
+          { category: 'Food', trend: 'increasing', recommendation: 'Consider meal planning' },
+        ],
+        predictions: [
+          { category: 'Transport', predictedAmount: 400, confidence: 0.85 },
+        ],
+        alerts: [
+          { type: 'overspending', message: 'You are spending 20% more than usual on food' },
+        ],
+      };
 
-    it('should apply authentication middleware', async () => {
-      await request(app).get('/api/financial/budget-analysis');
-      expect(mockAuthMiddleware).toHaveBeenCalled();
-    });
-  });
+      mockFinancialService.getFinancialInsights.mockResolvedValue(insights as any);
 
-  describe('GET /insights', () => {
-    it('should return financial insights', async () => {
       const response = await request(app)
         .get('/api/financial/insights')
-        .set('Content-Type', 'application/json');
+        .query(insightsData)
+        .expect(200);
 
-      expect(response.status).toBe(200);
-      expect(response.body.success).toBe(true);
-      expect(response.body.data).toHaveProperty('insights');
-      expect(response.body.data).toHaveProperty('trends');
+      expect(response.body).toEqual(insights);
+      expect(mockFinancialService.getFinancialInsights).toHaveBeenCalledWith(testUserId, insightsData);
     });
 
-    it('should apply authentication middleware', async () => {
-      await request(app).get('/api/financial/insights');
-      expect(mockAuthMiddleware).toHaveBeenCalled();
+    it('should get financial insights with default parameters', async () => {
+      const insights = { spendingPatterns: [], predictions: [], alerts: [] };
+
+      mockFinancialService.getFinancialInsights.mockResolvedValue(insights as any);
+
+      const response = await request(app)
+        .get('/api/financial/insights')
+        .expect(200);
+
+      expect(response.body).toEqual(insights);
+      expect(mockFinancialService.getFinancialInsights).toHaveBeenCalledWith(testUserId, {});
+    });
+
+    it('should return 500 when service throws error', async () => {
+      const error = new Error('Service error');
+
+      mockFinancialService.getFinancialInsights.mockRejectedValue(error);
+
+      const response = await request(app)
+        .get('/api/financial/insights')
+        .expect(500);
+
+      expect(response.body).toHaveProperty('error');
+      expect(mockFinancialService.getFinancialInsights).toHaveBeenCalledWith(testUserId, {});
     });
   });
 
-  describe('POST /export', () => {
-    it('should export financial data', async () => {
+  describe('GET /api/financial/budget-analysis', () => {
+    it('should get budget analysis successfully', async () => {
+      const analysisData = {
+        period: 'month',
+        includeRecommendations: true,
+      };
+
+      const analysis = {
+        budgetStatus: 'on_track',
+        totalBudget: 3000,
+        totalSpent: 2500,
+        remainingBudget: 500,
+        categoryBreakdown: [
+          { category: 'Food', budget: 500, spent: 450, remaining: 50 },
+        ],
+        recommendations: [
+          { type: 'savings', message: 'You can save $50 more this month' },
+        ],
+      };
+
+      mockFinancialService.getBudgetAnalysis.mockResolvedValue(analysis as any);
+
+      const response = await request(app)
+        .get('/api/financial/budget-analysis')
+        .query(analysisData)
+        .expect(200);
+
+      expect(response.body).toEqual(analysis);
+      expect(mockFinancialService.getBudgetAnalysis).toHaveBeenCalledWith(testUserId, analysisData);
+    });
+
+    it('should get budget analysis with default parameters', async () => {
+      const analysis = { budgetStatus: 'on_track', totalBudget: 3000, totalSpent: 2500 };
+
+      mockFinancialService.getBudgetAnalysis.mockResolvedValue(analysis as any);
+
+      const response = await request(app)
+        .get('/api/financial/budget-analysis')
+        .expect(200);
+
+      expect(response.body).toEqual(analysis);
+      expect(mockFinancialService.getBudgetAnalysis).toHaveBeenCalledWith(testUserId, {});
+    });
+
+    it('should return 500 when service throws error', async () => {
+      const error = new Error('Service error');
+
+      mockFinancialService.getBudgetAnalysis.mockRejectedValue(error);
+
+      const response = await request(app)
+        .get('/api/financial/budget-analysis')
+        .expect(500);
+
+      expect(response.body).toHaveProperty('error');
+      expect(mockFinancialService.getBudgetAnalysis).toHaveBeenCalledWith(testUserId, {});
+    });
+  });
+
+  describe('POST /api/financial/export', () => {
+    it('should export financial data successfully', async () => {
       const exportData = {
-        format: 'csv',
+        format: 'json',
         startDate: '2024-01-01',
         endDate: '2024-01-31',
         includeCategories: true,
@@ -185,89 +322,265 @@ describe('Financial Routes - Working Test', () => {
         includeStats: true,
       };
 
+      const exportResult = {
+        filename: 'financial_data_user123_2024-01-01_2024-01-31.json',
+        format: 'json',
+        size: 1024,
+        downloadUrl: 'https://example.com/download/file.json',
+      };
+
+      mockFinancialService.exportFinancialData.mockResolvedValue(exportResult as any);
+
       const response = await request(app)
         .post('/api/financial/export')
-        .set('Content-Type', 'application/json')
-        .send(exportData);
+        .send(exportData)
+        .expect(200);
 
-      expect(response.status).toBe(200);
-      expect(response.body.success).toBe(true);
-      expect(response.body.data).toHaveProperty('filename');
+      expect(response.body).toEqual(exportResult);
+      expect(mockFinancialService.exportFinancialData).toHaveBeenCalledWith(exportData, testUserId);
     });
 
-    it('should apply authentication middleware', async () => {
-      await request(app)
-        .post('/api/financial/export')
-        .set('Content-Type', 'application/json')
-        .send({ format: 'csv', startDate: '2024-01-01', endDate: '2024-01-31' });
+    it('should return 400 when format is missing', async () => {
+      const invalidData = {
+        startDate: '2024-01-01',
+        endDate: '2024-01-31',
+      };
 
-      expect(mockAuthMiddleware).toHaveBeenCalled();
+      const response = await request(app)
+        .post('/api/financial/export')
+        .send(invalidData)
+        .expect(400);
+
+      expect(response.body).toHaveProperty('error');
+      expect(mockFinancialService.exportFinancialData).not.toHaveBeenCalled();
+    });
+
+    it('should return 400 when start date is missing', async () => {
+      const invalidData = {
+        format: 'json',
+        endDate: '2024-01-31',
+      };
+
+      const response = await request(app)
+        .post('/api/financial/export')
+        .send(invalidData)
+        .expect(400);
+
+      expect(response.body).toHaveProperty('error');
+      expect(mockFinancialService.exportFinancialData).not.toHaveBeenCalled();
+    });
+
+    it('should return 400 when end date is missing', async () => {
+      const invalidData = {
+        format: 'json',
+        startDate: '2024-01-01',
+      };
+
+      const response = await request(app)
+        .post('/api/financial/export')
+        .send(invalidData)
+        .expect(400);
+
+      expect(response.body).toHaveProperty('error');
+      expect(mockFinancialService.exportFinancialData).not.toHaveBeenCalled();
+    });
+
+    it('should return 400 when format is unsupported', async () => {
+      const invalidData = {
+        format: 'unsupported',
+        startDate: '2024-01-01',
+        endDate: '2024-01-31',
+      };
+
+      const response = await request(app)
+        .post('/api/financial/export')
+        .send(invalidData)
+        .expect(400);
+
+      expect(response.body).toHaveProperty('error');
+      expect(mockFinancialService.exportFinancialData).not.toHaveBeenCalled();
+    });
+
+    it('should return 500 when service throws error', async () => {
+      const exportData = {
+        format: 'json',
+        startDate: '2024-01-01',
+        endDate: '2024-01-31',
+      };
+      const error = new Error('Service error');
+
+      mockFinancialService.exportFinancialData.mockRejectedValue(error);
+
+      const response = await request(app)
+        .post('/api/financial/export')
+        .send(exportData)
+        .expect(500);
+
+      expect(response.body).toHaveProperty('error');
+      expect(mockFinancialService.exportFinancialData).toHaveBeenCalledWith(exportData, testUserId);
     });
   });
 
-  describe('GET /summary', () => {
-    it('should return financial summary', async () => {
+
+
+      const summaryData = {
+        period: 'month',
+        includeComparisons: true,
+      };
+
+      const summary = {
+        period: 'month',
+        totalIncome: 5000,
+        totalExpenses: 3000,
+        netAmount: 2000,
+        savingsRate: 0.4,
+        comparison: {
+          previousPeriod: { netAmount: 1800, change: 0.11 },
+        },
+      };
+
+      mockFinancialService.getFinancialSummary.mockResolvedValue(summary as any);
+
       const response = await request(app)
         .get('/api/financial/summary')
-        .set('Content-Type', 'application/json');
+        .query(summaryData)
+        .expect(200);
 
-      expect(response.status).toBe(200);
-      expect(response.body.success).toBe(true);
-      expect(response.body.data).toHaveProperty('summary');
-      expect(response.body.data).toHaveProperty('period');
+      expect(response.body).toEqual(summary);
+      expect(mockFinancialService.getFinancialSummary).toHaveBeenCalledWith(testUserId, summaryData);
     });
 
-    it('should apply authentication middleware', async () => {
-      await request(app).get('/api/financial/summary');
-      expect(mockAuthMiddleware).toHaveBeenCalled();
+    it('should get financial summary with default period', async () => {
+      const summary = { period: 'month', totalIncome: 5000, totalExpenses: 3000, netAmount: 2000 };
+
+      mockFinancialService.getFinancialSummary.mockResolvedValue(summary as any);
+
+      const response = await request(app)
+        .get('/api/financial/summary')
+        .expect(200);
+
+      expect(response.body).toEqual(summary);
+      expect(mockFinancialService.getFinancialSummary).toHaveBeenCalledWith(testUserId, {});
+    });
+
+    it('should return 500 when service throws error', async () => {
+      const error = new Error('Service error');
+
+      mockFinancialService.getFinancialSummary.mockRejectedValue(error);
+
+      const response = await request(app)
+        .get('/api/financial/summary')
+        .expect(500);
+
+      expect(response.body).toHaveProperty('error');
+      expect(mockFinancialService.getFinancialSummary).toHaveBeenCalledWith(testUserId, {});
+    });
+  });
+
+  describe('Authentication', () => {
+    it('should return 401 when user is not authenticated', async () => {
+      // Mock auth middleware to fail
+      (authenticateToken as jest.Mock).mockImplementation((req, res, next) => {
+        res.status(401).json({ error: 'Unauthorized' });
+      });
+
+      const response = await request(app)
+        .get('/api/financial/dashboard')
+        .expect(401);
+
+      expect(response.body).toHaveProperty('error', 'Unauthorized');
+    });
+  });
+
+  describe('Error Handling', () => {
+    it('should handle unknown errors gracefully', async () => {
+      const unknownError = 'Unknown error occurred';
+
+      mockFinancialService.getFinancialDashboard.mockRejectedValue(unknownError);
+
+      const response = await request(app)
+        .get('/api/financial/dashboard')
+        .expect(500);
+
+      expect(response.body).toHaveProperty('error');
+      expect(mockFinancialService.getFinancialDashboard).toHaveBeenCalledWith(testUserId, {});
+    });
+
+    it('should handle malformed JSON gracefully', async () => {
+      const response = await request(app)
+        .post('/api/financial/report')
+        .set('Content-Type', 'application/json')
+        .send('invalid json')
+        .expect(400);
+
+      expect(response.body).toHaveProperty('error');
     });
   });
 
   describe('Route Configuration', () => {
-    it('should have all expected routes', async () => {
-      // Test routes by making actual requests to verify they exist
+    it('should have all required routes configured', async () => {
+      const routes = financialRoutes.stack
+        .filter((layer: any) => layer.route)
+        .map((layer: any) => ({
+          path: layer.route.path,
+          methods: Object.keys(layer.route.methods),
+        }));
+
       const expectedRoutes = [
-        { path: '/dashboard', method: 'get' },
-        { path: '/reports', method: 'post' },
-        { path: '/budget-analysis', method: 'get' },
-        { path: '/insights', method: 'get' },
-        { path: '/export', method: 'post' },
-        { path: '/summary', method: 'get' },
+        { path: '/dashboard', methods: ['get'] },
+        { path: '/report', methods: ['post'] },
+        { path: '/insights', methods: ['get'] },
+        { path: '/budget-analysis', methods: ['get'] },
+        { path: '/export', methods: ['post'] },
+        { path: '/summary', methods: ['get'] },
       ];
 
-      for (const route of expectedRoutes) {
-        let response;
-        if (route.method === 'get') {
-          response = await request(app).get(`/api/financial${route.path}`);
-        } else {
-          response = await request(app)
-            .post(`/api/financial${route.path}`)
-            .set('Content-Type', 'application/json')
-            .send({});
-        }
-        
-        // Route exists if we get a response (not 404)
-        expect(response.status).not.toBe(404);
-      }
+      expectedRoutes.forEach(expectedRoute => {
+        const foundRoute = routes.find(
+          route => route.path === expectedRoute.path
+        );
+        expect(foundRoute).toBeDefined();
+        expectedRoute.methods.forEach(method => {
+          expect(foundRoute?.methods).toContain(method);
+        });
+      });
+    });
+  });
+
+  describe('Validation', () => {
+    it('should validate date format in query parameters', async () => {
+      const response = await request(app)
+        .get('/api/financial/dashboard')
+        .query({ startDate: 'invalid-date' })
+        .expect(400);
+
+      expect(response.body).toHaveProperty('error');
     });
 
-    it('should apply authentication to all routes', async () => {
-      const routes = ['/dashboard', '/reports', '/budget-analysis', '/insights', '/export', '/summary'];
-      
-      for (const route of routes) {
-        jest.clearAllMocks();
-        
-        if (route === '/reports' || route === '/export') {
-          await request(app)
-            .post(`/api/financial${route}`)
-            .set('Content-Type', 'application/json')
-            .send({});
-        } else {
-          await request(app).get(`/api/financial${route}`);
-        }
-        
-        expect(mockAuthMiddleware).toHaveBeenCalled();
-      }
+    it('should validate date format in request body', async () => {
+      const response = await request(app)
+        .post('/api/financial/report')
+        .send({
+          reportType: 'monthly',
+          startDate: 'invalid-date',
+          endDate: '2024-01-31',
+        })
+        .expect(400);
+
+      expect(response.body).toHaveProperty('error');
+    });
+
+    it('should validate enum values', async () => {
+      const response = await request(app)
+        .post('/api/financial/report')
+        .send({
+          reportType: 'invalid-type',
+          startDate: '2024-01-01',
+          endDate: '2024-01-31',
+        })
+        .expect(400);
+
+      expect(response.body).toHaveProperty('error');
     });
   });
 });
