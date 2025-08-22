@@ -509,16 +509,28 @@ transactionSchema.statics.createRecurringSeries = async function (
   let currentDate = transactionData.date
     ? new Date(transactionData.date)
     : new Date();
+  
+  // Safety check to prevent infinite loops
+  const maxIterations = 1000;
+  let iterationCount = 0;
 
-  while (currentDate <= endDate) {
+  while (currentDate <= endDate && iterationCount < maxIterations) {
     const transaction = new this({
       ...transactionData,
       date: new Date(currentDate),
+      isRecurring: true,
+      recurrencePattern: pattern,
       nextOccurrence: calculateNextOccurrence(currentDate, pattern),
     });
 
     transactions.push(transaction);
     currentDate = calculateNextOccurrence(currentDate, pattern);
+    iterationCount++;
+  }
+
+  // If we hit the max iterations, log a warning
+  if (iterationCount >= maxIterations) {
+    console.warn(`createRecurringSeries: Maximum iterations (${maxIterations}) reached. This might indicate an infinite loop.`);
   }
 
   return this.insertMany(transactions);
@@ -543,13 +555,36 @@ function calculateNextOccurrence(
       nextDate.setDate(nextDate.getDate() + 14 * interval);
       break;
     case RecurrencePattern.MONTHLY:
+      // Handle month-end dates properly
+      const currentDay = nextDate.getDate();
       nextDate.setMonth(nextDate.getMonth() + interval);
+      
+      // If the original date was the last day of the month, 
+      // ensure we stay on the last day of the new month
+      const lastDayOfNewMonth = new Date(nextDate.getFullYear(), nextDate.getMonth() + 1, 0).getDate();
+      if (currentDay > lastDayOfNewMonth) {
+        nextDate.setDate(lastDayOfNewMonth);
+      }
       break;
     case RecurrencePattern.QUARTERLY:
+      // Handle month-end dates properly for quarterly
+      const currentDayQuarterly = nextDate.getDate();
       nextDate.setMonth(nextDate.getMonth() + 3 * interval);
+      
+      const lastDayOfNewQuarterMonth = new Date(nextDate.getFullYear(), nextDate.getMonth() + 1, 0).getDate();
+      if (currentDayQuarterly > lastDayOfNewQuarterMonth) {
+        nextDate.setDate(lastDayOfNewQuarterMonth);
+      }
       break;
     case RecurrencePattern.YEARLY:
+      // Handle leap year and month-end dates properly
+      const currentDayYearly = nextDate.getDate();
       nextDate.setFullYear(nextDate.getFullYear() + interval);
+      
+      const lastDayOfNewYearMonth = new Date(nextDate.getFullYear(), nextDate.getMonth() + 1, 0).getDate();
+      if (currentDayYearly > lastDayOfNewYearMonth) {
+        nextDate.setDate(lastDayOfNewYearMonth);
+      }
       break;
     default:
       return nextDate;

@@ -895,6 +895,10 @@ export class TransactionRepository extends BaseRepository<ITransaction> {
         {
           $addFields: {
             netIncome: { $subtract: ['$totalIncome', '$totalExpenses'] },
+          },
+        },
+        {
+          $addFields: {
             savingsRate: {
               $cond: [
                 { $gt: ['$totalIncome', 0] },

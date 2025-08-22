@@ -5,10 +5,12 @@ import mongoose from 'mongoose';
 
 // Mock the category repository
 jest.mock('../../../../modules/financial/categories/repositories/category.repository');
+// Mock the logger service
 jest.mock('../../../../shared/services/logger.service', () => ({
   logger: {
     info: jest.fn(),
     error: jest.fn(),
+    warn: jest.fn(),
   },
 }));
 
@@ -33,6 +35,8 @@ describe('Category Service', () => {
     mockCategoryRepository.deleteById.mockResolvedValue({} as any);
     mockCategoryRepository.find.mockResolvedValue([]);
     mockCategoryRepository.count.mockResolvedValue(0);
+    mockCategoryRepository.getCategoryTree.mockResolvedValue([]);
+    mockCategoryRepository.aggregate.mockResolvedValue([]);
   });
 
   describe('createCategory', () => {
@@ -810,6 +814,141 @@ describe('Category Service', () => {
       expect(result.categories).toHaveLength(5);
     });
   });
+
+  describe('getCategoryStats', () => {
+    const mockUserId = '507f1f77bcf86cd799439011';
+
+    it('should get category statistics successfully', async () => {
+      const mockLevelGroups = [
+        { _id: 0, count: 1 },
+        { _id: 1, count: 1 },
+      ];
+
+      mockCategoryRepository.count
+        .mockResolvedValueOnce(2) // totalCategories
+        .mockResolvedValueOnce(2) // activeCategories
+        .mockResolvedValueOnce(1); // rootCategories
+      mockCategoryRepository.findOne.mockResolvedValue({ 
+        level: 1,
+        name: 'Test Category',
+        path: ['Test Category'],
+        isActive: true,
+        isSystem: false,
+        userId: new mongoose.Types.ObjectId(mockUserId),
+        _id: new mongoose.Types.ObjectId(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        description: '',
+        color: '',
+        icon: '',
+        parentId: null,
+        children: [],
+        transactionCount: 0,
+        totalAmount: 0,
+        deletedAt: null
+      } as any);
+      mockCategoryRepository.aggregate.mockResolvedValue(mockLevelGroups);
+
+      const result = await categoryService.getCategoryStats(mockUserId);
+
+      expect(result).toBeDefined();
+      expect(result.totalCategories).toBe(2);
+      expect(result.activeCategories).toBe(2);
+      expect(result.maxDepth).toBe(1);
+      expect(result.categoriesByLevel).toEqual({ 0: 1, 1: 1 });
+    });
+
+    it('should handle repository errors in getCategoryStats', async () => {
+      const mockError = new Error('Repository error');
+      mockCategoryRepository.count.mockRejectedValue(mockError);
+
+      await expect(
+        categoryService.getCategoryStats(mockUserId)
+      ).rejects.toThrow('Repository error');
+    });
+
+    it('should handle empty categories gracefully', async () => {
+      mockCategoryRepository.count
+        .mockResolvedValueOnce(0) // totalCategories
+        .mockResolvedValueOnce(0) // activeCategories
+        .mockResolvedValueOnce(0); // rootCategories
+      mockCategoryRepository.findOne.mockResolvedValue(null);
+      mockCategoryRepository.aggregate.mockResolvedValue([]);
+
+      const result = await categoryService.getCategoryStats(mockUserId);
+
+      expect(result.totalCategories).toBe(0);
+      expect(result.activeCategories).toBe(0);
+      expect(result.maxDepth).toBe(0);
+      expect(result.categoriesByLevel).toEqual({});
+    });
+  });
+
+  describe('getCategoryTree', () => {
+    const mockUserId = '507f1f77bcf86cd799439011';
+
+    it('should get category tree successfully', async () => {
+      const mockCategories = [
+        {
+          _id: new mongoose.Types.ObjectId(),
+          name: 'Root Category',
+          userId: new mongoose.Types.ObjectId(mockUserId),
+          level: 0,
+          parentId: null,
+          path: ['Root Category'],
+          isActive: true,
+        },
+        {
+          _id: new mongoose.Types.ObjectId(),
+          name: 'Child Category',
+          userId: new mongoose.Types.ObjectId(mockUserId),
+          level: 1,
+          parentId: new mongoose.Types.ObjectId(),
+          path: ['Root Category', 'Child Category'],
+          isActive: true,
+        },
+      ] as any;
+
+      mockCategoryRepository.getCategoryTree.mockResolvedValue(mockCategories);
+
+      const result = await categoryService.getCategoryTree(mockUserId);
+
+      expect(result).toBeDefined();
+      expect(Array.isArray(result)).toBe(true);
+    });
+  });
+
+  describe('bulkCreateCategories', () => {
+    const mockUserId = '507f1f77bcf86cd799439011';
+
+    it('should bulk create categories successfully', async () => {
+      const categoriesData = [
+        { name: 'Category 1', description: 'First category' },
+        { name: 'Category 2', description: 'Second category' },
+      ];
+
+      const mockCreatedCategories = categoriesData.map((data, index) => ({
+        _id: new mongoose.Types.ObjectId(),
+        ...data,
+        userId: new mongoose.Types.ObjectId(mockUserId),
+        level: 0,
+        path: [data.name],
+        isActive: true,
+        isSystem: false,
+      })) as any;
+
+      mockCategoryRepository.create.mockResolvedValue(mockCreatedCategories[0]);
+      mockCategoryRepository.findOne.mockResolvedValue(null);
+
+      const result = await categoryService.bulkCreateCategories(categoriesData, mockUserId);
+
+      expect(result).toBeDefined();
+      expect(Array.isArray(result)).toBe(true);
+      expect(result).toHaveLength(2);
+    });
+  });
+
+
 
   describe('Edge Cases and Error Handling', () => {
     it('should handle empty category data', async () => {
