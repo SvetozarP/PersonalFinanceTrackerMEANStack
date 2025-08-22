@@ -271,6 +271,15 @@ describe('Base Repository', () => {
         'Count failed'
       );
     });
+
+    it('should handle count errors gracefully', async () => {
+      const mockError = new Error('Count failed');
+      mockModel.countDocuments.mockRejectedValue(mockError);
+
+      await expect(repository.count({ status: 'active' })).rejects.toThrow(
+        'Count failed'
+      );
+    });
   });
 
   describe('Exists', () => {
@@ -306,6 +315,15 @@ describe('Base Repository', () => {
         repository.exists({ email: 'test@example.com' })
       ).rejects.toThrow('Exists check failed');
     });
+
+    it('should handle exists errors gracefully', async () => {
+      const mockError = new Error('Exists check failed');
+      mockModel.exists.mockRejectedValue(mockError);
+
+      await expect(
+        repository.exists({ email: 'test@example.com' })
+      ).rejects.toThrow('Exists check failed');
+    });
   });
 
   describe('Aggregation', () => {
@@ -325,6 +343,15 @@ describe('Base Repository', () => {
     });
 
     it('should handle aggregation errors', async () => {
+      const mockError = new Error('Aggregation failed');
+      mockModel.aggregate.mockRejectedValue(mockError);
+
+      const pipeline = [{ $match: { status: 'active' } }];
+
+      await expect(repository.aggregate(pipeline)).rejects.toThrow('Aggregation failed');
+    });
+
+    it('should handle aggregation errors gracefully', async () => {
       const mockError = new Error('Aggregation failed');
       mockModel.aggregate.mockRejectedValue(mockError);
 
@@ -445,6 +472,23 @@ describe('Base Repository', () => {
 
       expect(result.totalPages).toBe(3);
       expect(result.total).toBe(25);
+    });
+
+    it('should handle pagination errors gracefully', async () => {
+      const mockError = new Error('Pagination failed');
+      
+      // Mock the chained methods for find
+      const mockFindChain = {
+        sort: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockRejectedValue(mockError)
+      };
+      mockModel.find.mockReturnValue(mockFindChain);
+      
+      // Mock countDocuments to also fail
+      mockModel.countDocuments.mockRejectedValue(mockError);
+
+      await expect(repository.findWithPagination({}, 1, 10)).rejects.toThrow('Pagination failed');
     });
   });
 });

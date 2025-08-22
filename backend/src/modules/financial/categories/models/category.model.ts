@@ -76,7 +76,11 @@ categorySchema.index({ userId: 1, parentId: 1 });
 
 // Virtual for full path
 categorySchema.virtual('fullPath').get(function () {
-  return this.path.join(' > ');
+  const pathArray = [...this.path];
+  if (this.name) {
+    pathArray.push(this.name);
+  }
+  return pathArray.join(' > ');
 });
 
 // Virtual for children count
@@ -150,16 +154,33 @@ categorySchema.pre('save', async function (this: ICategory, next: (error?: Error
 // Pre-deleteOne middleware to handle children when category is deleted
 categorySchema.pre(
   'deleteOne',
-  { document: true, query: false },
-  async function (this: ICategory, next: (error?: Error) => void) {
+  { document: true, query: true },
+  async function (this: any, next: (error?: Error) => void) {
     try {
+      let categoryId: mongoose.Types.ObjectId;
+      
+      if (this._id) {
+        // Document-level deletion
+        categoryId = this._id;
+      } else if (this.getQuery && this.getQuery()._id) {
+        // Query-level deletion
+        categoryId = this.getQuery()._id;
+      } else {
+        return next();
+      }
+
       // Move children to parent or make them root categories
-      const CategoryModel = this.constructor as mongoose.Model<ICategory>;
-      const children = await CategoryModel.find({ parentId: this._id });
+      const CategoryModel = mongoose.model('Category');
+      const children = await CategoryModel.find({ parentId: categoryId });
+      if (children.length === 0) return next();
+
+      // Get the category being deleted to determine its parent
+      const category = await CategoryModel.findById(categoryId);
+      if (!category) return next();
       for (const child of children) {
-        if (this.parentId) {
+        if (category.parentId) {
           // Move to grandparent
-          child.parentId = this.parentId;
+          child.parentId = category.parentId;
         } else {
           // Make root category
           child.parentId = undefined;
@@ -208,7 +229,7 @@ categorySchema.statics.getCategoryPath = async function (categoryId: string) {
   const category = await this.findById(categoryId);
   if (!category) return null;
 
-  const categoryObj = category.toObject();
+  const categoryObj = category.toObject({ virtuals: true });
   return {
     id: categoryObj._id,
     name: categoryObj.name,

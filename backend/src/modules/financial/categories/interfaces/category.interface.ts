@@ -21,5 +21,5 @@ export interface ICategoryModel extends Model<ICategory> {
   getCategoryTree(userId: string): Promise<ICategory[]>;
   getCategoryPath(
     categoryId: string
-  ): Promise<{ path: string[]; level: number }>;
+  ): Promise<{ id: mongoose.Types.ObjectId; name: string; path: string[]; fullPath: string } | null>;
 }

@@ -283,18 +283,18 @@ describe('Category Repository', () => {
     it('should get category path', async () => {
       // Mock the model's getCategoryPath method
       const mockPath = {
-        _id: new mongoose.Types.ObjectId(),
+        id: new mongoose.Types.ObjectId(),
         name: 'Test Category',
         path: ['Parent', 'Child'],
-        level: 2,
+        fullPath: 'Parent > Child > Test Category',
       };
 
       jest.spyOn(categoryRepository['model'], 'getCategoryPath').mockResolvedValue(mockPath);
 
-      const path = await categoryRepository.getCategoryPath(mockPath._id.toString());
+      const path = await categoryRepository.getCategoryPath(mockPath.id.toString());
 
       expect(path).toEqual(mockPath);
-      expect(categoryRepository['model'].getCategoryPath).toHaveBeenCalledWith(mockPath._id.toString());
+      expect(categoryRepository['model'].getCategoryPath).toHaveBeenCalledWith(mockPath.id.toString());
     });
 
     it('should handle errors when getting category path', async () => {
