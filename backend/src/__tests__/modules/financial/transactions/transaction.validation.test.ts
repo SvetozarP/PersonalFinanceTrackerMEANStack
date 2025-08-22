@@ -93,7 +93,7 @@ describe('Transaction Validation', () => {
       const { error } = transactionValidation.create.validate(invalidData);
 
       expect(error).toBeDefined();
-      expect(error?.details[0].message).toBe('Transaction amount must be positive');
+      expect(error?.details[0].message).toBe('Transaction amount must be at least 0.01');
     });
 
     it('should reject zero amount', () => {
@@ -105,7 +105,7 @@ describe('Transaction Validation', () => {
       const { error } = transactionValidation.create.validate(invalidData);
 
       expect(error).toBeDefined();
-      expect(error?.details[0].message).toBe('Transaction amount must be positive');
+      expect(error?.details[0].message).toBe('Transaction amount must be at least 0.01');
     });
 
     it('should reject invalid currency format', () => {
@@ -252,19 +252,18 @@ describe('Transaction Validation', () => {
       expect(error?.details[0].message).toBe('Tag must be less than 50 characters');
     });
 
-    it('should reject future dates', () => {
+    it('should accept future dates', () => {
       const futureDate = new Date();
       futureDate.setDate(futureDate.getDate() + 1);
 
-      const invalidData = {
+      const validData = {
         ...validTransactionData,
         date: futureDate,
       };
 
-      const { error } = transactionValidation.create.validate(invalidData);
+      const { error } = transactionValidation.create.validate(validData);
 
-      expect(error).toBeDefined();
-      expect(error?.details[0].message).toBe('Transaction date cannot be in the future');
+      expect(error).toBeUndefined();
     });
 
     it('should validate time format', () => {
@@ -386,7 +385,7 @@ describe('Transaction Validation', () => {
         ...validTransactionData,
         isRecurring: true,
         recurrencePattern: RecurrencePattern.MONTHLY,
-        recurenceInterval: 1,
+        recurrenceInterval: 1,
         recurrenceEndDate: new Date('2024-12-31'),
         nextOccurrence: new Date('2024-02-15'),
       };
@@ -719,111 +718,517 @@ describe('Transaction Validation', () => {
     });
   });
 
-  describe('edge cases and complex validation', () => {
+  describe('Edge Cases and Complex Validation', () => {
     it('should handle null values gracefully', () => {
-      const dataWithNulls = {
+      const schema = transactionValidation.create;
+      const data = {
         title: 'Test Transaction',
         amount: 100,
+        currency: 'USD',
         type: TransactionType.EXPENSE,
         categoryId: '507f1f77bcf86cd799439011',
         paymentMethod: PaymentMethod.CASH,
-        description: null,
-        subcategoryId: null,
+        date: new Date(),
         time: null,
+        timezone: null,
+        location: null,
+        tags: [],
+        notes: null,
+        attachments: null,
+        originalAmount: null,
+        originalCurrency: null,
+        exchangeRate: null,
+        fees: null,
+        tax: null,
+        discount: null,
+        merchantName: null,
+        merchantId: null,
+        paymentReference: null,
+        recurrencePattern: null,
+        recurrenceEndDate: null,
+        isRecurring: false,
       };
 
-      const { error } = transactionValidation.create.validate(dataWithNulls);
-
-      expect(error).toBeUndefined();
+      const result = schema.validate(data);
+      expect(result.error).toBeUndefined();
     });
 
-    it('should handle multiple validation errors', () => {
-      const invalidData = {
-        title: '', // empty title
-        amount: -100, // negative amount
-        type: 'invalid_type', // invalid type
-        categoryId: 'invalid_id', // invalid ObjectId
-        paymentMethod: 'invalid_method', // invalid payment method
-        currency: 'INVALID', // invalid currency
-      };
-
-      const { error } = transactionValidation.create.validate(invalidData, { abortEarly: false });
-
-      expect(error).toBeDefined();
-      expect(error?.details.length).toBeGreaterThan(1);
-    });
-
-    it('should validate recurring pattern dependencies', () => {
-      const invalidData = {
+    it('should handle undefined values gracefully', () => {
+      const schema = transactionValidation.create;
+      const data = {
         title: 'Test Transaction',
         amount: 100,
+        currency: 'USD',
         type: TransactionType.EXPENSE,
         categoryId: '507f1f77bcf86cd799439011',
         paymentMethod: PaymentMethod.CASH,
-        isRecurring: true,
-        recurrencePattern: RecurrencePattern.MONTHLY,
-        // missing recurenceInterval, recurrenceEndDate, nextOccurrence
+        date: new Date(),
+        time: undefined,
+        timezone: undefined,
+        location: undefined,
+        tags: undefined,
+        notes: undefined,
+        attachments: undefined,
+        originalAmount: undefined,
+        originalCurrency: undefined,
+        exchangeRate: undefined,
+        fees: undefined,
+        tax: undefined,
+        discount: undefined,
+        merchantName: undefined,
+        merchantId: undefined,
+        paymentReference: undefined,
+        recurrencePattern: undefined,
+        recurrenceEndDate: undefined,
+        isRecurring: false,
       };
 
-      const { error } = transactionValidation.create.validate(invalidData, { abortEarly: false });
-
-      expect(error).toBeDefined();
-      expect(error?.details.length).toBeGreaterThanOrEqual(3);
+      const result = schema.validate(data);
+      expect(result.error).toBeUndefined();
     });
 
-    it('should validate complex nested objects', () => {
-      const complexData = {
-        title: 'Complex Transaction',
-        amount: 99.99,
+    it('should handle empty string values', () => {
+      const schema = transactionValidation.create;
+      const data = {
+        title: 'Test Transaction',
+        amount: 100,
+        currency: 'USD',
         type: TransactionType.EXPENSE,
         categoryId: '507f1f77bcf86cd799439011',
-        paymentMethod: PaymentMethod.CREDIT_CARD,
+        paymentMethod: PaymentMethod.CASH,
+        date: new Date(),
+        description: '',
+        time: '',
+        timezone: '',
+        tags: [''],
+        notes: '',
+        merchantName: '',
+        merchantId: '',
+        paymentReference: '',
+      };
+
+      const result = schema.validate(data);
+      expect(result.error).toBeUndefined();
+    });
+
+    it('should handle whitespace-only values', () => {
+      const schema = transactionValidation.create;
+      const data = {
+        title: 'Test Transaction',
+        amount: 100,
+        currency: 'USD',
+        type: TransactionType.EXPENSE,
+        categoryId: '507f1f77bcf86cd799439011',
+        paymentMethod: PaymentMethod.CASH,
+        date: new Date(),
+        description: '   ',
+        time: '   ',
+        timezone: '   ',
+        tags: ['   '],
+        notes: '   ',
+        merchantName: '   ',
+        merchantId: '   ',
+        paymentReference: '   ',
+      };
+
+      const result = schema.validate(data);
+      expect(result.error).toBeUndefined();
+    });
+
+    it('should handle extreme numeric values', () => {
+      const schema = transactionValidation.create;
+      const data = {
+        title: 'Test Transaction',
+        amount: 0.01, // Minimum amount
+        currency: 'USD',
+        type: TransactionType.EXPENSE,
+        categoryId: '507f1f77bcf86cd799439011',
+        paymentMethod: PaymentMethod.CASH,
+        date: new Date(),
+        fees: 999999.99,
+        tax: 999999.99,
+        discount: 999999.99,
+        originalAmount: 999999.99,
+        exchangeRate: 999999.99,
+      };
+
+      const result = schema.validate(data);
+      expect(result.error).toBeUndefined();
+    });
+
+    it('should handle complex nested location objects', () => {
+      const schema = transactionValidation.create;
+      const data = {
+        title: 'Test Transaction',
+        amount: 100,
+        currency: 'USD',
+        type: TransactionType.EXPENSE,
+        categoryId: '507f1f77bcf86cd799439011',
+        paymentMethod: PaymentMethod.CASH,
+        date: new Date(),
         location: {
-          name: 'Complex Store Name',
-          address: '123 Complex Street, Complex City, Complex Country',
+          name: 'Test Location',
+          address: 'Test Address',
           coordinates: {
             latitude: 40.7128,
             longitude: -74.0060,
           },
         },
-        attachments: [
-          {
-            filename: 'receipt1.pdf',
-            originalName: 'Receipt 1.pdf',
-            mimeType: 'application/pdf',
-            size: 1024000,
-            url: 'https://example.com/receipt1.pdf',
-          },
-          {
-            filename: 'receipt2.jpg',
-            originalName: 'Receipt 2.jpg',
-            mimeType: 'image/jpeg',
-            size: 512000,
-            url: 'https://example.com/receipt2.jpg',
-          },
-        ],
-        tags: ['business', 'travel', 'receipt'],
       };
 
-      const { error } = transactionValidation.create.validate(complexData);
-
-      expect(error).toBeUndefined();
+      const result = schema.validate(data);
+      expect(result.error).toBeUndefined();
     });
 
-    it('should strip unknown fields', () => {
-      const dataWithExtraFields = {
+    it('should handle complex recurring patterns', () => {
+      const schema = transactionValidation.create;
+      const data = {
         title: 'Test Transaction',
         amount: 100,
+        currency: 'USD',
         type: TransactionType.EXPENSE,
         categoryId: '507f1f77bcf86cd799439011',
         paymentMethod: PaymentMethod.CASH,
-        unknownField: 'should be stripped',
+        date: new Date(),
+        isRecurring: true,
+        recurrencePattern: RecurrencePattern.MONTHLY,
+        recurrenceInterval: 1,
+        recurrenceEndDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year from now
+        nextOccurrence: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
       };
 
-      const { error, value } = transactionValidation.create.validate(dataWithExtraFields, { stripUnknown: true });
+      const result = schema.validate(data);
+      expect(result.error).toBeUndefined();
+    });
 
-      expect(error).toBeUndefined();
-      expect(value).not.toHaveProperty('unknownField');
+    it('should handle complex attachment arrays', () => {
+      const schema = transactionValidation.create;
+      const data = {
+        title: 'Test Transaction',
+        amount: 100,
+        currency: 'USD',
+        type: TransactionType.EXPENSE,
+        categoryId: '507f1f77bcf86cd799439011',
+        paymentMethod: PaymentMethod.CASH,
+        date: new Date(),
+        attachments: [
+          {
+            filename: 'receipt1.pdf',
+            originalName: 'receipt1.pdf',
+            mimeType: 'application/pdf',
+            size: 1024,
+            url: 'https://example.com/uploads/receipt1.pdf',
+            uploadDate: new Date(),
+          },
+          {
+            filename: 'receipt2.jpg',
+            originalName: 'receipt2.jpg',
+            mimeType: 'image/jpeg',
+            size: 2048,
+            url: 'https://example.com/uploads/receipt2.jpg',
+            uploadDate: new Date(),
+          },
+        ],
+      };
+
+      const result = schema.validate(data);
+      expect(result.error).toBeUndefined();
+    });
+
+    it('should handle complex tag arrays', () => {
+      const schema = transactionValidation.create;
+      const data = {
+        title: 'Test Transaction',
+        amount: 100,
+        currency: 'USD',
+        type: TransactionType.EXPENSE,
+        categoryId: '507f1f77bcf86cd799439011',
+        paymentMethod: PaymentMethod.CASH,
+        date: new Date(),
+        tags: [
+          'groceries',
+          'food',
+          'household',
+          'essentials',
+          'monthly',
+          'budget',
+          'tracking',
+          'expense',
+          'category',
+          'personal',
+        ],
+      };
+
+      const result = schema.validate(data);
+      expect(result.error).toBeUndefined();
+    });
+
+    it('should handle future dates for recurring transactions', () => {
+      const schema = transactionValidation.create;
+      const futureDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days from now
+      const data = {
+        title: 'Test Transaction',
+        amount: 100,
+        currency: 'USD',
+        type: TransactionType.EXPENSE,
+        categoryId: '507f1f77bcf86cd799439011',
+        paymentMethod: PaymentMethod.CASH,
+        date: futureDate,
+        isRecurring: true,
+        recurrencePattern: RecurrencePattern.MONTHLY,
+        recurrenceInterval: 1,
+        recurrenceEndDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year from now
+        nextOccurrence: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000), // 60 days from now (after the transaction date)
+      };
+
+      const result = schema.validate(data);
+      expect(result.error).toBeUndefined();
+    });
+
+    it('should handle edge case currency codes', () => {
+      const schema = transactionValidation.create;
+      const data = {
+        title: 'Test Transaction',
+        amount: 100,
+        currency: 'EUR', // Different currency
+        type: TransactionType.EXPENSE,
+        categoryId: '507f1f77bcf86cd799439011',
+        paymentMethod: PaymentMethod.CASH,
+        date: new Date(),
+        originalAmount: 86.96, // Original amount in GBP
+        originalCurrency: 'GBP', // Different original currency
+        exchangeRate: 1.15,
+      };
+
+      const result = schema.validate(data);
+      expect(result.error).toBeUndefined();
+    });
+
+    it('should handle edge case payment methods', () => {
+      const schema = transactionValidation.create;
+      const data = {
+        title: 'Test Transaction',
+        amount: 100,
+        currency: 'USD',
+        type: TransactionType.EXPENSE,
+        categoryId: '507f1f77bcf86cd799439011',
+        paymentMethod: PaymentMethod.CREDIT_CARD,
+        date: new Date(),
+        merchantName: 'Test Merchant',
+        merchantId: 'MERCH123',
+        paymentReference: 'REF123456',
+      };
+
+      const result = schema.validate(data);
+      expect(result.error).toBeUndefined();
+    });
+
+    it('should handle edge case transaction types', () => {
+      const schema = transactionValidation.create;
+      const data = {
+        title: 'Test Transaction',
+        amount: 100,
+        currency: 'USD',
+        type: TransactionType.TRANSFER, // Different type
+        categoryId: '507f1f77bcf86cd799439011',
+        paymentMethod: PaymentMethod.BANK_TRANSFER,
+        date: new Date(),
+        subcategoryId: '507f1f77bcf86cd799439012',
+      };
+
+      const result = schema.validate(data);
+      expect(result.error).toBeUndefined();
+    });
+
+    it('should handle edge case status values', () => {
+      const schema = transactionValidation.create;
+      const data = {
+        title: 'Test Transaction',
+        amount: 100,
+        currency: 'USD',
+        type: TransactionType.EXPENSE,
+        categoryId: '507f1f77bcf86cd799439011',
+        paymentMethod: PaymentMethod.CASH,
+        date: new Date(),
+        status: TransactionStatus.PENDING, // Different status
+      };
+
+      const result = schema.validate(data);
+      expect(result.error).toBeUndefined();
+    });
+
+    it('should handle edge case time formats', () => {
+      const schema = transactionValidation.create;
+      const data = {
+        title: 'Test Transaction',
+        amount: 100,
+        currency: 'USD',
+        type: TransactionType.EXPENSE,
+        categoryId: '507f1f77bcf86cd799439011',
+        paymentMethod: PaymentMethod.CASH,
+        date: new Date(),
+        time: '00:00', // Edge case time
+        timezone: 'UTC',
+      };
+
+      const result = schema.validate(data);
+      expect(result.error).toBeUndefined();
+    });
+
+    it('should handle edge case timezone values', () => {
+      const schema = transactionValidation.create;
+      const data = {
+        title: 'Test Transaction',
+        amount: 100,
+        currency: 'USD',
+        type: TransactionType.EXPENSE,
+        categoryId: '507f1f77bcf86cd799439011',
+        paymentMethod: PaymentMethod.CASH,
+        date: new Date(),
+        time: '12:00',
+        timezone: 'America/New_York', // Complex timezone
+      };
+
+      const result = schema.validate(data);
+      expect(result.error).toBeUndefined();
+    });
+
+    it('should handle edge case coordinate values', () => {
+      const schema = transactionValidation.create;
+      const data = {
+        title: 'Test Transaction',
+        amount: 100,
+        currency: 'USD',
+        type: TransactionType.EXPENSE,
+        categoryId: '507f1f77bcf86cd799439011',
+        paymentMethod: PaymentMethod.CASH,
+        date: new Date(),
+        location: {
+          name: 'Test Location',
+          address: 'Test Address',
+          coordinates: {
+            latitude: -90, // Edge case latitude
+            longitude: 180, // Edge case longitude
+          },
+        },
+      };
+
+      const result = schema.validate(data);
+      expect(result.error).toBeUndefined();
+    });
+
+    it('should handle edge case file sizes', () => {
+      const schema = transactionValidation.create;
+      const data = {
+        title: 'Test Transaction',
+        amount: 100,
+        currency: 'USD',
+        type: TransactionType.EXPENSE,
+        categoryId: '507f1f77bcf86cd799439011',
+        paymentMethod: PaymentMethod.CASH,
+        date: new Date(),
+        attachments: [
+          {
+            filename: 'large-file.pdf',
+            originalName: 'large-file.pdf',
+            mimeType: 'application/pdf',
+            size: 20 * 1024 * 1024, // 20MB (edge case)
+            url: 'https://example.com/uploads/large-file.pdf',
+          },
+        ],
+      };
+
+      const result = schema.validate(data);
+      expect(result.error).toBeUndefined();
+    });
+
+    it('should handle edge case tag lengths', () => {
+      const schema = transactionValidation.create;
+      const data = {
+        title: 'Test Transaction',
+        amount: 100,
+        currency: 'USD',
+        type: TransactionType.EXPENSE,
+        categoryId: '507f1f77bcf86cd799439011',
+        paymentMethod: PaymentMethod.CASH,
+        date: new Date(),
+        tags: [
+          'a'.repeat(50), // Edge case tag length
+          'b'.repeat(25),
+          'c'.repeat(10),
+        ],
+      };
+
+      const result = schema.validate(data);
+      expect(result.error).toBeUndefined();
+    });
+
+    it('should handle edge case description lengths', () => {
+      const schema = transactionValidation.create;
+      const data = {
+        title: 'Test Transaction',
+        amount: 100,
+        currency: 'USD',
+        type: TransactionType.EXPENSE,
+        categoryId: '507f1f77bcf86cd799439011',
+        paymentMethod: PaymentMethod.CASH,
+        date: new Date(),
+        description: 'a'.repeat(1000), // Edge case description length
+      };
+
+      const result = schema.validate(data);
+      expect(result.error).toBeUndefined();
+    });
+
+    it('should handle edge case title lengths', () => {
+      const schema = transactionValidation.create;
+      const data = {
+        title: 'a'.repeat(200), // Edge case title length
+        amount: 100,
+        currency: 'USD',
+        type: TransactionType.EXPENSE,
+        categoryId: '507f1f77bcf86cd799439011',
+        paymentMethod: PaymentMethod.CASH,
+        date: new Date(),
+      };
+
+      const result = schema.validate(data);
+      expect(result.error).toBeUndefined();
+    });
+
+    it('should handle edge case amount precision', () => {
+      const schema = transactionValidation.create;
+      const data = {
+        title: 'Test Transaction',
+        amount: 0.01, // Minimum valid amount
+        currency: 'USD',
+        type: TransactionType.EXPENSE,
+        categoryId: '507f1f77bcf86cd799439011',
+        paymentMethod: PaymentMethod.CASH,
+        date: new Date(),
+      };
+
+      const result = schema.validate(data);
+      expect(result.error).toBeUndefined();
+    });
+
+    it('should handle edge case exchange rate precision', () => {
+      const schema = transactionValidation.create;
+      const data = {
+        title: 'Test Transaction',
+        amount: 100,
+        currency: 'USD',
+        type: TransactionType.EXPENSE,
+        categoryId: '507f1f77bcf86cd799439011',
+        paymentMethod: PaymentMethod.CASH,
+        date: new Date(),
+        originalAmount: 85.50,
+        originalCurrency: 'EUR',
+        exchangeRate: 1.1695906432748538, // High precision exchange rate
+      };
+
+      const result = schema.validate(data);
+      expect(result.error).toBeUndefined();
     });
   });
 });

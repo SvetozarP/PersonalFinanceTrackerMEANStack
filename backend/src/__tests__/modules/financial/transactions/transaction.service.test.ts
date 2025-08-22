@@ -58,6 +58,22 @@ describe('TransactionService', () => {
     title: 'Salary',
   } as unknown as ITransaction;
 
+  // Define testTransaction for use in tests
+  const testTransaction = {
+    categoryId: new mongoose.Types.ObjectId(mockCategoryId),
+    accountId: new mongoose.Types.ObjectId(mockAccountId),
+    type: TransactionType.EXPENSE,
+    amount: 100,
+    title: 'Test Transaction',
+    description: 'Test Description',
+    currency: 'USD',
+    status: TransactionStatus.COMPLETED,
+    paymentMethod: PaymentMethod.CASH,
+    date: new Date('2024-01-15'),
+    timezone: 'UTC',
+    source: 'manual',
+  };
+
   beforeEach(() => {
     // Create a fresh instance of the service
     transactionService = new TransactionService();
@@ -174,14 +190,17 @@ describe('TransactionService', () => {
         totalPages: 1,
       };
 
-      mockTransactionRepository.count.mockResolvedValue(1);
-      mockTransactionRepository.find.mockResolvedValue([mockTransaction]);
+      mockTransactionRepository.findByUserId.mockResolvedValue(mockResult);
 
       const result = await transactionService.getUserTransactions(mockUserId);
 
       expect(result).toEqual(mockResult);
-      expect(mockTransactionRepository.count).toHaveBeenCalledWith({
-        userId: new mongoose.Types.ObjectId(mockUserId),
+      expect(mockTransactionRepository.findByUserId).toHaveBeenCalledWith(mockUserId, {
+        page: 1,
+        limit: 20,
+        sort: { date: -1 },
+        filter: {},
+        populate: ['categoryId', 'subcategoryId'],
       });
     });
 
@@ -206,15 +225,16 @@ describe('TransactionService', () => {
         totalPages: 1,
       };
 
-      mockTransactionRepository.count.mockResolvedValue(1);
-      mockTransactionRepository.find.mockResolvedValue([mockTransaction]);
+      mockTransactionRepository.findByUserId.mockResolvedValue(mockResult);
 
       const result = await transactionService.getUserTransactions(mockUserId, customOptions);
 
       expect(result).toEqual(mockResult);
-      expect(mockTransactionRepository.count).toHaveBeenCalledWith(
-        expect.objectContaining({
-          userId: new mongoose.Types.ObjectId(mockUserId),
+      expect(mockTransactionRepository.findByUserId).toHaveBeenCalledWith(mockUserId, {
+        page: 2,
+        limit: 10,
+        sort: { date: -1 },
+        filter: expect.objectContaining({
           date: {
             $gte: customOptions.startDate,
             $lte: customOptions.endDate,
@@ -227,8 +247,9 @@ describe('TransactionService', () => {
             $lte: customOptions.maxAmount,
           },
           tags: { $in: customOptions.tags },
-        })
-      );
+        }),
+        populate: ['categoryId', 'subcategoryId'],
+      });
     });
 
     it('should handle date range filtering', async () => {
@@ -237,57 +258,85 @@ describe('TransactionService', () => {
         endDate: new Date('2024-01-31'),
       };
 
-      mockTransactionRepository.count.mockResolvedValue(1);
-      mockTransactionRepository.find.mockResolvedValue([mockTransaction]);
+      mockTransactionRepository.findByUserId.mockResolvedValue({
+        transactions: [mockTransaction],
+        total: 1,
+        page: 1,
+        totalPages: 1,
+      });
 
       await transactionService.getUserTransactions(mockUserId, options);
 
-      expect(mockTransactionRepository.count).toHaveBeenCalledWith(
-        expect.objectContaining({
+      expect(mockTransactionRepository.findByUserId).toHaveBeenCalledWith(mockUserId, {
+        page: 1,
+        limit: 20,
+        sort: { date: -1 },
+        filter: expect.objectContaining({
           date: {
             $gte: options.startDate,
             $lte: options.endDate,
           },
-        })
-      );
+        }),
+        populate: ['categoryId', 'subcategoryId'],
+      });
     });
 
     it('should handle amount range filtering', async () => {
       const options = { minAmount: 100, maxAmount: 500 };
 
-      mockTransactionRepository.count.mockResolvedValue(1);
-      mockTransactionRepository.find.mockResolvedValue([mockTransaction]);
+      mockTransactionRepository.findByUserId.mockResolvedValue({
+        transactions: [mockTransaction],
+        total: 1,
+        page: 1,
+        totalPages: 1,
+      });
 
       await transactionService.getUserTransactions(mockUserId, options);
 
-      expect(mockTransactionRepository.count).toHaveBeenCalledWith(
-        expect.objectContaining({
+      expect(mockTransactionRepository.findByUserId).toHaveBeenCalledWith(mockUserId, {
+        page: 1,
+        limit: 20,
+        sort: { date: -1 },
+        filter: expect.objectContaining({
           amount: {
             $gte: 100,
             $lte: 500,
           },
-        })
-      );
+        }),
+        populate: ['categoryId', 'subcategoryId'],
+      });
     });
 
     it('should handle tag filtering', async () => {
       const options = { tags: ['food', 'transport'] };
 
-      mockTransactionRepository.count.mockResolvedValue(1);
-      mockTransactionRepository.find.mockResolvedValue([mockTransaction]);
+      mockTransactionRepository.findByUserId.mockResolvedValue({
+        transactions: [mockTransaction],
+        total: 1,
+        page: 1,
+        totalPages: 1,
+      });
 
       await transactionService.getUserTransactions(mockUserId, options);
 
-      expect(mockTransactionRepository.count).toHaveBeenCalledWith(
-        expect.objectContaining({
+      expect(mockTransactionRepository.findByUserId).toHaveBeenCalledWith(mockUserId, {
+        page: 1,
+        limit: 20,
+        sort: { date: -1 },
+        filter: expect.objectContaining({
           tags: { $in: ['food', 'transport'] },
-        })
-      );
+        }),
+        populate: ['categoryId', 'subcategoryId'],
+      });
     });
 
     it('should calculate total pages correctly', async () => {
-      mockTransactionRepository.count.mockResolvedValue(25);
-      mockTransactionRepository.find.mockResolvedValue([mockTransaction]);
+      mockTransactionRepository.findByUserId.mockResolvedValue({
+        transactions: [mockTransaction],
+        total: 25,
+        page: 1,
+        totalPages: 3
+      });
 
       const result = await transactionService.getUserTransactions(mockUserId, { limit: 10 });
 
@@ -541,6 +590,609 @@ describe('TransactionService', () => {
         isRecurring: true,
         isDeleted: { $ne: true },
       });
+    });
+  });
+
+  describe('Edge Cases and Error Handling', () => {
+    it('should handle invalid ObjectId strings gracefully', async () => {
+      await expect(
+        transactionService.getTransactionById('invalid-id', mockUserId)
+      ).rejects.toThrow();
+    });
+
+    it('should handle database connection errors', async () => {
+      const mockError = new Error('Database connection failed');
+      mockTransactionRepository.findById.mockRejectedValue(mockError);
+
+      await expect(
+        transactionService.getTransactionById(mockTransactionId, mockUserId)
+      ).rejects.toThrow('Database connection failed');
+    });
+
+    it('should handle validation errors gracefully', async () => {
+      const mockError = new Error('Validation failed');
+      mockError.name = 'ValidationError';
+      mockTransactionRepository.create.mockRejectedValue(mockError);
+
+      await expect(
+        transactionService.createTransaction({} as any, mockUserId)
+      ).rejects.toThrow('Validation failed');
+    });
+
+    it('should handle cast errors gracefully', async () => {
+      const mockError = new Error('Cast to ObjectId failed');
+      mockError.name = 'CastError';
+      mockTransactionRepository.findById.mockRejectedValue(mockError);
+
+      await expect(
+        transactionService.getTransactionById('invalid-id', mockUserId)
+      ).rejects.toThrow('Cast to ObjectId failed');
+    });
+
+    it('should handle duplicate key errors gracefully', async () => {
+      const mockError = new Error('Duplicate key error');
+      mockError.name = 'MongoError';
+      (mockError as any).code = 11000;
+      mockTransactionRepository.create.mockRejectedValue(mockError);
+
+      await expect(
+        transactionService.createTransaction(testTransaction, mockUserId)
+      ).rejects.toThrow('Duplicate key error');
+    });
+
+    it('should handle empty filter arrays gracefully', async () => {
+      mockTransactionRepository.findByUserId.mockResolvedValue({
+        transactions: [],
+        total: 0,
+        page: 1,
+        totalPages: 0
+      });
+
+      const result = await transactionService.getUserTransactions(mockUserId, {
+        tags: [],
+        categoryId: testTransaction.categoryId.toString(),
+      });
+
+      expect(result.transactions).toEqual([]);
+      expect(result.total).toBe(0);
+    });
+
+    it('should handle null filter values gracefully', async () => {
+      mockTransactionRepository.findByUserId.mockResolvedValue({
+        transactions: [],
+        total: 0,
+        page: 1,
+        totalPages: 0
+      });
+
+      const result = await transactionService.getUserTransactions(mockUserId, {
+        tags: null as any,
+        categoryId: null as any,
+        search: null as any,
+      });
+
+      expect(result.transactions).toEqual([]);
+      expect(result.total).toBe(0);
+    });
+
+    it('should handle undefined filter values gracefully', async () => {
+      mockTransactionRepository.findByUserId.mockResolvedValue({
+        transactions: [],
+        total: 0,
+        page: 1,
+        totalPages: 0
+      });
+
+      const result = await transactionService.getUserTransactions(mockUserId, {
+        tags: undefined,
+        categoryId: undefined,
+        search: undefined,
+      });
+
+      expect(result.transactions).toEqual([]);
+      expect(result.total).toBe(0);
+    });
+
+    it('should handle extreme date ranges gracefully', async () => {
+      mockTransactionRepository.findByUserId.mockResolvedValue({
+        transactions: [],
+        total: 0,
+        page: 1,
+        totalPages: 0
+      });
+
+      const farPastDate = new Date('1900-01-01');
+      const farFutureDate = new Date('2100-12-31');
+
+      const result = await transactionService.getUserTransactions(mockUserId, {
+        startDate: farPastDate,
+        endDate: farFutureDate,
+      });
+
+      expect(result.transactions).toEqual([]);
+      expect(result.total).toBe(0);
+    });
+
+    it('should handle extreme amount ranges gracefully', async () => {
+      mockTransactionRepository.findByUserId.mockResolvedValue({
+        transactions: [],
+        total: 0,
+        page: 1,
+        totalPages: 0
+      });
+
+      const result = await transactionService.getUserTransactions(mockUserId, {
+        minAmount: 0.01,
+        maxAmount: 999999999.99,
+      });
+
+      expect(result.transactions).toEqual([]);
+      expect(result.total).toBe(0);
+    });
+
+    it('should handle invalid pagination parameters gracefully', async () => {
+      mockTransactionRepository.findByUserId.mockResolvedValue({
+        transactions: [],
+        total: 0,
+        page: 1,
+        totalPages: 1
+      });
+
+      const result = await transactionService.getUserTransactions(mockUserId, {
+        page: -1,
+        limit: 0,
+      });
+
+      expect(result.transactions).toEqual([]);
+      expect(result.total).toBe(0);
+      expect(result.page).toBe(1);
+      expect(result.totalPages).toBe(1);
+    });
+
+    it('should handle extreme pagination parameters gracefully', async () => {
+      mockTransactionRepository.findByUserId.mockResolvedValue({
+        transactions: [],
+        total: 0,
+        page: 999999,
+        totalPages: 1
+      });
+
+      const result = await transactionService.getUserTransactions(mockUserId, {
+        page: 999999,
+        limit: 999999,
+      });
+
+      expect(result.transactions).toEqual([]);
+      expect(result.total).toBe(0);
+      expect(result.page).toBe(999999);
+      expect(result.totalPages).toBe(1); // Should be capped at 100
+    });
+
+    it('should handle empty search terms gracefully', async () => {
+      mockTransactionRepository.findByUserId.mockResolvedValue({
+        transactions: [],
+        total: 0,
+        page: 1,
+        totalPages: 0
+      });
+
+      const result = await transactionService.getUserTransactions(mockUserId, {
+        search: '',
+      });
+
+      expect(result.transactions).toEqual([]);
+      expect(result.total).toBe(0);
+    });
+
+    it('should handle whitespace-only search terms gracefully', async () => {
+      mockTransactionRepository.findByUserId.mockResolvedValue({
+        transactions: [],
+        total: 0,
+        page: 1,
+        totalPages: 0
+      });
+
+      const result = await transactionService.getUserTransactions(mockUserId, {
+        search: '   ',
+      });
+
+      expect(result.transactions).toEqual([]);
+      expect(result.total).toBe(0);
+    });
+
+    it('should handle very long search terms gracefully', async () => {
+      mockTransactionRepository.findByUserId.mockResolvedValue({
+        transactions: [],
+        total: 0,
+        page: 1,
+        totalPages: 0
+      });
+
+      const longSearchTerm = 'a'.repeat(1000);
+      const result = await transactionService.getUserTransactions(mockUserId, {
+        search: longSearchTerm,
+      });
+
+      expect(result.transactions).toEqual([]);
+      expect(result.total).toBe(0);
+    });
+
+    it('should handle complex sort orders gracefully', async () => {
+      mockTransactionRepository.findByUserId.mockResolvedValue({
+        transactions: [],
+        total: 0,
+        page: 1,
+        totalPages: 0
+      });
+
+      const result = await transactionService.getUserTransactions(mockUserId, {
+        sortBy: 'amount',
+        sortOrder: 'desc',
+      });
+
+      expect(result.transactions).toEqual([]);
+      expect(result.total).toBe(0);
+    });
+
+    it('should handle invalid sort fields gracefully', async () => {
+      mockTransactionRepository.findByUserId.mockResolvedValue({
+        transactions: [],
+        total: 0,
+        page: 1,
+        totalPages: 0
+      });
+
+      const result = await transactionService.getUserTransactions(mockUserId, {
+        sortBy: 'invalidField' as any,
+        sortOrder: 'asc',
+      });
+
+      expect(result.transactions).toEqual([]);
+      expect(result.total).toBe(0);
+    });
+
+    it('should handle invalid sort orders gracefully', async () => {
+      mockTransactionRepository.findByUserId.mockResolvedValue({
+        transactions: [],
+        total: 0,
+        page: 1,
+        totalPages: 0
+      });
+
+      const result = await transactionService.getUserTransactions(mockUserId, {
+        sortBy: 'amount',
+        sortOrder: 'invalid' as any,
+      });
+
+      expect(result.transactions).toEqual([]);
+      expect(result.total).toBe(0);
+    });
+
+    it('should handle missing transaction data gracefully', async () => {
+      await expect(
+        transactionService.createTransaction({} as any, mockUserId)
+      ).rejects.toThrow();
+    });
+
+    it('should handle partial transaction data gracefully', async () => {
+      const partialData = {
+        title: 'Partial Transaction',
+        amount: 100,
+      };
+
+      await expect(
+        transactionService.createTransaction(partialData as any, mockUserId)
+      ).rejects.toThrow();
+    });
+
+    it('should handle invalid amount values gracefully', async () => {
+      const invalidAmountData = {
+        ...testTransaction,
+        amount: -100,
+      };
+
+      await expect(
+        transactionService.createTransaction(invalidAmountData, mockUserId)
+      ).rejects.toThrow();
+    });
+
+    it('should handle zero amount values gracefully', async () => {
+      const zeroAmountData = {
+        ...testTransaction,
+        amount: 0,
+      };
+
+      await expect(
+        transactionService.createTransaction(zeroAmountData, mockUserId)
+      ).rejects.toThrow();
+    });
+
+    it('should handle very small amount values gracefully', async () => {
+      const smallAmountData = {
+        ...testTransaction,
+        amount: 0.001,
+      };
+
+      await expect(
+        transactionService.createTransaction(smallAmountData, mockUserId)
+      ).rejects.toThrow();
+    });
+
+    it('should handle very large amount values gracefully', async () => {
+      const largeAmountData = {
+        ...testTransaction,
+        amount: 1000000000,
+      };
+
+      await expect(
+        transactionService.createTransaction(largeAmountData, mockUserId)
+      ).rejects.toThrow();
+    });
+
+    it('should handle invalid currency codes gracefully', async () => {
+      const invalidCurrencyData = {
+        ...testTransaction,
+        currency: 'INVALID',
+      };
+
+      await expect(
+        transactionService.createTransaction(invalidCurrencyData, mockUserId)
+      ).rejects.toThrow();
+    });
+
+    it('should handle invalid transaction types gracefully', async () => {
+      const invalidTypeData = {
+        ...testTransaction,
+        type: 'INVALID_TYPE' as any,
+      };
+
+      await expect(
+        transactionService.createTransaction(invalidTypeData, mockUserId)
+      ).rejects.toThrow();
+    });
+
+    it('should handle invalid payment methods gracefully', async () => {
+      const invalidPaymentData = {
+        ...testTransaction,
+        paymentMethod: 'INVALID_METHOD' as any,
+      };
+
+      await expect(
+        transactionService.createTransaction(invalidPaymentData, mockUserId)
+      ).rejects.toThrow();
+    });
+
+    it('should handle invalid category IDs gracefully', async () => {
+      const invalidCategoryData = {
+        ...testTransaction,
+        categoryId: 'invalid-category-id' as any,
+      };
+
+      await expect(
+        transactionService.createTransaction(invalidCategoryData, mockUserId)
+      ).rejects.toThrow();
+    });
+
+    it('should handle invalid subcategory IDs gracefully', async () => {
+      const invalidSubcategoryData = {
+        ...testTransaction,
+        subcategoryId: 'invalid-subcategory-id' as any,
+      };
+
+      await expect(
+        transactionService.createTransaction(invalidSubcategoryData, mockUserId)
+      ).rejects.toThrow();
+    });
+
+    it('should handle future dates gracefully', async () => {
+      const futureDate = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000); // 1 year from now
+      const futureDateData = {
+        ...testTransaction,
+        date: futureDate,
+      };
+
+      await expect(
+        transactionService.createTransaction(futureDateData, mockUserId)
+      ).rejects.toThrow();
+    });
+
+    it('should handle very old dates gracefully', async () => {
+      const oldDate = new Date('1900-01-01');
+      const oldDateData = {
+        ...testTransaction,
+        date: oldDate,
+      };
+
+      await expect(
+        transactionService.createTransaction(oldDateData, mockUserId)
+      ).rejects.toThrow();
+    });
+
+    it('should handle invalid time formats gracefully', async () => {
+      const invalidTimeData = {
+        ...testTransaction,
+        time: '25:00', // Invalid time
+      };
+
+      await expect(
+        transactionService.createTransaction(invalidTimeData, mockUserId)
+      ).rejects.toThrow();
+    });
+
+    it('should handle invalid timezone values gracefully', async () => {
+      const invalidTimezoneData = {
+        ...testTransaction,
+        timezone: 'INVALID_TIMEZONE',
+      };
+
+      await expect(
+        transactionService.createTransaction(invalidTimezoneData, mockUserId)
+      ).rejects.toThrow();
+    });
+
+    it('should handle invalid location coordinates gracefully', async () => {
+      const invalidLocationData = {
+        ...testTransaction,
+        location: {
+          name: 'Test Location',
+          address: 'Test Address',
+          coordinates: {
+            latitude: 1000, // Invalid latitude
+            longitude: -74.0060,
+          },
+        },
+      };
+
+      await expect(
+        transactionService.createTransaction(invalidLocationData, mockUserId)
+      ).rejects.toThrow();
+    });
+
+    it('should handle invalid tag formats gracefully', async () => {
+      const invalidTagData = {
+        ...testTransaction,
+        tags: ['a'.repeat(100)], // Tag too long
+      };
+
+      await expect(
+        transactionService.createTransaction(invalidTagData, mockUserId)
+      ).rejects.toThrow();
+    });
+
+    it('should handle invalid attachment data gracefully', async () => {
+      const invalidAttachmentData = {
+        ...testTransaction,
+        attachments: [
+          {
+            filename: 'test.pdf',
+            originalName: 'test.pdf',
+            mimeType: 'application/pdf',
+            size: 100 * 1024 * 1024, // 100MB (too large)
+            url: '/uploads/test.pdf',
+            uploadedAt: new Date(),
+          },
+        ],
+      };
+
+      await expect(
+        transactionService.createTransaction(invalidAttachmentData, mockUserId)
+      ).rejects.toThrow();
+    });
+
+    it('should handle invalid recurring pattern gracefully', async () => {
+      const invalidRecurringData = {
+        ...testTransaction,
+        isRecurring: true,
+        recurringPattern: {
+          frequency: 'INVALID_FREQUENCY' as any,
+          interval: 1,
+        },
+      };
+
+      await expect(
+        transactionService.createTransaction(invalidRecurringData, mockUserId)
+      ).rejects.toThrow();
+    });
+
+    it('should handle invalid exchange rate gracefully', async () => {
+      const invalidExchangeData = {
+        ...testTransaction,
+        originalAmount: 85.50,
+        originalCurrency: 'EUR',
+        exchangeRate: -1.15, // Negative exchange rate
+      };
+
+      await expect(
+        transactionService.createTransaction(invalidExchangeData, mockUserId)
+      ).rejects.toThrow();
+    });
+
+    it('should handle invalid fees gracefully', async () => {
+      const invalidFeesData = {
+        ...testTransaction,
+        fees: -10, // Negative fees
+      };
+
+      await expect(
+        transactionService.createTransaction(invalidFeesData, mockUserId)
+      ).rejects.toThrow();
+    });
+
+    it('should handle invalid tax gracefully', async () => {
+      const invalidTaxData = {
+        ...testTransaction,
+        tax: -8.50, // Negative tax
+      };
+
+      await expect(
+        transactionService.createTransaction(invalidTaxData, mockUserId)
+      ).rejects.toThrow();
+    });
+
+    it('should handle invalid discount gracefully', async () => {
+      const invalidDiscountData = {
+        ...testTransaction,
+        discount: -5.00, // Negative discount
+      };
+
+      await expect(
+        transactionService.createTransaction(invalidDiscountData, mockUserId)
+      ).rejects.toThrow();
+    });
+
+    it('should handle invalid merchant data gracefully', async () => {
+      const invalidMerchantData = {
+        ...testTransaction,
+        merchantName: 'a'.repeat(300), // Name too long
+      };
+
+      await expect(
+        transactionService.createTransaction(invalidMerchantData, mockUserId)
+      ).rejects.toThrow();
+    });
+
+    it('should handle invalid payment reference gracefully', async () => {
+      const invalidReferenceData = {
+        ...testTransaction,
+        paymentReference: 'a'.repeat(200), // Reference too long
+      };
+
+      await expect(
+        transactionService.createTransaction(invalidReferenceData, mockUserId)
+      ).rejects.toThrow();
+    });
+
+    it('should handle invalid notes gracefully', async () => {
+      const invalidNotesData = {
+        ...testTransaction,
+        notes: 'a'.repeat(2000), // Notes too long
+      };
+
+      await expect(
+        transactionService.createTransaction(invalidNotesData, mockUserId)
+      ).rejects.toThrow();
+    });
+
+    it('should handle invalid description gracefully', async () => {
+      const invalidDescriptionData = {
+        ...testTransaction,
+        description: 'a'.repeat(2000), // Description too long
+      };
+
+      await expect(
+        transactionService.createTransaction(invalidDescriptionData, mockUserId)
+      ).rejects.toThrow();
+    });
+
+    it('should handle invalid title gracefully', async () => {
+      const invalidTitleData = {
+        ...testTransaction,
+        title: 'a'.repeat(300), // Title too long
+      };
+
+      await expect(
+        transactionService.createTransaction(invalidTitleData, mockUserId)
+      ).rejects.toThrow();
     });
   });
 });

@@ -165,7 +165,7 @@ export class TransactionService {
       } = options;
 
       // Build query
-      const query: any = { userId: new mongoose.Types.ObjectId(userId) };
+      const query: any = {};
 
       if (type) query.type = type;
       if (status) query.status = status;
@@ -208,21 +208,24 @@ export class TransactionService {
         query.tags = { $in: tags };
       }
 
-      // Get total count
-      const total = await this.transactionRepository.count(query);
+      // Validate and sanitize pagination parameters
+      const sanitizedPage = Math.max(1, page);
+      const sanitizedLimit = Math.min(Math.max(1, limit), 100); // Cap at 100
 
       // Build sort object
       const sort: any = {};
       sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
 
-      // Get paginated results
-      const transactions = await this.transactionRepository.find(query, {
-        skip: (page - 1) * limit,
-        limit,
+      // Get paginated results using findByUserId
+      const result = await this.transactionRepository.findByUserId(userId, {
+        page: sanitizedPage,
+        limit: sanitizedLimit,
         sort,
+        filter: query,
+        populate: ['categoryId', 'subcategoryId'],
       });
 
-      const totalPages = Math.ceil(total / limit);
+      const { transactions, total, totalPages } = result;
 
       logger.info('Retrieved user transactions', {
         userId,
@@ -232,7 +235,7 @@ export class TransactionService {
         totalPages,
       });
 
-      return { transactions, total, page, totalPages };
+      return { transactions, total, page: sanitizedPage, totalPages };
     } catch (error) {
       logger.error('Error getting user transactions', {
         error: String(error),

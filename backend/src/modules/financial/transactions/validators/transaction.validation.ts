@@ -36,9 +36,9 @@ export const baseTransactionSchema = Joi.object({
       'string.max': 'Description must be less than 1000 characters',
     }),
 
-  amount: Joi.number().required().positive().precision(2).messages({
+  amount: Joi.number().required().min(0.01).precision(2).messages({
     'any.required': 'Transaction amount is required',
-    'number.positive': 'Transaction amount must be positive',
+    'number.min': 'Transaction amount must be at least 0.01',
     'number.precision': 'Transaction amount must have 2 decimal places',
     'number.base': 'Transaction amount must be a valid number',
   }),
@@ -88,10 +88,10 @@ export const baseTransactionSchema = Joi.object({
 
   tags: Joi.array()
     .items(
-              Joi.string()
-          .trim()
-          .max(50)
-          .min(1)
+      Joi.string()
+        .trim()
+        .max(50)
+        .allow('')
         .messages({
           'string.max': 'Tag must be less than 50 characters',
         })
@@ -105,18 +105,22 @@ export const baseTransactionSchema = Joi.object({
   // Timing
   date: Joi.date()
     .optional()
-    .max(new Date())
     .default(() => new Date())
     .messages({
-      'date.max': 'Transaction date cannot be in the future',
+      'date.base': 'Transaction date must be a valid date',
     }),
 
   time: Joi.string()
     .optional()
-    .pattern(timePattern)
-    .allow(null)
+    .allow(null, '')
     .custom((value, helpers) => {
-      if (value === '') {
+      if (!value || value === '') {
+        return value;
+      }
+      if (value.trim() === '') {
+        return '';
+      }
+      if (!timePattern.test(value)) {
         return helpers.error('string.pattern.base');
       }
       return value;
@@ -127,6 +131,7 @@ export const baseTransactionSchema = Joi.object({
 
   timezone: Joi.string()
     .default('Europe/London')
+    .allow('', null)
     .messages({
       'string.base': 'Timezone must be a string',
     }),
@@ -164,7 +169,7 @@ export const baseTransactionSchema = Joi.object({
         'any.required': 'Longitude is required',
       }),
     }).optional(),
-  }).optional(),
+  }).optional().allow(null),
 
   // Payment details
 
@@ -180,7 +185,7 @@ export const baseTransactionSchema = Joi.object({
       .optional()
       .trim()
       .max(100)
-      .allow('')
+      .allow('', null)
       .messages({
         'string.max': 'Payment reference must be less than 100 characters',
       }),
@@ -189,7 +194,7 @@ export const baseTransactionSchema = Joi.object({
       .optional()
       .trim()
       .max(200)
-      .allow('')
+      .allow('', null)
       .messages({
         'string.max': 'Merchant name must be less than 200 characters',
       }),
@@ -201,13 +206,14 @@ export const baseTransactionSchema = Joi.object({
     .messages({
       'string.max': 'Merchant ID must be less than 100 characters',
     })
-    .allow(''),
+    .allow('', null),
 
   // Financial details
   originalAmount: Joi.number()
     .optional()
     .positive()
     .precision(2)
+    .allow(null)
     .when('originalCurrency', {
       is: Joi.exist(),
       then: Joi.required(),
@@ -228,12 +234,13 @@ export const baseTransactionSchema = Joi.object({
       'Original currency must be a valid 3-letter ISO code'
     )
     .uppercase()
-    .allow(''),
+    .allow('', null),
 
   exchangeRate: Joi.number()
     .optional()
     .positive()
     .precision(6)
+    .allow(null)
     .when('originalCurrency', {
       is: Joi.exist(),
       then: Joi.required(),
@@ -246,14 +253,19 @@ export const baseTransactionSchema = Joi.object({
       'number.precision': 'Exchange rate must have 6 decimal places',
     }),
 
-  fees: Joi.number().optional().min(0).precision(2).default(0).messages({
+  fees: Joi.number().optional().min(0).precision(2).default(0).allow(null).messages({
     'number.min': 'Fees must be positive',
     'number.precision': 'Fees must have 2 decimal places',
   }),
 
-  tax: Joi.number().optional().min(0).precision(2).default(0).messages({
+  tax: Joi.number().optional().min(0).precision(2).default(0).allow(null).messages({
     'number.min': 'Tax must be positive',
     'number.precision': 'Tax must have 2 decimal places',
+  }),
+
+  discount: Joi.number().optional().min(0).precision(2).default(0).allow(null).messages({
+    'number.min': 'Discount must be positive',
+    'number.precision': 'Discount must have 2 decimal places',
   }),
 
   // Recurrence
@@ -262,6 +274,7 @@ export const baseTransactionSchema = Joi.object({
   recurrencePattern: Joi.string()
     .valid(...Object.values(RecurrencePattern))
     .default(RecurrencePattern.NONE)
+    .allow(null)
     .when('isRecurring', {
       is: true,
       then: Joi.required(),
@@ -272,7 +285,7 @@ export const baseTransactionSchema = Joi.object({
       'any.only': 'Invalid recurrence pattern',
     }),
 
-  recurenceInterval: Joi.number()
+  recurrenceInterval: Joi.number()
     .optional()
     .integer()
     .min(1)
@@ -291,6 +304,7 @@ export const baseTransactionSchema = Joi.object({
   recurrenceEndDate: Joi.date()
     .optional()
     .greater(Joi.ref('date'))
+    .allow(null)
     .when('isRecurring', {
       is: true,
       then: Joi.required(),
@@ -372,6 +386,7 @@ export const baseTransactionSchema = Joi.object({
     )
     .max(10)
     .default([])
+    .allow(null)
     .messages({
       'array.max': 'Maximum of 10 attachments allowed',
     }),

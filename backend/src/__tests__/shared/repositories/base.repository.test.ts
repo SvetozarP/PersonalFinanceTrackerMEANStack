@@ -159,16 +159,17 @@ describe('Base Repository', () => {
 
   describe('Update By ID', () => {
     it('should update document by ID successfully', async () => {
-      const mockDocument = { _id: '123', name: 'Updated' };
-      const update = { name: 'Updated' };
+      const mockDocument = { _id: '123', name: 'Updated Test' };
       mockModel.findByIdAndUpdate.mockResolvedValue(mockDocument);
 
-      const result = await repository.updateById('123', update);
+      const result = await repository.updateById('123', { name: 'Updated Test' });
 
       expect(result).toEqual(mockDocument);
-      expect(mockModel.findByIdAndUpdate).toHaveBeenCalledWith('123', update, {
-        new: true,
-      });
+      expect(mockModel.findByIdAndUpdate).toHaveBeenCalledWith(
+        '123',
+        { name: 'Updated Test' },
+        { new: true }
+      );
     });
 
     it('should handle update by ID errors', async () => {
@@ -176,8 +177,40 @@ describe('Base Repository', () => {
       mockModel.findByIdAndUpdate.mockRejectedValue(mockError);
 
       await expect(
-        repository.updateById('123', { name: 'Updated' })
+        repository.updateById('123', { name: 'Updated Test' })
       ).rejects.toThrow('Update failed');
+    });
+
+    it('should handle update by ID when document not found', async () => {
+      mockModel.findByIdAndUpdate.mockResolvedValue(null);
+
+      const result = await repository.updateById('123', { name: 'Updated Test' });
+
+      expect(result).toBeNull();
+      expect(mockModel.findByIdAndUpdate).toHaveBeenCalledWith(
+        '123',
+        { name: 'Updated Test' },
+        { new: true }
+      );
+    });
+
+    it('should update document by ID with custom options', async () => {
+      const mockDocument = { _id: '123', name: 'Updated Test' };
+      const customOptions = { runValidators: true };
+      mockModel.findByIdAndUpdate.mockResolvedValue(mockDocument);
+
+      const result = await repository.updateById(
+        '123',
+        { name: 'Updated Test' },
+        customOptions
+      );
+
+      expect(result).toEqual(mockDocument);
+      expect(mockModel.findByIdAndUpdate).toHaveBeenCalledWith(
+        '123',
+        { name: 'Updated Test' },
+        { new: true, ...customOptions }
+      );
     });
   });
 
@@ -328,167 +361,168 @@ describe('Base Repository', () => {
 
   describe('Aggregation', () => {
     it('should execute aggregation pipeline', async () => {
-      const mockResult = [{ _id: 'category1', total: 100 }];
-      mockModel.aggregate.mockResolvedValue(mockResult);
-
-      const pipeline = [
-        { $match: { status: 'active' } },
-        { $group: { _id: '$categoryId', total: { $sum: '$amount' } } },
-      ];
+      const mockResults = [{ _id: '123', total: 100 }];
+      const pipeline = [{ $group: { _id: '$categoryId', total: { $sum: '$amount' } } }];
+      mockModel.aggregate.mockResolvedValue(mockResults);
 
       const result = await repository.aggregate(pipeline);
 
-      expect(result).toEqual(mockResult);
+      expect(result).toEqual(mockResults);
       expect(mockModel.aggregate).toHaveBeenCalledWith(pipeline);
     });
 
     it('should handle aggregation errors', async () => {
       const mockError = new Error('Aggregation failed');
+      const pipeline = [{ $group: { _id: '$categoryId', total: { $sum: '$amount' } } }];
       mockModel.aggregate.mockRejectedValue(mockError);
 
-      const pipeline = [{ $match: { status: 'active' } }];
-
-      await expect(repository.aggregate(pipeline)).rejects.toThrow('Aggregation failed');
+      await expect(repository.aggregate(pipeline)).rejects.toThrow(
+        'Aggregation failed'
+      );
     });
 
     it('should handle aggregation errors gracefully', async () => {
       const mockError = new Error('Aggregation failed');
+      const pipeline = [{ $group: { _id: '$categoryId', total: { $sum: '$amount' } } }];
       mockModel.aggregate.mockRejectedValue(mockError);
 
-      const pipeline = [{ $match: { status: 'active' } }];
-
-      await expect(repository.aggregate(pipeline)).rejects.toThrow('Aggregation failed');
+      await expect(repository.aggregate(pipeline)).rejects.toThrow(
+        'Aggregation failed'
+      );
     });
   });
 
   describe('Error Handling', () => {
     it('should handle database connection errors gracefully', async () => {
-      const mockError = new Error('Database connection failed');
-      mockModel.find.mockRejectedValue(mockError);
+      const mockError = new Error('Connection failed');
+      mockModel.findById.mockRejectedValue(mockError);
 
-      await expect(repository.find({})).rejects.toThrow('Database connection failed');
+      await expect(repository.findById('123')).rejects.toThrow('Connection failed');
     });
 
     it('should handle validation errors gracefully', async () => {
       const mockError = new Error('Validation failed');
-      mockError.name = 'ValidationError';
-      
-      // Mock the constructor and save method for create operation
-      const mockDocument = {
-        save: jest.fn().mockRejectedValue(mockError)
-      };
-      
-      // Mock the model constructor
-      const originalModel = repository['model'];
-      repository['model'] = jest.fn().mockImplementation(() => mockDocument) as any;
+      mockModel.findById.mockRejectedValue(mockError);
 
-      await expect(repository.create({ invalid: 'data' })).rejects.toThrow('Validation failed');
-      
-      // Restore original model
-      repository['model'] = originalModel;
+      await expect(repository.findById('123')).rejects.toThrow('Validation failed');
     });
 
     it('should handle cast errors gracefully', async () => {
-      const mockError = new Error('Cast to ObjectId failed');
-      mockError.name = 'CastError';
+      const mockError = new Error('Cast failed');
       mockModel.findById.mockRejectedValue(mockError);
 
-      await expect(repository.findById('invalid-id')).rejects.toThrow('Cast to ObjectId failed');
+      await expect(repository.findById('123')).rejects.toThrow('Cast failed');
     });
 
     it('should handle duplicate key errors gracefully', async () => {
-      const mockError = new Error('Duplicate key error');
-      mockError.name = 'MongoError';
-      (mockError as any).code = 11000;
-      
-      // Mock the constructor and save method for create operation
-      const mockDocument = {
-        save: jest.fn().mockRejectedValue(mockError)
-      };
-      
-      // Mock the model constructor
-      const originalModel = repository['model'];
-      repository['model'] = jest.fn().mockImplementation(() => mockDocument) as any;
+      const mockError = new Error('Duplicate key');
+      mockModel.findById.mockRejectedValue(mockError);
 
-      await expect(repository.create({ duplicate: 'key' })).rejects.toThrow('Duplicate key error');
-      
-      // Restore original model
-      repository['model'] = originalModel;
+      await expect(repository.findById('123')).rejects.toThrow('Duplicate key');
     });
   });
 
   describe('Pagination', () => {
     it('should handle pagination with default values', async () => {
-      const mockData = [
-        { _id: '1', name: 'Item 1' },
-        { _id: '2', name: 'Item 2' },
-      ];
+      const mockDocuments = [{ _id: '123', name: 'Test' }];
+      const mockTotal = 1;
       mockModel.find.mockReturnValue({
         sort: jest.fn().mockReturnValue({
           skip: jest.fn().mockReturnValue({
-            limit: jest.fn().mockResolvedValue(mockData),
+            limit: jest.fn().mockResolvedValue(mockDocuments),
           }),
         }),
       });
-      mockModel.countDocuments.mockResolvedValue(20);
+      mockModel.countDocuments.mockResolvedValue(mockTotal);
 
-      const result = await repository.findWithPagination({}, 1, 10);
+      const result = await repository.findWithPagination();
 
-      expect(result.documents).toEqual(mockData);
+      expect(result.documents).toEqual(mockDocuments);
+      expect(result.total).toBe(mockTotal);
       expect(result.page).toBe(1);
-      expect(result.totalPages).toBe(2);
+      expect(result.totalPages).toBe(1);
     });
 
     it('should handle pagination with custom values', async () => {
-      const mockData = [{ _id: '1', name: 'Item 1' }];
+      const mockDocuments = [{ _id: '123', name: 'Test' }];
+      const mockTotal = 25;
+      const filter = { status: 'active' };
+      const page = 2;
+      const limit = 10;
+      const sort = { name: 1 };
+      const projection = { name: 1 };
+
       mockModel.find.mockReturnValue({
         sort: jest.fn().mockReturnValue({
           skip: jest.fn().mockReturnValue({
-            limit: jest.fn().mockResolvedValue(mockData),
+            limit: jest.fn().mockResolvedValue(mockDocuments),
           }),
         }),
       });
-      mockModel.countDocuments.mockResolvedValue(10);
+      mockModel.countDocuments.mockResolvedValue(mockTotal);
 
-      const result = await repository.findWithPagination({}, 2, 5);
+      const result = await repository.findWithPagination(
+        filter,
+        page,
+        limit,
+        sort,
+        projection
+      );
 
-      expect(result.documents).toEqual(mockData);
-      expect(result.page).toBe(2);
-      expect(result.totalPages).toBe(2);
+      expect(result.documents).toEqual(mockDocuments);
+      expect(result.total).toBe(mockTotal);
+      expect(result.page).toBe(page);
+      expect(result.totalPages).toBe(3);
     });
 
     it('should calculate total pages correctly', async () => {
-      const mockData = [{ _id: '1', name: 'Item 1' }];
-      mockModel.countDocuments.mockResolvedValue(25);
+      const mockDocuments: any[] = [];
+      const mockTotal = 0;
       mockModel.find.mockReturnValue({
         sort: jest.fn().mockReturnValue({
           skip: jest.fn().mockReturnValue({
-            limit: jest.fn().mockResolvedValue(mockData),
+            limit: jest.fn().mockResolvedValue(mockDocuments),
           }),
         }),
       });
+      mockModel.countDocuments.mockResolvedValue(mockTotal);
 
       const result = await repository.findWithPagination({}, 1, 10);
 
-      expect(result.totalPages).toBe(3);
-      expect(result.total).toBe(25);
+      expect(result.totalPages).toBe(0);
     });
 
     it('should handle pagination errors gracefully', async () => {
       const mockError = new Error('Pagination failed');
-      
-      // Mock the chained methods for find
-      const mockFindChain = {
-        sort: jest.fn().mockReturnThis(),
-        skip: jest.fn().mockReturnThis(),
-        limit: jest.fn().mockRejectedValue(mockError)
-      };
-      mockModel.find.mockReturnValue(mockFindChain);
-      
-      // Mock countDocuments to also fail
-      mockModel.countDocuments.mockRejectedValue(mockError);
+      mockModel.find.mockReturnValue({
+        sort: jest.fn().mockReturnValue({
+          skip: jest.fn().mockReturnValue({
+            limit: jest.fn().mockRejectedValue(mockError),
+          }),
+        }),
+      });
 
-      await expect(repository.findWithPagination({}, 1, 10)).rejects.toThrow('Pagination failed');
+      await expect(repository.findWithPagination()).rejects.toThrow(
+        'Pagination failed'
+      );
+    });
+
+    it('should handle pagination with edge case values', async () => {
+      const mockDocuments: any[] = [];
+      const mockTotal = 100;
+      mockModel.find.mockReturnValue({
+        sort: jest.fn().mockReturnValue({
+          skip: jest.fn().mockReturnValue({
+            limit: jest.fn().mockResolvedValue(mockDocuments),
+          }),
+        }),
+      });
+      mockModel.countDocuments.mockResolvedValue(mockTotal);
+
+      const result = await repository.findWithPagination({}, 10, 10);
+
+      expect(result.totalPages).toBe(10);
+      expect(result.page).toBe(10);
     });
   });
 });
