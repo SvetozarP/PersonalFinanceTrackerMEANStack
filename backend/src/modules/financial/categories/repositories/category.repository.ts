@@ -40,7 +40,7 @@ export class CategoryRepository extends BaseRepository<ICategory> {
   async findRootCategories(userId: string): Promise<ICategory[]> {
     try {
       const categories = await this.model
-        .find({ userId, parentId: { $exists: false }, isActive: true })
+        .find({ userId, parentId: null, isActive: true })
         .sort({ name: 1 });
 
       logger.info(`Found root categories for user`, {
@@ -187,7 +187,7 @@ export class CategoryRepository extends BaseRepository<ICategory> {
             _id: null,
             totalCategories: { $sum: 1 },
             rootCategories: {
-              $sum: { $cond: [{ $eq: ['$parentId', null] }, 1, 0] },
+              $sum: { $cond: [{ $not: '$parentId' }, 1, 0] },
             },
             maxLevel: { $max: '$level' },
             avgLevel: { $avg: '$level' },
@@ -229,7 +229,7 @@ export class CategoryRepository extends BaseRepository<ICategory> {
       if (parentId) {
         filter.parentId = parentId;
       } else {
-        filter.parentId = { $exists: false };
+        filter.parentId = null;
       }
 
       const exists = await this.model.exists(filter);
