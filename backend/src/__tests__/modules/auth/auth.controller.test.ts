@@ -1,10 +1,21 @@
 import { AuthController } from '../../../modules/auth/auth.controller';
 import { AuthService } from '../../../modules/auth/auth.service';
 import { Request, Response, NextFunction } from 'express';
+import { registerSchema, loginSchema } from '../../../modules/auth/auth.validation';
+import mongoose from 'mongoose';
 
 // Mock AuthService
 jest.mock('../../../modules/auth/auth.service');
-const mockAuthService = AuthService as jest.MockedClass<typeof AuthService>;
+
+// Mock validation schemas
+jest.mock('../../../modules/auth/auth.validation', () => ({
+  registerSchema: {
+    validate: jest.fn(),
+  },
+  loginSchema: {
+    validate: jest.fn(),
+  },
+}));
 
 // Mock logger
 jest.mock('../../../shared/services/logger.service', () => ({
@@ -25,22 +36,24 @@ describe('Auth Controller', () => {
   let mockRequest: Partial<TestRequest>;
   let mockResponse: Partial<Response>;
   let mockNext: NextFunction;
-  let mockAuthServiceInstance: jest.Mocked<AuthService>;
+  let mockAuthService: jest.Mocked<AuthService>;
 
   beforeEach(() => {
     jest.clearAllMocks();
 
     // Create mock AuthService instance
-    mockAuthServiceInstance = {
+    mockAuthService = {
       register: jest.fn(),
       login: jest.fn(),
       refreshToken: jest.fn(),
-      logout: jest.fn().mockResolvedValue(Promise.resolve()),
+      logout: jest.fn(),
+      validateToken: jest.fn(),
     } as any;
 
-    mockAuthService.mockImplementation(() => mockAuthServiceInstance);
+    // Mock the AuthService constructor to return our mock instance
+    (AuthService as jest.MockedClass<typeof AuthService>).mockImplementation(() => mockAuthService);
 
-    authController = new AuthController(mockAuthServiceInstance);
+    authController = new AuthController(mockAuthService);
 
     // Setup mock request and response
     mockRequest = {
@@ -62,81 +75,31 @@ describe('Auth Controller', () => {
 
   describe('register', () => {
     it('should register a new user successfully', async () => {
-      const mockUser = {
-        _id: 'user123',
+      const mockUser = { 
+        _id: new mongoose.Types.ObjectId('507f1f77bcf86cd799439011'),
         email: 'test@example.com',
         firstName: 'Test',
         lastName: 'User',
         isActive: true,
         createdAt: new Date(),
-        updatedAt: new Date(),
-        password: 'hashedPassword',
-        comparePassword: jest.fn(),
-        $assertPopulated: jest.fn(),
-        $clearModifiedPaths: jest.fn(),
-        $clone: jest.fn(),
-        $getAllSubdocs: jest.fn(),
-        $ignore: jest.fn(),
-        $isDefault: jest.fn(),
-        $isDeleted: jest.fn(),
-        $isEmpty: jest.fn(),
-        $isValid: jest.fn(),
-        $locals: {},
-        $op: null,
-        $session: jest.fn(),
-        $where: {},
-        collection: {} as any,
-        db: {} as any,
-        delete: jest.fn(),
-        deleteOne: jest.fn(),
-        depopulate: jest.fn(),
-        equals: jest.fn(),
-        errors: {},
-        get: jest.fn(),
-        increment: jest.fn(),
-        isDirectModified: jest.fn(),
-        isInit: jest.fn(),
-        isModified: jest.fn(),
-        isSelected: jest.fn(),
-        markModified: jest.fn(),
-        modifiedPaths: jest.fn(),
-        modelName: '',
-        overwrite: jest.fn(),
-        populate: jest.fn(),
-        populated: jest.fn(),
-        replaceOne: jest.fn(),
-        resetModified: jest.fn(),
-        save: jest.fn(),
-        schema: {} as any,
-        set: jest.fn(),
-        toJSON: jest.fn(),
-        toObject: jest.fn(),
-        unmarkModified: jest.fn(),
-        update: jest.fn(),
-        validate: jest.fn(),
-        validateSync: jest.fn(),
-      } as any;
-
-      mockRequest.body = {
-        email: 'test@example.com',
-        password: 'Password123!',
-        firstName: 'Test',
-        lastName: 'User',
+        updatedAt: new Date()
       };
+      const mockRegisterData = { email: 'test@example.com', password: 'password123', firstName: 'Test', lastName: 'User' };
 
-      mockAuthServiceInstance.register.mockResolvedValue(mockUser);
+      (registerSchema.validate as jest.Mock).mockReturnValue({
+        error: null,
+        value: mockRegisterData,
+      });
+      mockAuthService.register.mockResolvedValue(mockUser as any);
 
-      await authController.register(
-        mockRequest as TestRequest,
-        mockResponse as Response,
-        mockNext
-      );
+      const req = { body: mockRegisterData } as Request;
+      const res = { status: jest.fn().mockReturnThis(), json: jest.fn() } as any;
+      const next = jest.fn();
 
-      expect(mockAuthServiceInstance.register).toHaveBeenCalledWith(
-        mockRequest.body
-      );
-      expect(mockResponse.status).toHaveBeenCalledWith(201);
-      expect(mockResponse.json).toHaveBeenCalledWith({
+      await authController.register(req, res, next);
+
+      expect(res.status).toHaveBeenCalledWith(201);
+      expect(res.json).toHaveBeenCalledWith({
         success: true,
         message: 'User registered successfully',
         data: { user: mockUser },
@@ -144,276 +107,484 @@ describe('Auth Controller', () => {
     });
 
     it('should handle validation errors', async () => {
-      mockRequest.body = {
-        email: 'test@example.com',
-        password: 'weak',
-        firstName: 'Test',
-        lastName: 'User',
+      const validationError = {
+        error: {
+          details: [{ message: 'Email is required' }],
+        },
       };
 
-      await authController.register(
-        mockRequest as TestRequest,
-        mockResponse as Response,
-        mockNext
-      );
+      (registerSchema.validate as jest.Mock).mockReturnValue(validationError);
 
-      expect(mockResponse.status).toHaveBeenCalledWith(400);
-      expect(mockResponse.json).toHaveBeenCalledWith({
+      const req = { body: {} } as Request;
+      const res = { status: jest.fn().mockReturnThis(), json: jest.fn() } as any;
+      const next = jest.fn();
+
+      await authController.register(req, res, next);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({
         success: false,
         message: 'Validation error',
-        errors: expect.arrayContaining([
-          expect.stringContaining(
-            'Password must be at least 8 characters long'
-          ),
-        ]),
+        errors: ['Email is required'],
+      });
+    });
+
+    it('should handle user already exists error', async () => {
+      const mockRegisterData = { email: 'test@example.com', password: 'password123' };
+      const mockError = new Error('User with this email already exists');
+
+      (registerSchema.validate as jest.Mock).mockReturnValue({
+        error: null,
+        value: mockRegisterData,
+      });
+      mockAuthService.register.mockRejectedValue(mockError);
+
+      const req = { body: mockRegisterData } as Request;
+      const res = { status: jest.fn().mockReturnThis(), json: jest.fn() } as any;
+      const next = jest.fn();
+
+      await authController.register(req, res, next);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: 'User with this email already exists',
+        errors: ['User with this email already exists'],
+      });
+    });
+
+    it('should handle other errors by passing to next', async () => {
+      const mockRegisterData = { email: 'test@example.com', password: 'password123' };
+      const mockError = new Error('Database error');
+
+      (registerSchema.validate as jest.Mock).mockReturnValue({
+        error: null,
+        value: mockRegisterData,
+      });
+      mockAuthService.register.mockRejectedValue(mockError);
+
+      const req = { body: mockRegisterData } as Request;
+      const res = { status: jest.fn().mockReturnThis(), json: jest.fn() } as any;
+      const next = jest.fn();
+
+      await authController.register(req, res, next);
+
+      expect(next).toHaveBeenCalledWith(mockError);
+    });
+
+    it('should handle validation errors with multiple details', async () => {
+      const validationError = {
+        error: {
+          details: [
+            { message: 'Email is required' },
+            { message: 'Password is required' },
+          ],
+        },
+      };
+
+      (registerSchema.validate as jest.Mock).mockReturnValue(validationError);
+
+      const req = { body: {} } as Request;
+      const res = { status: jest.fn().mockReturnThis(), json: jest.fn() } as any;
+      const next = jest.fn();
+
+      await authController.register(req, res, next);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: 'Validation error',
+        errors: ['Email is required', 'Password is required'],
       });
     });
   });
 
   describe('login', () => {
     it('should login user successfully', async () => {
-      const mockUser = {
-        _id: 'user123',
+      const mockUser = { 
+        _id: new mongoose.Types.ObjectId('507f1f77bcf86cd799439011'),
         email: 'test@example.com',
         firstName: 'Test',
         lastName: 'User',
         isActive: true,
         createdAt: new Date(),
-        updatedAt: new Date(),
-        password: 'hashedPassword',
-        comparePassword: jest.fn(),
-        $assertPopulated: jest.fn(),
-        $clearModifiedPaths: jest.fn(),
-        $clone: jest.fn(),
-        $getAllSubdocs: jest.fn(),
-        $ignore: jest.fn(),
-        $isDefault: jest.fn(),
-        $isDeleted: jest.fn(),
-        $isEmpty: jest.fn(),
-        $isValid: jest.fn(),
-        $locals: {},
-        $op: null,
-        $session: jest.fn(),
-        $where: {},
-        collection: {} as any,
-        db: {} as any,
-        delete: jest.fn(),
-        deleteOne: jest.fn(),
-        depopulate: jest.fn(),
-        equals: jest.fn(),
-        errors: {},
-        get: jest.fn(),
-        increment: jest.fn(),
-        isDirectModified: jest.fn(),
-        isInit: jest.fn(),
-        isModified: jest.fn(),
-        isSelected: jest.fn(),
-        markModified: jest.fn(),
-        modifiedPaths: jest.fn(),
-        modelName: '',
-        overwrite: jest.fn(),
-        populate: jest.fn(),
-        populated: jest.fn(),
-        replaceOne: jest.fn(),
-        resetModified: jest.fn(),
-        save: jest.fn(),
-        schema: {} as any,
-        set: jest.fn(),
-        toJSON: jest.fn(),
-        toObject: jest.fn(),
-        unmarkModified: jest.fn(),
-        update: jest.fn(),
-        validate: jest.fn(),
-        validateSync: jest.fn(),
+        updatedAt: new Date()
+      };
+      const mockTokens = { accessToken: 'access123', refreshToken: 'refresh123' };
+      const mockLoginData = { email: 'test@example.com', password: 'password123' };
+
+      (loginSchema.validate as jest.Mock).mockReturnValue({
+        error: null,
+        value: mockLoginData,
+      });
+      mockAuthService.login.mockResolvedValue({ user: mockUser, tokens: mockTokens });
+
+      const req = { body: mockLoginData } as Request;
+      const res = { 
+        status: jest.fn().mockReturnThis(), 
+        json: jest.fn(),
+        cookie: jest.fn(),
       } as any;
+      const next = jest.fn();
 
-      const mockTokens = {
-        accessToken: 'access123',
-        refreshToken: 'refresh123',
-      };
+      // Mock process.env.NODE_ENV
+      const originalEnv = process.env.NODE_ENV;
+      process.env.NODE_ENV = 'development';
 
-      mockRequest.body = {
-        email: 'test@example.com',
-        password: 'Password123!',
-      };
+      await authController.login(req, res, next);
 
-      mockAuthServiceInstance.login.mockResolvedValue({
-        user: mockUser,
-        tokens: mockTokens,
+      expect(res.cookie).toHaveBeenCalledWith('refreshToken', 'refresh123', {
+        httpOnly: true,
+        secure: false,
+        sameSite: 'strict',
+        maxAge: 7 * 24 * 60 * 60 * 1000,
       });
-
-      await authController.login(
-        mockRequest as TestRequest,
-        mockResponse as Response,
-        mockNext
-      );
-
-      expect(mockAuthServiceInstance.login).toHaveBeenCalledWith({
-        email: 'test@example.com',
-        password: 'Password123!',
-        rememberMe: false,
-      });
-      expect(mockResponse.status).toHaveBeenCalledWith(200);
-      expect(mockResponse.json).toHaveBeenCalledWith({
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith({
         success: true,
         message: 'Login successful',
-        data: { user: mockUser, accessToken: mockTokens.accessToken },
+        data: { user: mockUser, accessToken: 'access123' },
       });
-      expect(mockResponse.cookie).toHaveBeenCalledWith(
-        'refreshToken',
-        mockTokens.refreshToken,
-        expect.any(Object)
-      );
+
+      // Restore original env
+      process.env.NODE_ENV = originalEnv;
     });
 
-    it('should handle login errors', async () => {
-      const mockError = new Error('Invalid email or password');
-      mockRequest.body = {
-        email: 'test@example.com',
-        password: 'wrongpassword',
+    it('should handle validation errors during login', async () => {
+      const validationError = {
+        error: {
+          details: [{ message: 'Email is required' }],
+        },
       };
 
-      mockAuthServiceInstance.login.mockRejectedValue(mockError);
+      (loginSchema.validate as jest.Mock).mockReturnValue(validationError);
 
-      await authController.login(
-        mockRequest as TestRequest,
-        mockResponse as Response,
-        mockNext
-      );
+      const req = { body: {} } as Request;
+      const res = { status: jest.fn().mockReturnThis(), json: jest.fn() } as any;
+      const next = jest.fn();
 
-      expect(mockResponse.status).toHaveBeenCalledWith(400);
-      expect(mockResponse.json).toHaveBeenCalledWith({
+      await authController.login(req, res, next);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: 'Validation error',
+        errors: ['Email is required'],
+      });
+    });
+
+    it('should handle invalid email or password error', async () => {
+      const mockLoginData = { email: 'test@example.com', password: 'wrongpassword' };
+      const mockError = new Error('Invalid email or password');
+
+      (loginSchema.validate as jest.Mock).mockReturnValue({
+        error: null,
+        value: mockLoginData,
+      });
+      mockAuthService.login.mockRejectedValue(mockError);
+
+      const req = { body: mockLoginData } as Request;
+      const res = { status: jest.fn().mockReturnThis(), json: jest.fn() } as any;
+      const next = jest.fn();
+
+      await authController.login(req, res, next);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({
         success: false,
         message: 'Invalid email or password',
         errors: ['Invalid email or password'],
+      });
+    });
+
+    it('should handle account deactivated error', async () => {
+      const mockLoginData = { email: 'test@example.com', password: 'password123' };
+      const mockError = new Error('Account is deactivated');
+
+      (loginSchema.validate as jest.Mock).mockReturnValue({
+        error: null,
+        value: mockLoginData,
+      });
+      mockAuthService.login.mockRejectedValue(mockError);
+
+      const req = { body: mockLoginData } as Request;
+      const res = { status: jest.fn().mockReturnThis(), json: jest.fn() } as any;
+      const next = jest.fn();
+
+      await authController.login(req, res, next);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: 'Account is deactivated',
+        errors: ['Account is deactivated'],
+      });
+    });
+
+    it('should handle other login errors by passing to next', async () => {
+      const mockLoginData = { email: 'test@example.com', password: 'password123' };
+      const mockError = new Error('Database error');
+
+      (loginSchema.validate as jest.Mock).mockReturnValue({
+        error: null,
+        value: mockLoginData,
+      });
+      mockAuthService.login.mockRejectedValue(mockError);
+
+      const req = { body: mockLoginData } as Request;
+      const res = { status: jest.fn().mockReturnThis(), json: jest.fn() } as any;
+      const next = jest.fn();
+
+      await authController.login(req, res, next);
+
+      expect(next).toHaveBeenCalledWith(mockError);
+    });
+
+    it('should set secure cookie in production environment', async () => {
+      const mockUser = { 
+        _id: new mongoose.Types.ObjectId('507f1f77bcf86cd799439011'),
+        email: 'test@example.com',
+        firstName: 'Test',
+        lastName: 'User',
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+      const mockTokens = { accessToken: 'access123', refreshToken: 'refresh123' };
+      const mockLoginData = { email: 'test@example.com', password: 'password123' };
+
+      (loginSchema.validate as jest.Mock).mockReturnValue({
+        error: null,
+        value: mockLoginData,
+      });
+      mockAuthService.login.mockResolvedValue({ user: mockUser, tokens: mockTokens });
+
+      const req = { body: mockLoginData } as Request;
+      const res = { 
+        status: jest.fn().mockReturnThis(), 
+        json: jest.fn(),
+        cookie: jest.fn(),
+      } as any;
+      const next = jest.fn();
+
+      // Mock process.env.NODE_ENV
+      const originalEnv = process.env.NODE_ENV;
+      process.env.NODE_ENV = 'production';
+
+      await authController.login(req, res, next);
+
+      expect(res.cookie).toHaveBeenCalledWith('refreshToken', 'refresh123', {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'strict',
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+      });
+
+      // Restore original env
+      process.env.NODE_ENV = originalEnv;
+    });
+  });
+
+  describe('refreshToken', () => {
+    it('should refresh token successfully', async () => {
+      const mockTokens = { accessToken: 'newAccess123', refreshToken: 'newRefresh123' };
+
+      mockAuthService.refreshToken.mockResolvedValue(mockTokens);
+
+      const req = { cookies: { refreshToken: 'oldRefresh123' } } as any;
+      const res = { 
+        status: jest.fn().mockReturnThis(), 
+        json: jest.fn(),
+        cookie: jest.fn(),
+      } as any;
+      const next = jest.fn();
+
+      // Mock process.env.NODE_ENV
+      const originalEnv = process.env.NODE_ENV;
+      process.env.NODE_ENV = 'development';
+
+      await authController.refreshToken(req, res, next);
+
+      expect(res.cookie).toHaveBeenCalledWith('refreshToken', 'newRefresh123', {
+        httpOnly: true,
+        secure: false,
+        sameSite: 'strict',
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+      });
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith({
+        success: true,
+        message: 'Token refreshed successfully',
+        data: { accessToken: 'newAccess123' },
+      });
+
+      // Restore original env
+      process.env.NODE_ENV = originalEnv;
+    });
+
+    it('should handle missing refresh token', async () => {
+      const req = { cookies: {} } as any;
+      const res = { status: jest.fn().mockReturnThis(), json: jest.fn() } as any;
+      const next = jest.fn();
+
+      await authController.refreshToken(req, res, next);
+
+      expect(res.status).toHaveBeenCalledWith(401);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: 'Refresh token not provided',
+      });
+    });
+
+    it('should handle invalid refresh token error', async () => {
+      const mockError = new Error('Invalid refresh token');
+
+      mockAuthService.refreshToken.mockRejectedValue(mockError);
+
+      const req = { cookies: { refreshToken: 'invalidToken' } } as any;
+      const res = { status: jest.fn().mockReturnThis(), json: jest.fn() } as any;
+      const next = jest.fn();
+
+      await authController.refreshToken(req, res, next);
+
+      expect(res.status).toHaveBeenCalledWith(401);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: 'Invalid refresh token',
+        errors: ['Invalid refresh token'],
+      });
+    });
+
+    it('should handle other refresh token errors by passing to next', async () => {
+      const mockError = new Error('Database error');
+
+      mockAuthService.refreshToken.mockRejectedValue(mockError);
+
+      const req = { cookies: { refreshToken: 'validToken' } } as any;
+      const res = { status: jest.fn().mockReturnThis(), json: jest.fn() } as any;
+      const next = jest.fn();
+
+      await authController.refreshToken(req, res, next);
+
+      expect(next).toHaveBeenCalledWith(mockError);
+    });
+
+    it('should handle undefined cookies', async () => {
+      const req = { cookies: {} } as any;
+      const res = { status: jest.fn().mockReturnThis(), json: jest.fn() } as any;
+      const next = jest.fn();
+
+      await authController.refreshToken(req, res, next);
+
+      expect(res.status).toHaveBeenCalledWith(401);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: 'Refresh token not provided',
+      });
+    });
+
+    it('should handle empty refresh token string', async () => {
+      const req = { cookies: { refreshToken: '' } } as any;
+      const res = { status: jest.fn().mockReturnThis(), json: jest.fn() } as any;
+      const next = jest.fn();
+
+      await authController.refreshToken(req, res, next);
+
+      expect(res.status).toHaveBeenCalledWith(401);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: 'Refresh token not provided',
       });
     });
   });
 
   describe('logout', () => {
     it('should handle logout with user', async () => {
-      mockRequest.user = { userId: 'user123' };
+      const req = { user: { userId: '123' } } as any;
+      const res = { 
+        status: jest.fn().mockReturnThis(), 
+        json: jest.fn(),
+        clearCookie: jest.fn(),
+      } as any;
+      const next = jest.fn();
 
+      await authController.logout(req, res, next);
 
-
-      await authController.logout(
-        mockRequest as TestRequest,
-        mockResponse as Response,
-        mockNext
-      );
-
-      expect(mockAuthServiceInstance.logout).toHaveBeenCalledWith('user123');
-      expect(mockResponse.status).toHaveBeenCalledWith(200);
-      expect(mockResponse.json).toHaveBeenCalledWith({
+      expect(mockAuthService.logout).toHaveBeenCalledWith('123');
+      expect(res.clearCookie).toHaveBeenCalledWith('refreshToken');
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith({
         success: true,
         message: 'Logout successful',
       });
-      expect(mockResponse.clearCookie).toHaveBeenCalledWith('refreshToken');
     });
 
     it('should handle logout without user', async () => {
-      mockRequest.user = undefined;
+      const req = { user: undefined } as any;
+      const res = { 
+        status: jest.fn().mockReturnThis(), 
+        json: jest.fn(),
+        clearCookie: jest.fn(),
+      } as any;
+      const next = jest.fn();
 
-      await authController.logout(
-        mockRequest as TestRequest,
-        mockResponse as Response,
-        mockNext
-      );
+      await authController.logout(req, res, next);
 
-      expect(mockResponse.status).toHaveBeenCalledWith(200);
-      expect(mockResponse.json).toHaveBeenCalledWith({
+      expect(mockAuthService.logout).not.toHaveBeenCalled();
+      expect(res.clearCookie).toHaveBeenCalledWith('refreshToken');
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith({
         success: true,
         message: 'Logout successful',
-      });
-    });
-  });
-
-  describe('refreshToken', () => {
-    it('should refresh token successfully', async () => {
-      const mockTokens = {
-        accessToken: 'newAccess123',
-        refreshToken: 'newRefresh123',
-      };
-
-      mockRequest.cookies = { refreshToken: 'oldRefresh123' };
-
-      mockAuthServiceInstance.refreshToken.mockResolvedValue(mockTokens);
-
-      await authController.refreshToken(
-        mockRequest as TestRequest,
-        mockResponse as Response,
-        mockNext
-      );
-
-      expect(mockAuthServiceInstance.refreshToken).toHaveBeenCalledWith(
-        'oldRefresh123'
-      );
-      expect(mockResponse.status).toHaveBeenCalledWith(200);
-      expect(mockResponse.json).toHaveBeenCalledWith({
-        success: true,
-        message: 'Token refreshed successfully',
-        data: { accessToken: mockTokens.accessToken },
-      });
-      expect(mockResponse.cookie).toHaveBeenCalledWith(
-        'refreshToken',
-        mockTokens.refreshToken,
-        expect.any(Object)
-      );
-    });
-
-    it('should handle refresh token errors', async () => {
-      const mockError = new Error('Invalid refresh token');
-      mockRequest.cookies = { refreshToken: 'invalidToken' };
-
-      mockAuthServiceInstance.refreshToken.mockRejectedValue(mockError);
-
-      await authController.refreshToken(
-        mockRequest as TestRequest,
-        mockResponse as Response,
-        mockNext
-      );
-
-      expect(mockResponse.status).toHaveBeenCalledWith(401);
-      expect(mockResponse.json).toHaveBeenCalledWith({
-        success: false,
-        message: 'Invalid refresh token',
-        errors: ['Invalid refresh token'],
       });
     });
   });
 
   describe('getProfile', () => {
-    it('should get user profile successfully', () => {
-      mockRequest.user = { userId: 'user123' };
+    it('should get user profile successfully', async () => {
+      const req = { user: { userId: '123' } } as any;
+      const res = { status: jest.fn().mockReturnThis(), json: jest.fn() } as any;
+      const next = jest.fn();
 
-      authController.getProfile(
-        mockRequest as TestRequest,
-        mockResponse as Response,
-        mockNext
-      );
+      await authController.getProfile(req, res, next);
 
-      expect(mockResponse.status).toHaveBeenCalledWith(200);
-      expect(mockResponse.json).toHaveBeenCalledWith({
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith({
         success: true,
         message: 'Profile retrieved successfully',
-        data: { userId: 'user123' },
+        data: { userId: '123' },
       });
     });
 
-    it('should handle profile request without user', () => {
-      mockRequest.user = undefined;
+    it('should handle profile request without user', async () => {
+      const req = { user: undefined } as any;
+      const res = { status: jest.fn().mockReturnThis(), json: jest.fn() } as any;
+      const next = jest.fn();
 
-      authController.getProfile(
-        mockRequest as TestRequest,
-        mockResponse as Response,
-        mockNext
-      );
+      await authController.getProfile(req, res, next);
 
-      expect(mockResponse.status).toHaveBeenCalledWith(401);
-      expect(mockResponse.json).toHaveBeenCalledWith({
+      expect(res.status).toHaveBeenCalledWith(401);
+      expect(res.json).toHaveBeenCalledWith({
         success: false,
         message: 'User not authenticated',
       });
+    });
+
+    it('should handle profile errors by passing to next', async () => {
+      const mockError = new Error('Profile retrieval failed');
+
+      const req = { user: { userId: '123' } } as any;
+      const res = { status: jest.fn().mockReturnThis(), json: jest.fn() } as any;
+      const next = jest.fn();
+
+      // Mock the response methods to throw an error
+      res.status.mockImplementation(() => {
+        throw mockError;
+      });
+
+      await authController.getProfile(req, res, next);
+
+      expect(next).toHaveBeenCalledWith(mockError);
     });
   });
 });

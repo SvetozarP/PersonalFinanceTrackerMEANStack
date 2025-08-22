@@ -1,6 +1,11 @@
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import mongoose from 'mongoose';
 
+// Import models to ensure they are registered
+import '../modules/financial/categories/models/category.model';
+import '../modules/financial/transactions/models/transaction.model';
+import '../modules/users/user.model';
+
 let mongod: MongoMemoryServer;
 
 // Set test environment
@@ -19,6 +24,21 @@ beforeAll(async () => {
 
   // Connect to test database
   await mongoose.connect(uri);
+
+  // Create mock Account model if it doesn't exist
+  if (!mongoose.models.Account) {
+    const accountSchema = new mongoose.Schema({
+      name: { type: String, required: true },
+      type: { type: String, required: true },
+      balance: { type: Number, default: 0 },
+      currency: { type: String, default: 'USD' },
+      userId: { type: mongoose.Schema.Types.ObjectId, required: true },
+      isActive: { type: Boolean, default: true },
+      isDeleted: { type: Boolean, default: false },
+    }, { timestamps: true });
+    
+    mongoose.model('Account', accountSchema);
+  }
 });
 
 afterAll(async () => {

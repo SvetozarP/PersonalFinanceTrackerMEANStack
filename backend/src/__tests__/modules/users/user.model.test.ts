@@ -3,7 +3,12 @@ import bcrypt from 'bcryptjs';
 import { User } from '../../../modules/users/user.model';
 
 // Mock bcrypt
-jest.mock('bcryptjs');
+jest.mock('bcryptjs', () => ({
+  genSalt: jest.fn(),
+  hash: jest.fn(),
+  compare: jest.fn(),
+}));
+
 const mockBcrypt = bcrypt as jest.Mocked<typeof bcrypt>;
 
 describe('User Model', () => {
@@ -21,6 +26,11 @@ describe('User Model', () => {
   beforeEach(async () => {
     await User.deleteMany({});
     jest.clearAllMocks();
+    
+    // Reset bcrypt mocks
+    mockBcrypt.genSalt.mockReset();
+    mockBcrypt.hash.mockReset();
+    mockBcrypt.compare.mockReset();
   });
 
   describe('Schema Validation', () => {
@@ -236,12 +246,6 @@ describe('User Model', () => {
 
   describe('Password Hashing', () => {
     it('should hash password before saving', async () => {
-      const mockSalt = 'mocked-salt';
-      const mockHash = 'mocked-hash';
-
-      mockBcrypt.genSalt.mockResolvedValue(mockSalt as never);
-      mockBcrypt.hash.mockResolvedValue(mockHash as never);
-
       const userData = {
         email: 'test@example.com',
         password: 'TestPass123!',
@@ -250,10 +254,11 @@ describe('User Model', () => {
       };
 
       const user = new User(userData);
-      await user.save();
+      const savedUser = await user.save();
 
-      expect(mockBcrypt.genSalt).toHaveBeenCalledWith(12);
-      expect(mockBcrypt.hash).toHaveBeenCalledWith('TestPass123!', mockSalt);
+      // Verify that the password was hashed (should not be the original password)
+      expect(savedUser.password).not.toBe('TestPass123!');
+      expect(savedUser.password).toMatch(/^\$2[aby]\$\d{1,2}\$[./A-Za-z0-9]{53}$/); // bcrypt hash pattern
     });
 
     it('should hash password when password is modified', async () => {
@@ -267,27 +272,21 @@ describe('User Model', () => {
       const user = new User(userData);
       await user.save();
 
-      // Clear mocks
-      jest.clearAllMocks();
-
-      // Mock the salt generation for the second save
-      const mockSalt = 'mocked-salt-2';
-      mockBcrypt.genSalt.mockResolvedValue(mockSalt as never);
+      const originalHashedPassword = user.password;
 
       // Update password field
       user.password = 'NewPass123!';
       await user.save();
 
-      expect(mockBcrypt.genSalt).toHaveBeenCalledWith(12);
-      expect(mockBcrypt.hash).toHaveBeenCalledWith('NewPass123!', mockSalt);
+      // Verify that the password was re-hashed
+      expect(user.password).not.toBe('NewPass123!');
+      expect(user.password).not.toBe(originalHashedPassword);
+      expect(user.password).toMatch(/^\$2[aby]\$\d{1,2}\$[./A-Za-z0-9]{53}$/); // bcrypt hash pattern
     });
   });
 
   describe('Password Comparison', () => {
     it('should compare passwords correctly', async () => {
-      const mockResult = true;
-      mockBcrypt.compare.mockResolvedValue(mockResult as never);
-
       const userData = {
         email: 'test@example.com',
         password: 'TestPass123!',
@@ -298,12 +297,13 @@ describe('User Model', () => {
       const user = new User(userData);
       await user.save();
 
-      const result = await user.comparePassword('TestPass123!');
-      expect(result).toBe(mockResult);
-      expect(mockBcrypt.compare).toHaveBeenCalledWith(
-        'TestPass123!',
-        user.password
-      );
+      // Test correct password
+      const correctResult = await user.comparePassword('TestPass123!');
+      expect(correctResult).toBe(true);
+
+      // Test incorrect password
+      const incorrectResult = await user.comparePassword('WrongPass123!');
+      expect(incorrectResult).toBe(false);
     });
   });
 

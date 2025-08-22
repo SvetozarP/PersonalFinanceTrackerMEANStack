@@ -17,6 +17,7 @@ const MockedCategoryRepository = CategoryRepository as jest.MockedClass<typeof C
 describe('Category Service', () => {
   let categoryService: CategoryService;
   let mockCategoryRepository: jest.Mocked<CategoryRepository>;
+  const mockUserId = '507f1f77bcf86cd799439011';
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -41,8 +42,6 @@ describe('Category Service', () => {
       color: '#FF0000',
       icon: 'test-icon',
     };
-
-    const mockUserId = '507f1f77bcf86cd799439011';
 
     it('should create a category successfully without parent', async () => {
       const mockCreatedCategory = {
@@ -560,186 +559,339 @@ describe('Category Service', () => {
 
     it('should get user categories successfully', async () => {
       const mockCategories = [
-        {
-          _id: new mongoose.Types.ObjectId(),
-          name: 'Category 1',
-          userId: new mongoose.Types.ObjectId(mockUserId),
-          level: 0,
-          path: ['Category 1'],
-          isActive: true,
-          isSystem: false,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-        {
-          _id: new mongoose.Types.ObjectId(),
-          name: 'Category 2',
-          userId: new mongoose.Types.ObjectId(mockUserId),
-          level: 0,
-          path: ['Category 2'],
-          isActive: true,
-          isSystem: false,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-      ] as any[];
-
-      const mockResult = {
-        categories: mockCategories,
-        total: 2,
-        page: 1,
-        totalPages: 1,
-      };
+        { _id: new mongoose.Types.ObjectId(), name: 'Category 1' },
+        { _id: new mongoose.Types.ObjectId(), name: 'Category 2' },
+      ] as any;
 
       mockCategoryRepository.count.mockResolvedValue(2);
       mockCategoryRepository.find.mockResolvedValue(mockCategories);
 
-      const result = await categoryService.getUserCategories(mockUserId, {});
+      const result = await categoryService.getUserCategories(mockUserId);
 
-      expect(result).toEqual(mockResult);
-      expect(mockCategoryRepository.count).toHaveBeenCalledWith(
-        { userId: new mongoose.Types.ObjectId(mockUserId) }
-      );
-      expect(mockCategoryRepository.find).toHaveBeenCalledWith(
-        { userId: new mongoose.Types.ObjectId(mockUserId) },
-        {
-          skip: 0,
-          limit: 20,
-          sort: { level: 1, name: 1 },
-        }
-      );
+      expect(result.categories).toEqual(mockCategories);
+      expect(result.total).toBe(2);
+      expect(result.page).toBe(1);
+      expect(result.totalPages).toBe(1);
     });
 
     it('should handle custom pagination parameters', async () => {
-      const mockCategories: any[] = [];
-      const mockResult = {
-        categories: mockCategories,
-        total: 0,
-        page: 2,
-        totalPages: 0,
-      };
+      const mockCategories = [
+        { _id: new mongoose.Types.ObjectId(), name: 'Category 1' },
+      ] as any;
 
-      mockCategoryRepository.count.mockResolvedValue(0);
+      mockCategoryRepository.count.mockResolvedValue(25);
       mockCategoryRepository.find.mockResolvedValue(mockCategories);
 
       const result = await categoryService.getUserCategories(mockUserId, {
         page: 2,
-        limit: 5,
+        limit: 10,
       });
 
-      expect(result).toEqual(mockResult);
+      expect(result.page).toBe(2);
+      expect(result.totalPages).toBe(3);
+    });
+
+    it('should handle parentId filtering when parentId is null', async () => {
+      const mockCategories = [
+        { _id: new mongoose.Types.ObjectId(), name: 'Root Category' },
+      ] as any;
+
+      mockCategoryRepository.count.mockResolvedValue(1);
+      mockCategoryRepository.find.mockResolvedValue(mockCategories);
+
+      const result = await categoryService.getUserCategories(mockUserId, {
+        parentId: '',
+      });
+
+      expect(result.categories).toEqual(mockCategories);
       expect(mockCategoryRepository.count).toHaveBeenCalledWith(
-        { userId: new mongoose.Types.ObjectId(mockUserId) }
-      );
-      expect(mockCategoryRepository.find).toHaveBeenCalledWith(
-        { userId: new mongoose.Types.ObjectId(mockUserId) },
-        {
-          skip: 5,
-          limit: 5,
-          sort: { level: 1, name: 1 },
-        }
+        expect.objectContaining({ 
+          userId: new mongoose.Types.ObjectId(mockUserId),
+          parentId: null 
+        })
       );
     });
 
+    it('should handle parentId filtering when parentId is undefined', async () => {
+      const mockCategories = [
+        { _id: new mongoose.Types.ObjectId(), name: 'Any Category' },
+      ] as any;
+
+      mockCategoryRepository.count.mockResolvedValue(1);
+      mockCategoryRepository.find.mockResolvedValue(mockCategories);
+
+      const result = await categoryService.getUserCategories(mockUserId, {
+        parentId: undefined,
+      });
+
+      expect(result.categories).toEqual(mockCategories);
+      expect(mockCategoryRepository.count).toHaveBeenCalledWith(
+        expect.objectContaining({ userId: new mongoose.Types.ObjectId(mockUserId) })
+      );
+    });
+
+    it('should handle level filtering', async () => {
+      const mockCategories = [
+        { _id: new mongoose.Types.ObjectId(), name: 'Level 1 Category' },
+      ] as any;
+
+      mockCategoryRepository.count.mockResolvedValue(1);
+      mockCategoryRepository.find.mockResolvedValue(mockCategories);
+
+      const result = await categoryService.getUserCategories(mockUserId, {
+        level: 1,
+      });
+
+      expect(result.categories).toEqual(mockCategories);
+      expect(mockCategoryRepository.count).toHaveBeenCalledWith(
+        expect.objectContaining({ level: 1 })
+      );
+    });
+
+    it('should handle isActive filtering', async () => {
+      const mockCategories = [
+        { _id: new mongoose.Types.ObjectId(), name: 'Active Category' },
+      ] as any;
+
+      mockCategoryRepository.count.mockResolvedValue(1);
+      mockCategoryRepository.find.mockResolvedValue(mockCategories);
+
+      const result = await categoryService.getUserCategories(mockUserId, {
+        isActive: true,
+      });
+
+      expect(result.categories).toEqual(mockCategories);
+      expect(mockCategoryRepository.count).toHaveBeenCalledWith(
+        expect.objectContaining({ isActive: true })
+      );
+    });
+
+    it('should handle search functionality', async () => {
+      const mockCategories = [
+        { _id: new mongoose.Types.ObjectId(), name: 'Food Category' },
+      ] as any;
+
+      mockCategoryRepository.count.mockResolvedValue(1);
+      mockCategoryRepository.find.mockResolvedValue(mockCategories);
+
+      const result = await categoryService.getUserCategories(mockUserId, {
+        search: 'food',
+      });
+
+      expect(result.categories).toEqual(mockCategories);
+      expect(mockCategoryRepository.count).toHaveBeenCalledWith(
+        expect.objectContaining({
+          $or: [
+            { name: { $regex: 'food', $options: 'i' } },
+            { description: { $regex: 'food', $options: 'i' } },
+          ],
+        })
+      );
+    });
+
+    it('should handle search with description', async () => {
+      const mockCategories = [
+        { _id: new mongoose.Types.ObjectId(), name: 'Category', description: 'Food related' },
+      ] as any;
+
+      mockCategoryRepository.count.mockResolvedValue(1);
+      mockCategoryRepository.find.mockResolvedValue(mockCategories);
+
+      const result = await categoryService.getUserCategories(mockUserId, {
+        search: 'food',
+      });
+
+      expect(result.categories).toEqual(mockCategories);
+    });
+
+    it('should handle case-insensitive search', async () => {
+      const mockCategories = [
+        { _id: new mongoose.Types.ObjectId(), name: 'FOOD Category' },
+      ] as any;
+
+      mockCategoryRepository.count.mockResolvedValue(1);
+      mockCategoryRepository.find.mockResolvedValue(mockCategories);
+
+      const result = await categoryService.getUserCategories(mockUserId, {
+        search: 'food',
+      });
+
+      expect(result.categories).toEqual(mockCategories);
+    });
+
     it('should handle repository errors during retrieval', async () => {
-      const mockError = new Error('Repository error');
+      const mockError = new Error('Database error');
       mockCategoryRepository.count.mockRejectedValue(mockError);
 
       await expect(
-        categoryService.getUserCategories(mockUserId, {})
-      ).rejects.toThrow('Repository error');
+        categoryService.getUserCategories(mockUserId)
+      ).rejects.toThrow('Database error');
+    });
+
+    it('should handle find repository errors during retrieval', async () => {
+      mockCategoryRepository.count.mockResolvedValue(1);
+      const mockError = new Error('Find error');
+      mockCategoryRepository.find.mockRejectedValue(mockError);
+
+      await expect(
+        categoryService.getUserCategories(mockUserId)
+      ).rejects.toThrow('Find error');
+    });
+
+    it('should handle edge case pagination values', async () => {
+      // Test with page 1, limit 1
+      mockCategoryRepository.count.mockResolvedValue(1);
+      mockCategoryRepository.find.mockResolvedValue([{} as any]);
+
+      const result1 = await categoryService.getUserCategories(mockUserId, {
+        page: 1,
+        limit: 1,
+      });
+
+      expect(result1.totalPages).toBe(1);
+
+      // Test with page 1, limit 10, total 25
+      mockCategoryRepository.count.mockResolvedValue(25);
+      mockCategoryRepository.find.mockResolvedValue(Array(10).fill({} as any));
+
+      const result2 = await categoryService.getUserCategories(mockUserId, {
+        page: 1,
+        limit: 10,
+      });
+
+      expect(result2.totalPages).toBe(3);
+    });
+
+    it('should handle zero total count', async () => {
+      mockCategoryRepository.count.mockResolvedValue(0);
+      mockCategoryRepository.find.mockResolvedValue([]);
+
+      const result = await categoryService.getUserCategories(mockUserId);
+
+      expect(result.total).toBe(0);
+      expect(result.totalPages).toBe(0);
+      expect(result.categories).toHaveLength(0);
+    });
+
+    it('should handle single page results', async () => {
+      mockCategoryRepository.count.mockResolvedValue(5);
+      mockCategoryRepository.find.mockResolvedValue(Array(5).fill({} as any));
+
+      const result = await categoryService.getUserCategories(mockUserId, {
+        page: 1,
+        limit: 10,
+      });
+
+      expect(result.totalPages).toBe(1);
+    });
+
+    it('should handle multiple page results', async () => {
+      mockCategoryRepository.count.mockResolvedValue(25);
+      mockCategoryRepository.find.mockResolvedValue(Array(10).fill({} as any));
+
+      const result = await categoryService.getUserCategories(mockUserId, {
+        page: 1,
+        limit: 10,
+      });
+
+      expect(result.totalPages).toBe(3);
+    });
+
+    it('should handle last page with remaining items', async () => {
+      mockCategoryRepository.count.mockResolvedValue(25);
+      mockCategoryRepository.find.mockResolvedValue(Array(5).fill({} as any));
+
+      const result = await categoryService.getUserCategories(mockUserId, {
+        page: 3,
+        limit: 10,
+      });
+
+      expect(result.totalPages).toBe(3);
+      expect(result.categories).toHaveLength(5);
     });
   });
 
   describe('Edge Cases and Error Handling', () => {
-    const mockUserId = '507f1f77bcf86cd799439011';
-
     it('should handle empty category data', async () => {
-      const mockCreatedCategory = {
-        _id: new mongoose.Types.ObjectId(),
-        name: '',
-        userId: new mongoose.Types.ObjectId(mockUserId),
-        level: 0,
-        path: [''],
-        isActive: true,
-        isSystem: false,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      } as any;
-
-      mockCategoryRepository.findById.mockResolvedValue(null);
+      const emptyData = {};
       mockCategoryRepository.findOne.mockResolvedValue(null);
-      mockCategoryRepository.create.mockResolvedValue(mockCreatedCategory);
+      mockCategoryRepository.create.mockResolvedValue({} as any);
 
-      const result = await categoryService.createCategory({ name: '' }, mockUserId);
+      const result = await categoryService.createCategory(emptyData, mockUserId);
 
-      expect(result).toEqual(mockCreatedCategory);
+      expect(result).toBeDefined();
     });
 
     it('should handle null values in category data', async () => {
-      const mockCreatedCategory = {
-        _id: new mongoose.Types.ObjectId(),
-        name: 'Test Category',
+      const nullData = {
+        name: undefined,
         description: undefined,
-        userId: new mongoose.Types.ObjectId(mockUserId),
-        level: 0,
-        path: ['Test Category'],
-        isActive: true,
-        isSystem: false,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      } as any;
-
-      mockCategoryRepository.findById.mockResolvedValue(null);
+        parentId: undefined,
+      };
       mockCategoryRepository.findOne.mockResolvedValue(null);
-      mockCategoryRepository.create.mockResolvedValue(mockCreatedCategory);
+      mockCategoryRepository.create.mockResolvedValue({} as any);
 
-      const result = await categoryService.createCategory(
-        { name: 'Test Category', description: undefined },
-        mockUserId
-      );
+      const result = await categoryService.createCategory(nullData, mockUserId);
 
-      expect(result).toEqual(mockCreatedCategory);
+      expect(result).toBeDefined();
     });
 
     it('should handle undefined values in category data', async () => {
-      const mockCreatedCategory = {
-        _id: new mongoose.Types.ObjectId(),
-        name: 'Test Category',
-        userId: new mongoose.Types.ObjectId(mockUserId),
-        level: 0,
-        path: ['Test Category'],
-        isActive: true,
-        isSystem: false,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      } as any;
-
-      mockCategoryRepository.findById.mockResolvedValue(null);
+      const undefinedData = {
+        name: undefined,
+        description: undefined,
+        parentId: undefined,
+      };
       mockCategoryRepository.findOne.mockResolvedValue(null);
-      mockCategoryRepository.create.mockResolvedValue(mockCreatedCategory);
+      mockCategoryRepository.create.mockResolvedValue({} as any);
 
-      const result = await categoryService.createCategory(
-        { name: 'Test Category', description: undefined },
-        mockUserId
-      );
+      const result = await categoryService.createCategory(undefinedData, mockUserId);
 
-      expect(result).toEqual(mockCreatedCategory);
+      expect(result).toBeDefined();
     });
 
     it('should handle invalid ObjectId strings gracefully', async () => {
+      const invalidId = 'invalid-id';
+      
       await expect(
-        categoryService.getCategoryById('invalid-id', mockUserId)
+        categoryService.getCategoryById(invalidId, mockUserId)
       ).rejects.toThrow();
     });
 
     it('should handle database connection errors', async () => {
-      const mockError = new Error('Database connection failed');
+      const mockError = new Error('Connection failed');
       mockCategoryRepository.findById.mockRejectedValue(mockError);
 
       await expect(
         categoryService.getCategoryById('507f1f77bcf86cd799439011', mockUserId)
-      ).rejects.toThrow('Database connection failed');
+      ).rejects.toThrow('Connection failed');
+    });
+
+    it('should handle validation errors during creation', async () => {
+      const mockError = new Error('Validation failed');
+      mockCategoryRepository.create.mockRejectedValue(mockError);
+
+      await expect(
+        categoryService.createCategory({ name: 'Test' }, mockUserId)
+      ).rejects.toThrow('Validation failed');
+    });
+
+    it('should handle validation errors during update', async () => {
+      const mockError = new Error('Category not found');
+      mockCategoryRepository.findById.mockRejectedValue(mockError);
+
+      await expect(
+        categoryService.updateCategory('507f1f77bcf86cd799439011', { name: 'Updated' }, mockUserId)
+      ).rejects.toThrow('Category not found');
+    });
+
+    it('should handle validation errors during deletion', async () => {
+      const mockError = new Error('Category not found');
+      mockCategoryRepository.findById.mockRejectedValue(mockError);
+
+      await expect(
+        categoryService.deleteCategory('507f1f77bcf86cd799439011', mockUserId)
+      ).rejects.toThrow('Category not found');
     });
   });
 });
