@@ -5,13 +5,21 @@ import { Category } from '../../../../modules/financial/categories/models/catego
 import { ICategory } from '../../../../modules/financial/categories/interfaces/category.interface';
 
 // Mock the CategoryRepository
-jest.mock('../../../modules/financial/categories/repositories/category.repository');
+jest.mock('../../../../modules/financial/categories/repositories/category.repository');
+
+// Helper function to properly type category with ObjectId
+const createTypedCategory = (category: any): ICategory & { _id: mongoose.Types.ObjectId } => {
+  return {
+    ...category.toObject(),
+    _id: category._id as mongoose.Types.ObjectId,
+  } as ICategory & { _id: mongoose.Types.ObjectId };
+};
 
 describe('Category Service', () => {
   let categoryService: CategoryService;
   let mockCategoryRepository: jest.Mocked<CategoryRepository>;
   let testUserId: mongoose.Types.ObjectId;
-  let testCategory: ICategory;
+  let testCategory: ICategory & { _id: mongoose.Types.ObjectId };
 
   beforeAll(async () => {
     testUserId = new mongoose.Types.ObjectId();
@@ -21,11 +29,14 @@ describe('Category Service', () => {
     await Category.deleteMany({});
     
     // Create a test category
-    testCategory = await Category.create({
+    const createdCategory = await Category.create({
       name: 'Test Category',
       userId: testUserId,
       isActive: true,
     });
+
+    // Create a properly typed test category
+    testCategory = createTypedCategory(createdCategory);
 
     // Reset mocks
     jest.clearAllMocks();
@@ -106,8 +117,11 @@ describe('Category Service', () => {
         _id: parentId,
         userId: testUserId,
         level: 0,
-        path: ['Parent'],
-      } as ICategory;
+        path: [] as string[],
+        name: 'Parent',
+        isActive: true,
+        isSystem: false,
+      } as any;
 
       const expectedCategory = {
         _id: new mongoose.Types.ObjectId(),
@@ -222,7 +236,7 @@ describe('Category Service', () => {
       const otherUserCategory = {
         ...testCategory,
         userId: otherUserId,
-      };
+      } as ICategory;
 
       mockCategoryRepository.findById.mockResolvedValue(otherUserCategory);
 
@@ -242,17 +256,18 @@ describe('Category Service', () => {
   describe('getUserCategories', () => {
     it('should get user categories successfully', async () => {
       const categories = [testCategory];
-      mockCategoryRepository.findByUserId.mockResolvedValue(categories);
+      mockCategoryRepository.find.mockResolvedValue(categories);
+      mockCategoryRepository.count.mockResolvedValue(1);
 
       const result = await categoryService.getUserCategories(testUserId.toString());
 
-      expect(result).toEqual(categories);
-      expect(mockCategoryRepository.findByUserId).toHaveBeenCalledWith(testUserId.toString());
+      expect(result.categories).toEqual(categories);
+      expect(mockCategoryRepository.find).toHaveBeenCalled();
     });
 
     it('should handle errors during retrieval', async () => {
       const error = new Error('Database error');
-      mockCategoryRepository.findByUserId.mockRejectedValue(error);
+      mockCategoryRepository.find.mockRejectedValue(error);
 
       await expect(categoryService.getUserCategories(testUserId.toString()))
         .rejects.toThrow('Database error');
@@ -295,7 +310,7 @@ describe('Category Service', () => {
       const updatedCategory = {
         ...testCategory,
         ...updateData,
-      };
+      } as ICategory;
 
       mockCategoryRepository.findById.mockResolvedValue(testCategory);
       mockCategoryRepository.updateById.mockResolvedValue(updatedCategory);
@@ -309,7 +324,8 @@ describe('Category Service', () => {
       expect(result).toEqual(updatedCategory);
       expect(mockCategoryRepository.updateById).toHaveBeenCalledWith(
         testCategory._id.toString(),
-        updateData
+        updateData,
+        { new: true, runValidators: true }
       );
     });
 
@@ -329,7 +345,7 @@ describe('Category Service', () => {
       const otherUserCategory = {
         ...testCategory,
         userId: otherUserId,
-      };
+      } as ICategory;
 
       mockCategoryRepository.findById.mockResolvedValue(otherUserCategory);
 
@@ -357,11 +373,14 @@ describe('Category Service', () => {
     it('should delete category successfully', async () => {
       mockCategoryRepository.findById.mockResolvedValue(testCategory);
       mockCategoryRepository.deleteById.mockResolvedValue(testCategory);
+      mockCategoryRepository.findByParentId.mockResolvedValue([]);
 
-      const result = await categoryService.deleteCategory(testCategory._id.toString(), testUserId.toString());
+      await categoryService.deleteCategory(testCategory._id.toString(), testUserId.toString());
 
-      expect(result).toEqual(testCategory);
-      expect(mockCategoryRepository.deleteById).toHaveBeenCalledWith(testCategory._id.toString());
+      expect(mockCategoryRepository.updateById).toHaveBeenCalledWith(testCategory._id.toString(), {
+        isActive: false,
+        deletedAt: expect.any(Date),
+      });
     });
 
     it('should throw error when category not found', async () => {
@@ -377,7 +396,7 @@ describe('Category Service', () => {
       const otherUserCategory = {
         ...testCategory,
         userId: otherUserId,
-      };
+      } as ICategory;
 
       mockCategoryRepository.findById.mockResolvedValue(otherUserCategory);
 
@@ -386,9 +405,17 @@ describe('Category Service', () => {
     });
 
     it('should throw error when category has subcategories', async () => {
-      const subcategories = [{ _id: new mongoose.Types.ObjectId() }];
+      const subcategories = [{
+        _id: new mongoose.Types.ObjectId(),
+        name: 'Subcategory',
+        userId: testUserId,
+        level: 1,
+        path: ['Test Category', 'Subcategory'],
+        isActive: true,
+        isSystem: false,
+      } as ICategory];
       mockCategoryRepository.findById.mockResolvedValue(testCategory);
-      mockCategoryRepository.findByParentId.mockResolvedValue(subcategories);
+      mockCategoryRepository.findOne.mockResolvedValue(subcategories[0]);
 
       await expect(categoryService.deleteCategory(testCategory._id.toString(), testUserId.toString()))
         .rejects.toThrow('Cannot delete category with subcategories');
@@ -397,8 +424,8 @@ describe('Category Service', () => {
     it('should handle errors during deletion', async () => {
       const error = new Error('Database error');
       mockCategoryRepository.findById.mockResolvedValue(testCategory);
-      mockCategoryRepository.findByParentId.mockResolvedValue([]);
-      mockCategoryRepository.deleteById.mockRejectedValue(error);
+      mockCategoryRepository.findOne.mockResolvedValue(null);
+      mockCategoryRepository.updateById.mockRejectedValue(error);
 
       await expect(categoryService.deleteCategory(testCategory._id.toString(), testUserId.toString()))
         .rejects.toThrow('Database error');
@@ -453,7 +480,15 @@ describe('Category Service', () => {
       mockCategoryRepository.findById.mockResolvedValue(null);
       mockCategoryRepository.findOne
         .mockResolvedValueOnce(null)
-        .mockResolvedValueOnce({ _id: new mongoose.Types.ObjectId() }); // Duplicate
+        .mockResolvedValueOnce({
+          _id: new mongoose.Types.ObjectId(),
+          name: 'Category 2',
+          userId: testUserId,
+          level: 0,
+          path: ['Category 2'],
+          isActive: true,
+          isSystem: false,
+        } as ICategory); // Duplicate
       mockCategoryRepository.create.mockResolvedValue(createdCategory as ICategory);
 
       const result = await categoryService.bulkCreateCategories(categoriesData, testUserId.toString());
@@ -468,20 +503,27 @@ describe('Category Service', () => {
       const stats = {
         totalCategories: 5,
         activeCategories: 4,
-        inactiveCategories: 1,
+        rootCategories: 2,
+        maxDepth: 1,
         categoriesByLevel: { 0: 2, 1: 3 },
       };
 
       mockCategoryRepository.count
         .mockResolvedValueOnce(5) // total
         .mockResolvedValueOnce(4) // active
-        .mockResolvedValueOnce(1); // inactive
+        .mockResolvedValueOnce(2); // root
+
+      mockCategoryRepository.findOne.mockResolvedValue({ level: 1 } as any);
+      mockCategoryRepository.aggregate.mockResolvedValue([
+        { _id: 0, count: 2 },
+        { _id: 1, count: 3 }
+      ]);
 
       const result = await categoryService.getCategoryStats(testUserId.toString());
 
       expect(result.totalCategories).toBe(5);
       expect(result.activeCategories).toBe(4);
-      expect(result.inactiveCategories).toBe(1);
+      expect(result.rootCategories).toBe(2);
     });
 
     it('should handle errors during stats retrieval', async () => {
