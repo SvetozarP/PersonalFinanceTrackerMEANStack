@@ -1,0 +1,840 @@
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { RouterTestingModule } from '@angular/router/testing';
+import { FormsModule, ReactiveFormsModule } from '@angular/forms';
+
+import { FinancialGoalsComponent } from './financial-goals';
+import { FinancialService } from '../../../../core/services/financial.service';
+import { TransactionService } from '../../../../core/services/transaction.service';
+import { CategoryService } from '../../../../core/services/category.service';
+
+describe('FinancialGoalsComponent', () => {
+  let component: FinancialGoalsComponent;
+  let fixture: ComponentFixture<FinancialGoalsComponent>;
+  let mockFinancialService: jasmine.SpyObj<FinancialService>;
+  let mockTransactionService: jasmine.SpyObj<TransactionService>;
+  let mockCategoryService: jasmine.SpyObj<CategoryService>;
+
+  beforeEach(async () => {
+    const financialServiceSpy = jasmine.createSpyObj('FinancialService', ['getFinancialDashboard']);
+    const transactionServiceSpy = jasmine.createSpyObj('TransactionService', ['getUserTransactions']);
+    const categoryServiceSpy = jasmine.createSpyObj('CategoryService', ['getUserCategories']);
+
+    await TestBed.configureTestingModule({
+      imports: [
+        FinancialGoalsComponent,
+        FormsModule,
+        ReactiveFormsModule,
+        RouterTestingModule
+      ],
+      providers: [
+        { provide: FinancialService, useValue: financialServiceSpy },
+        { provide: TransactionService, useValue: transactionServiceSpy },
+        { provide: CategoryService, useValue: categoryServiceSpy }
+      ]
+    })
+    .compileComponents();
+
+    mockFinancialService = TestBed.inject(FinancialService) as jasmine.SpyObj<FinancialService>;
+    mockTransactionService = TestBed.inject(TransactionService) as jasmine.SpyObj<TransactionService>;
+    mockCategoryService = TestBed.inject(CategoryService) as jasmine.SpyObj<CategoryService>;
+
+    fixture = TestBed.createComponent(FinancialGoalsComponent);
+    component = fixture.componentInstance;
+  });
+
+  it('should create', () => {
+    expect(component).toBeTruthy();
+  });
+
+  it('should initialize with default values', () => {
+    expect(component.isLoading).toBe(false);
+    expect(component.showAddGoal).toBe(false);
+    expect(component.editingGoalId).toBeNull();
+    expect(component.selectedGoalType).toBe('all');
+    expect(component.selectedStatus).toBe('all');
+    expect(component.selectedPriority).toBe('all');
+  });
+
+  it('should initialize forms on ngOnInit', () => {
+    spyOn(component, 'initializeForms' as any);
+    spyOn(component, 'loadData' as any);
+
+    component.ngOnInit();
+
+    expect(component['initializeForms']).toHaveBeenCalled();
+    expect(component['loadData']).toHaveBeenCalled();
+  });
+
+  it('should clean up on destroy', () => {
+    spyOn(component['destroy$'], 'next');
+    spyOn(component['destroy$'], 'complete');
+
+    component.ngOnDestroy();
+
+    expect(component['destroy$'].next).toHaveBeenCalled();
+    expect(component['destroy$'].complete).toHaveBeenCalled();
+  });
+
+  describe('Form Initialization', () => {
+    beforeEach(() => {
+      component['initializeForms']();
+    });
+
+    it('should create goal form with correct structure', () => {
+      const form = component.goalForm;
+      expect(form.get('title')).toBeTruthy();
+      expect(form.get('description')).toBeTruthy();
+      expect(form.get('targetAmount')).toBeTruthy();
+      expect(form.get('startDate')).toBeTruthy();
+      expect(form.get('targetDate')).toBeTruthy();
+      expect(form.get('category')).toBeTruthy();
+      expect(form.get('priority')).toBeTruthy();
+      expect(form.get('type')).toBeTruthy();
+      expect(form.get('icon')).toBeTruthy();
+      expect(form.get('color')).toBeTruthy();
+    });
+
+    it('should create edit goal form with correct structure', () => {
+      const form = component.editGoalForm;
+      expect(form.get('title')).toBeTruthy();
+      expect(form.get('description')).toBeTruthy();
+      expect(form.get('targetAmount')).toBeTruthy();
+      expect(form.get('startDate')).toBeTruthy();
+      expect(form.get('targetDate')).toBeTruthy();
+      expect(form.get('category')).toBeTruthy();
+      expect(form.get('priority')).toBeTruthy();
+      expect(form.get('type')).toBeTruthy();
+      expect(form.get('icon')).toBeTruthy();
+      expect(form.get('color')).toBeTruthy();
+    });
+
+    it('should set default values for forms', () => {
+      expect(component.goalForm.get('priority')?.value).toBe('medium');
+      expect(component.goalForm.get('type')?.value).toBe('savings');
+      expect(component.goalForm.get('icon')?.value).toBe('fas fa-star');
+      expect(component.goalForm.get('color')?.value).toBe('#007bff');
+    });
+
+    it('should validate required fields', () => {
+      const form = component.goalForm;
+      
+      // Mark all fields as touched to trigger validation
+      Object.keys(form.controls).forEach(key => {
+        const control = form.get(key);
+        control?.markAsTouched();
+      });
+      
+      expect(form.get('title')?.hasError('required')).toBe(true);
+      expect(form.get('targetAmount')?.hasError('required')).toBe(true);
+      expect(form.get('startDate')?.hasError('required')).toBe(true);
+      expect(form.get('targetDate')?.hasError('required')).toBe(true);
+      expect(form.get('category')?.hasError('required')).toBe(true);
+      // Priority and type have default values, so they won't have required errors
+      expect(form.get('priority')?.hasError('required')).toBe(false);
+      expect(form.get('type')?.hasError('required')).toBe(false);
+    });
+
+    it('should validate title minimum length', () => {
+      const titleControl = component.goalForm.get('title');
+      titleControl?.setValue('ab');
+      titleControl?.markAsTouched();
+
+      expect(titleControl?.hasError('minlength')).toBe(true);
+    });
+
+    it('should validate target amount minimum value', () => {
+      const amountControl = component.goalForm.get('targetAmount');
+      amountControl?.setValue(0);
+      amountControl?.markAsTouched();
+
+      expect(amountControl?.hasError('min')).toBe(true);
+    });
+  });
+
+  describe('Goal CRUD Operations', () => {
+    beforeEach(() => {
+      component['initializeForms']();
+      // Set up mock data for testing
+      component.goals = [
+        {
+          _id: '1',
+          title: 'Emergency Fund',
+          description: 'Build a 6-month emergency fund',
+          targetAmount: 15000,
+          currentAmount: 8500,
+          startDate: new Date(2024, 0, 1),
+          targetDate: new Date(2024, 11, 31),
+          category: 'Savings',
+          priority: 'high' as const,
+          status: 'active' as const,
+          type: 'emergency-fund' as const,
+          icon: 'fas fa-shield-alt',
+          color: '#6f42c1',
+          userId: 'user1',
+          createdAt: new Date(),
+          updatedAt: new Date()
+        }
+      ];
+    });
+
+    it('should show add goal form', () => {
+      component.showAddGoalForm();
+
+      expect(component.showAddGoal).toBe(true);
+      expect(component.goalForm.get('startDate')?.value).toBeDefined();
+      expect(component.goalForm.get('targetDate')?.value).toBeDefined();
+    });
+
+    it('should hide add goal form', () => {
+      component.showAddGoal = true;
+      component.goalForm.patchValue({ title: 'Test Goal' });
+
+      component.hideAddGoalForm();
+
+      expect(component.showAddGoal).toBe(false);
+      expect(component.goalForm.get('title')?.value).toBeFalsy();
+    });
+
+    it('should create new goal successfully', () => {
+      const initialGoalCount = component.goals.length;
+      
+      component.goalForm.patchValue({
+        title: 'New Test Goal',
+        description: 'Test description',
+        targetAmount: 5000,
+        startDate: '2024-01-01',
+        targetDate: '2024-12-31',
+        category: 'Savings',
+        priority: 'high',
+        type: 'savings'
+      });
+
+      component.onSubmitGoal();
+
+      expect(component.goals.length).toBe(initialGoalCount + 1);
+      expect(component.goals[component.goals.length - 1].title).toBe('New Test Goal');
+      expect(component.goals[component.goals.length - 1].currentAmount).toBe(0);
+      expect(component.goals[component.goals.length - 1].status).toBe('active');
+    });
+
+    it('should not create goal with invalid form', () => {
+      const initialGoalCount = component.goals.length;
+      
+      component.goalForm.patchValue({
+        title: '', // Invalid - required field
+        targetAmount: 5000
+      });
+
+      component.onSubmitGoal();
+
+      expect(component.goals.length).toBe(initialGoalCount);
+    });
+
+    it('should edit goal successfully', () => {
+      const goal = component.goals[0];
+      const newTitle = 'Updated Goal Title';
+
+      component.editGoal(goal);
+
+      expect(component.editingGoalId).toBe(goal._id);
+      expect(component.editGoalForm.get('title')?.value).toBe(goal.title);
+
+      component.editGoalForm.patchValue({ title: newTitle });
+      component.updateGoal();
+
+      expect(component.goals[0].title).toBe(newTitle);
+      expect(component.editingGoalId).toBeNull();
+    });
+
+    it('should cancel goal editing', () => {
+      const goal = component.goals[0];
+      component.editGoal(goal);
+
+      expect(component.editingGoalId).toBe(goal._id);
+
+      component.cancelEdit();
+
+      expect(component.editingGoalId).toBeNull();
+      expect(component.editGoalForm.get('title')?.value).toBeFalsy();
+    });
+
+    it('should delete goal with confirmation', () => {
+      spyOn(window, 'confirm').and.returnValue(true);
+      const initialGoalCount = component.goals.length;
+      const goalToDelete = component.goals[0];
+
+      component.deleteGoal(goalToDelete._id);
+
+      expect(component.goals.length).toBe(initialGoalCount - 1);
+      expect(component.goals.find(g => g._id === goalToDelete._id)).toBeUndefined();
+    });
+
+    it('should not delete goal without confirmation', () => {
+      spyOn(window, 'confirm').and.returnValue(false);
+      const initialGoalCount = component.goals.length;
+      const goalToDelete = component.goals[0];
+
+      component.deleteGoal(goalToDelete._id);
+
+      expect(component.goals.length).toBe(initialGoalCount);
+    });
+  });
+
+  describe('Goal Progress Calculations', () => {
+    beforeEach(() => {
+      // Set up test data for progress calculations
+      component.goals = [
+        {
+          _id: '1',
+          title: 'Test Goal 1',
+          description: 'Test description 1',
+          targetAmount: 1000,
+          currentAmount: 500,
+          startDate: new Date('2024-01-01'),
+          targetDate: new Date('2024-12-31'),
+          category: 'Savings',
+          priority: 'high',
+          type: 'savings',
+          status: 'active',
+          icon: 'fas fa-piggy-bank',
+          color: '#28a745',
+          userId: 'user1',
+          createdAt: new Date(),
+          updatedAt: new Date()
+        },
+        {
+          _id: '2',
+          title: 'Test Goal 2',
+          description: 'Test description 2',
+          targetAmount: 2000,
+          currentAmount: 2000,
+          startDate: new Date('2024-01-01'),
+          targetDate: new Date('2024-12-31'),
+          category: 'Investment',
+          priority: 'medium',
+          type: 'investment',
+          status: 'completed',
+          icon: 'fas fa-chart-line',
+          color: '#007bff',
+          userId: 'user1',
+          createdAt: new Date(),
+          updatedAt: new Date()
+        }
+      ];
+    });
+
+    it('should calculate goal progress correctly', () => {
+      component['calculateGoalProgress']();
+
+      expect(component.goalProgress.length).toBe(2);
+      const progress = component.goalProgress[0];
+      expect(progress.percentageComplete).toBe(50);
+      expect(progress.goalId).toBe('1');
+      expect(progress.isOnTrack).toBeDefined();
+    });
+
+    it('should calculate completed goal progress correctly', () => {
+      component['calculateGoalProgress']();
+
+      const progress = component.goalProgress[1];
+      expect(progress.percentageComplete).toBe(100);
+      expect(progress.goalId).toBe('2');
+      expect(progress.isOnTrack).toBeDefined();
+    });
+
+    it('should handle zero target amount', () => {
+      component.goals[0].targetAmount = 0;
+      component['calculateGoalProgress']();
+
+      expect(component.goalProgress.length).toBe(2);
+      expect(component.goalProgress[0].percentageComplete).toBe(Infinity);
+    });
+
+    it('should handle negative target amount', () => {
+      component.goals[0].targetAmount = -1000;
+      component['calculateGoalProgress']();
+
+      expect(component.goalProgress.length).toBe(2);
+      expect(component.goalProgress[0].percentageComplete).toBe(-50);
+    });
+
+    it('should handle current amount greater than target', () => {
+      component.goals[0].currentAmount = 1500;
+      component['calculateGoalProgress']();
+
+      expect(component.goalProgress.length).toBe(2);
+      expect(component.goalProgress[0].percentageComplete).toBe(150);
+    });
+
+    it('should calculate goal statistics correctly', () => {
+      component['calculateGoalStats']();
+
+      expect(component.totalGoals).toBe(2);
+      expect(component.completedGoals).toBe(1);
+      expect(component.activeGoals).toBe(1);
+      expect(component.totalTargetAmount).toBe(3000);
+      expect(component.totalCurrentAmount).toBe(2500);
+    });
+
+    it('should handle empty goals array for statistics', () => {
+      component.goals = [];
+      component['calculateGoalStats']();
+
+      expect(component.totalGoals).toBe(0);
+      expect(component.completedGoals).toBe(0);
+      expect(component.activeGoals).toBe(0);
+      expect(component.totalTargetAmount).toBe(0);
+      expect(component.totalCurrentAmount).toBe(0);
+    });
+  });
+
+  describe('Goal Management Operations', () => {
+    beforeEach(() => {
+      // Set up test data for management operations
+      component.goals = [
+        {
+          _id: '1',
+          title: 'Test Goal 1',
+          description: 'Test description 1',
+          targetAmount: 1000,
+          currentAmount: 500,
+          startDate: new Date('2024-01-01'),
+          targetDate: new Date('2024-12-31'),
+          category: 'Savings',
+          priority: 'high',
+          type: 'savings',
+          status: 'active',
+          icon: 'fas fa-piggy-bank',
+          color: '#28a745',
+          userId: 'user1',
+          createdAt: new Date(),
+          updatedAt: new Date()
+        },
+        {
+          _id: '2',
+          title: 'Test Goal 2',
+          description: 'Test description 2',
+          targetAmount: 2000,
+          currentAmount: 2000,
+          startDate: new Date('2024-01-01'),
+          targetDate: new Date('2024-12-31'),
+          category: 'Investment',
+          priority: 'medium',
+          type: 'investment',
+          status: 'completed',
+          icon: 'fas fa-chart-line',
+          color: '#007bff',
+          userId: 'user1',
+          createdAt: new Date(),
+          updatedAt: new Date()
+        }
+      ];
+    });
+
+    it('should filter goals by type', () => {
+      component.selectedGoalType = 'savings';
+      const filteredGoals = component.getFilteredGoals();
+
+      expect(filteredGoals.length).toBe(1);
+      expect(filteredGoals[0].type).toBe('savings');
+    });
+
+    it('should filter goals by status', () => {
+      component.selectedStatus = 'completed';
+      const filteredGoals = component.getFilteredGoals();
+
+      expect(filteredGoals.length).toBe(1);
+      expect(filteredGoals[0].status).toBe('completed');
+    });
+
+    it('should filter goals by priority', () => {
+      component.selectedPriority = 'high';
+      const filteredGoals = component.getFilteredGoals();
+
+      expect(filteredGoals.length).toBe(1);
+      expect(filteredGoals[0].priority).toBe('high');
+    });
+
+    it('should return all goals when no filters are applied', () => {
+      component.selectedGoalType = 'all';
+      component.selectedStatus = 'all';
+      component.selectedPriority = 'all';
+      const filteredGoals = component.getFilteredGoals();
+
+      expect(filteredGoals.length).toBe(2);
+    });
+
+    it('should combine multiple filters', () => {
+      component.selectedGoalType = 'savings';
+      component.selectedStatus = 'active';
+      component.selectedPriority = 'high';
+      const filteredGoals = component.getFilteredGoals();
+
+      expect(filteredGoals.length).toBe(1);
+      expect(filteredGoals[0].type).toBe('savings');
+      expect(filteredGoals[0].status).toBe('active');
+      expect(filteredGoals[0].priority).toBe('high');
+    });
+
+    it('should handle goal type change', () => {
+      component.onGoalTypeChange('investment');
+
+      expect(component.selectedGoalType).toBe('investment');
+    });
+
+    it('should handle status change', () => {
+      component.onStatusChange('paused');
+
+      expect(component.selectedStatus).toBe('paused');
+    });
+
+    it('should handle priority change', () => {
+      component.onPriorityChange('low');
+
+      expect(component.selectedPriority).toBe('low');
+    });
+  });
+
+  describe('Utility Methods', () => {
+    beforeEach(() => {
+      // Set up test data for utility methods
+      component.goals = [
+        {
+          _id: '1',
+          title: 'Test Goal 1',
+          description: 'Test description 1',
+          targetAmount: 1000,
+          currentAmount: 500,
+          startDate: new Date('2024-01-01'),
+          targetDate: new Date('2024-12-31'),
+          category: 'Savings',
+          priority: 'high',
+          type: 'savings',
+          status: 'active',
+          icon: 'fas fa-piggy-bank',
+          color: '#28a745',
+          userId: 'user1',
+          createdAt: new Date(),
+          updatedAt: new Date()
+        }
+      ];
+    });
+
+    it('should calculate days remaining correctly', () => {
+      const futureDate = new Date();
+      futureDate.setDate(futureDate.getDate() + 30);
+      
+      const daysRemaining = component['calculateDaysRemaining'](futureDate);
+      
+      expect(daysRemaining).toBeGreaterThan(0);
+      expect(daysRemaining).toBeLessThanOrEqual(30);
+    });
+
+    it('should return 0 days for past dates', () => {
+      const pastDate = new Date();
+      pastDate.setDate(pastDate.getDate() - 30);
+      
+      const daysRemaining = component['calculateDaysRemaining'](pastDate);
+      
+      expect(daysRemaining).toBe(0);
+    });
+
+    it('should calculate projected completion date', () => {
+      const goal = component.goals[0];
+      const projectedDate = component['calculateProjectedCompletion'](goal);
+      
+      expect(projectedDate).toBeInstanceOf(Date);
+      expect(projectedDate.getTime()).toBeGreaterThan(new Date().getTime());
+    });
+
+    it('should determine if goal is on track', () => {
+      const goal = component.goals[0];
+      const isOnTrack = component['isGoalOnTrack'](goal);
+      
+      expect(typeof isOnTrack).toBe('boolean');
+    });
+
+    it('should calculate monthly contribution', () => {
+      const goal = component.goals[0];
+      const monthlyContribution = component['calculateMonthlyContribution'](goal);
+      
+      expect(typeof monthlyContribution).toBe('number');
+      expect(monthlyContribution).toBeGreaterThan(0);
+    });
+
+    it('should calculate estimated completion date', () => {
+      const goal = component.goals[0];
+      const monthlyContribution = 100;
+      const estimatedDate = component['calculateEstimatedCompletion'](goal, monthlyContribution);
+      
+      expect(estimatedDate).toBeInstanceOf(Date);
+    });
+
+    it('should return target date when monthly contribution is 0', () => {
+      const goal = component.goals[0];
+      const estimatedDate = component['calculateEstimatedCompletion'](goal, 0);
+      
+      expect(estimatedDate).toEqual(goal.targetDate);
+    });
+
+    it('should return target date when monthly contribution is negative', () => {
+      const goal = component.goals[0];
+      const estimatedDate = component['calculateEstimatedCompletion'](goal, -100);
+      
+      expect(estimatedDate).toEqual(goal.targetDate);
+    });
+  });
+
+  describe('Edge Cases and Error Handling', () => {
+    beforeEach(() => {
+      // Set up test data for edge cases
+      component.goals = [
+        {
+          _id: '1',
+          title: 'Test Goal 1',
+          description: 'Test description 1',
+          targetAmount: 1000,
+          currentAmount: 500,
+          startDate: new Date('2024-01-01'),
+          targetDate: new Date('2024-12-31'),
+          category: 'Savings',
+          priority: 'high',
+          type: 'savings',
+          status: 'active',
+          icon: 'fas fa-piggy-bank',
+          color: '#28a745',
+          userId: 'user1',
+          createdAt: new Date(),
+          updatedAt: new Date()
+        }
+      ];
+    });
+
+    it('should handle goal with very large amounts', () => {
+      component.goals[0].targetAmount = Number.MAX_SAFE_INTEGER;
+      component.goals[0].currentAmount = Number.MAX_SAFE_INTEGER - 1000;
+      
+      component['calculateGoalProgress']();
+      
+      expect(component.goalProgress.length).toBe(1);
+      expect(component.goalProgress[0].percentageComplete).toBeCloseTo(100, 0);
+    });
+
+    it('should handle goal with very small amounts', () => {
+      component.goals[0].targetAmount = 0.01;
+      component.goals[0].currentAmount = 0.005;
+      
+      component['calculateGoalProgress']();
+      
+      expect(component.goalProgress.length).toBe(1);
+      expect(component.goalProgress[0].percentageComplete).toBe(50);
+    });
+
+    it('should handle goal with same start and target date', () => {
+      const sameDate = new Date('2024-01-01');
+      component.goals[0].startDate = sameDate;
+      component.goals[0].targetDate = sameDate;
+      
+      const isOnTrack = component['isGoalOnTrack'](component.goals[0]);
+      
+      expect(typeof isOnTrack).toBe('boolean');
+    });
+
+    it('should handle goal with start date after target date', () => {
+      component.goals[0].startDate = new Date('2024-12-31');
+      component.goals[0].targetDate = new Date('2024-01-01');
+      
+      const isOnTrack = component['isGoalOnTrack'](component.goals[0]);
+      
+      expect(typeof isOnTrack).toBe('boolean');
+    });
+
+    it('should handle goal with NaN values', () => {
+      component.goals[0].targetAmount = NaN;
+      component.goals[0].currentAmount = NaN;
+      
+      component['calculateGoalProgress']();
+      
+      expect(component.goalProgress.length).toBe(1);
+      expect(isNaN(component.goalProgress[0].percentageComplete)).toBe(true);
+    });
+
+    it('should handle goal with infinite values', () => {
+      component.goals[0].targetAmount = Infinity;
+      component.goals[0].currentAmount = 1000;
+      
+      component['calculateGoalProgress']();
+      
+      expect(component.goalProgress.length).toBe(1);
+      expect(component.goalProgress[0].percentageComplete).toBe(0);
+    });
+
+    it('should handle empty goals array for progress calculation', () => {
+      component.goals = [];
+      
+      component['calculateGoalProgress']();
+      
+      expect(component.goalProgress.length).toBe(0);
+    });
+
+    it('should handle goal with undefined description', () => {
+      component.goals[0].description = undefined;
+      
+      expect(component.goals[0].description).toBeUndefined();
+      expect(component.goals[0].title).toBeDefined();
+    });
+
+    it('should handle goal with empty string values', () => {
+      component.goals[0].title = '';
+      component.goals[0].description = '';
+      component.goals[0].category = '';
+      
+      expect(component.goals[0].title).toBe('');
+      expect(component.goals[0].description).toBe('');
+      expect(component.goals[0].category).toBe('');
+    });
+  });
+
+  describe('Form Validation Edge Cases', () => {
+    beforeEach(() => {
+      component['initializeForms']();
+    });
+
+    it('should handle form with extremely long values', () => {
+      const longString = 'a'.repeat(1000);
+      const longNumber = Number.MAX_SAFE_INTEGER;
+      
+      component.goalForm.patchValue({
+        title: longString,
+        description: longString,
+        targetAmount: longNumber,
+        startDate: '2024-01-01',
+        targetDate: '2024-12-31',
+        category: longString,
+        priority: 'high',
+        type: 'savings'
+      });
+
+      expect(component.goalForm.get('title')?.value).toBe(longString);
+      expect(component.goalForm.get('targetAmount')?.value).toBe(longNumber);
+    });
+
+    it('should handle form with special characters', () => {
+      const specialChars = '!@#$%^&*()_+-=[]{}|;:,.<>?';
+      
+      component.goalForm.patchValue({
+        title: specialChars,
+        description: specialChars,
+        targetAmount: 1000,
+        startDate: '2024-01-01',
+        targetDate: '2024-12-31',
+        category: specialChars,
+        priority: 'high',
+        type: 'savings'
+      });
+
+      expect(component.goalForm.get('title')?.value).toBe(specialChars);
+      expect(component.goalForm.get('description')?.value).toBe(specialChars);
+    });
+
+    it('should handle form with unicode characters', () => {
+      const unicodeString = '🚀💰📈🎯💎🌟';
+      
+      component.goalForm.patchValue({
+        title: unicodeString,
+        description: unicodeString,
+        targetAmount: 1000,
+        startDate: '2024-01-01',
+        targetDate: '2024-12-31',
+        category: unicodeString,
+        priority: 'high',
+        type: 'savings'
+      });
+
+      expect(component.goalForm.get('title')?.value).toBe(unicodeString);
+      expect(component.goalForm.get('description')?.value).toBe(unicodeString);
+    });
+
+    it('should handle form with negative amounts', () => {
+      component.goalForm.patchValue({
+        title: 'Test Goal',
+        description: 'Test description',
+        targetAmount: -1000,
+        startDate: '2024-01-01',
+        targetDate: '2024-12-31',
+        category: 'Savings',
+        priority: 'high',
+        type: 'savings'
+      });
+
+      expect(component.goalForm.get('targetAmount')?.value).toBe(-1000);
+    });
+
+    it('should handle form with decimal amounts', () => {
+      component.goalForm.patchValue({
+        title: 'Test Goal',
+        description: 'Test description',
+        targetAmount: 1000.99,
+        startDate: '2024-01-01',
+        targetDate: '2024-12-31',
+        category: 'Savings',
+        priority: 'high',
+        type: 'savings'
+      });
+
+      expect(component.goalForm.get('targetAmount')?.value).toBe(1000.99);
+    });
+
+    it('should handle form with invalid date strings', () => {
+      component.goalForm.patchValue({
+        title: 'Test Goal',
+        description: 'Test description',
+        targetAmount: 1000,
+        startDate: 'invalid-date',
+        targetDate: 'invalid-date',
+        category: 'Savings',
+        priority: 'high',
+        type: 'savings'
+      });
+
+      expect(component.goalForm.get('startDate')?.value).toBe('invalid-date');
+      expect(component.goalForm.get('targetDate')?.value).toBe('invalid-date');
+    });
+
+    it('should handle form with empty priority and type', () => {
+      component.goalForm.patchValue({
+        title: 'Test Goal',
+        description: 'Test description',
+        targetAmount: 1000,
+        startDate: '2024-01-01',
+        targetDate: '2024-12-31',
+        category: 'Savings',
+        priority: '',
+        type: ''
+      });
+
+      expect(component.goalForm.get('priority')?.value).toBe('');
+      expect(component.goalForm.get('type')?.value).toBe('');
+    });
+
+    it('should handle form reset after multiple patches', () => {
+      // First patch
+      component.goalForm.patchValue({
+        title: 'First Goal',
+        targetAmount: 1000
+      });
+
+      // Second patch
+      component.goalForm.patchValue({
+        title: 'Second Goal',
+        targetAmount: 2000
+      });
+
+      // Reset form
+      component.goalForm.reset();
+
+      expect(component.goalForm.get('title')?.value).toBeFalsy();
+      expect(component.goalForm.get('targetAmount')?.value).toBeFalsy();
+    });
+  });
+});
