@@ -94,7 +94,7 @@ export class FinancialChartsComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   private updateCharts(): void {
-    if (this.transactions.length === 0) return;
+    if (!this.transactions || !Array.isArray(this.transactions) || this.transactions.length === 0) return;
 
     this.generateExpenseChart();
     this.generateIncomeChart();
@@ -103,6 +103,11 @@ export class FinancialChartsComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   private generateExpenseChart(): void {
+    if (!this.transactions || !Array.isArray(this.transactions)) {
+      this.expenseChartData = { labels: [], datasets: [] };
+      return;
+    }
+    
     const expenses = this.transactions.filter(t => t.type === TransactionType.EXPENSE);
     const monthlyData = this.groupTransactionsByMonth(expenses);
     
@@ -121,6 +126,11 @@ export class FinancialChartsComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   private generateIncomeChart(): void {
+    if (!this.transactions || !Array.isArray(this.transactions)) {
+      this.incomeChartData = { labels: [], datasets: [] };
+      return;
+    }
+    
     const income = this.transactions.filter(t => t.type === TransactionType.INCOME);
     const monthlyData = this.groupTransactionsByMonth(income);
     
@@ -139,6 +149,11 @@ export class FinancialChartsComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   private generateCategoryChart(): void {
+    if (!this.transactions || !Array.isArray(this.transactions) || !this.categories || !Array.isArray(this.categories)) {
+      this.categoryChartData = { labels: [], datasets: [] };
+      return;
+    }
+    
     const categoryTotals = this.calculateCategoryTotals();
     
     this.categoryChartData = {
@@ -154,6 +169,11 @@ export class FinancialChartsComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   private generateTrendChart(): void {
+    if (!this.transactions || !Array.isArray(this.transactions)) {
+      this.trendChartData = { labels: [], datasets: [] };
+      return;
+    }
+    
     const monthlyNet = this.calculateMonthlyNet();
     
     this.trendChartData = {
@@ -163,8 +183,8 @@ export class FinancialChartsComponent implements OnInit, OnDestroy, OnChanges {
           label: 'Net Income',
           data: monthlyNet.map(d => d.net),
           backgroundColor: 'rgba(0, 123, 255, 0.1)',
-          borderColor: 'rgba(0, 123, 255, 1)',
           borderWidth: 2,
+          borderColor: 'rgba(0, 123, 255, 1)',
           fill: true,
           tension: 0.4
         },
@@ -191,12 +211,25 @@ export class FinancialChartsComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   private groupTransactionsByMonth(transactions: Transaction[]): { month: string; amount: number }[] {
+    if (!transactions || !Array.isArray(transactions)) {
+      return [];
+    }
+    
     const monthlyMap = new Map<string, number>();
     
     transactions.forEach(transaction => {
-      const date = new Date(transaction.date);
-      const monthKey = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-      monthlyMap.set(monthKey, (monthlyMap.get(monthKey) || 0) + transaction.amount);
+      try {
+        const date = new Date(transaction.date);
+        // Check if the date is valid
+        if (isNaN(date.getTime())) {
+          return; // Skip invalid dates
+        }
+        const monthKey = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+        monthlyMap.set(monthKey, (monthlyMap.get(monthKey) || 0) + transaction.amount);
+      } catch (error) {
+        // Skip transactions with invalid dates
+        console.warn('Invalid date in transaction:', transaction.date);
+      }
     });
 
     return Array.from(monthlyMap.entries())
@@ -205,6 +238,10 @@ export class FinancialChartsComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   private calculateCategoryTotals(): { name: string; amount: number }[] {
+    if (!this.transactions || !Array.isArray(this.transactions)) {
+      return [];
+    }
+    
     const categoryMap = new Map<string, number>();
     
     this.transactions
@@ -221,20 +258,33 @@ export class FinancialChartsComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   private calculateMonthlyNet(): { month: string; income: number; expenses: number; net: number }[] {
+    if (!this.transactions || !Array.isArray(this.transactions)) {
+      return [];
+    }
+    
     const monthlyMap = new Map<string, { income: number; expenses: number }>();
     
     this.transactions.forEach(transaction => {
-      const date = new Date(transaction.date);
-      const monthKey = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-      const current = monthlyMap.get(monthKey) || { income: 0, expenses: 0 };
-      
-      if (transaction.type === TransactionType.INCOME) {
-        current.income += transaction.amount;
-      } else {
-        current.expenses += transaction.amount;
+      try {
+        const date = new Date(transaction.date);
+        // Check if the date is valid
+        if (isNaN(date.getTime())) {
+          return; // Skip invalid dates
+        }
+        const monthKey = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+        const current = monthlyMap.get(monthKey) || { income: 0, expenses: 0 };
+        
+        if (transaction.type === TransactionType.INCOME) {
+          current.income += transaction.amount;
+        } else {
+          current.expenses += transaction.amount;
+        }
+        
+        monthlyMap.set(monthKey, current);
+      } catch (error) {
+        // Skip transactions with invalid dates
+        console.warn('Invalid date in transaction:', transaction.date);
       }
-      
-      monthlyMap.set(monthKey, current);
     });
 
     return Array.from(monthlyMap.entries())
@@ -248,6 +298,10 @@ export class FinancialChartsComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   private getCategoryName(categoryId: string): string {
+    if (!this.categories || !Array.isArray(this.categories)) {
+      return 'Unknown Category';
+    }
+    
     const category = this.categories.find(c => c._id === categoryId);
     return category ? category.name : 'Unknown Category';
   }

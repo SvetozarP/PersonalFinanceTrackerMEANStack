@@ -192,16 +192,11 @@ describe('GuestGuard', () => {
       // Mock router.navigate to throw an error
       router.navigate.and.throwError('Guard error');
 
-      // The guard should handle the error gracefully
-      guard.canActivate().subscribe({
-        next: (result) => {
-          // Should return false when user is authenticated, even if navigation fails
-          expect(result).toBe(false);
-        },
-        error: (error) => {
-          // Router errors should be handled gracefully
-          expect(error).toBeDefined();
-        }
+      // The guard should handle the error gracefully and still return false
+      guard.canActivate().subscribe(result => {
+        // Should return false when user is authenticated, even if navigation fails
+        expect(result).toBe(false);
+        expect(router.navigate).toHaveBeenCalledWith(['/dashboard']);
       });
     });
   });

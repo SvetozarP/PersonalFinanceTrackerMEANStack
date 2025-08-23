@@ -350,7 +350,7 @@ describe('AuthService', () => {
       expect((service as any).refreshTokenInternal).toHaveBeenCalled();
     });
 
-    it('should clear tokens when refresh fails', () => {
+    it('should clear tokens when refresh fails', (done) => {
       tokenService.getAccessToken.and.returnValue('expired-token');
       tokenService.shouldRefreshToken.and.returnValue(true);
       
@@ -359,8 +359,12 @@ describe('AuthService', () => {
 
       service.initializeAuth();
       
-      // The error should be handled gracefully - the service should call logout which clears tokens
-      expect(tokenService.clearAccessToken).toHaveBeenCalled();
+      // Wait for the async operation to complete
+      setTimeout(() => {
+        // The error should be handled gracefully - the service should call logout which clears tokens
+        expect(tokenService.clearAccessToken).toHaveBeenCalled();
+        done();
+      }, 100);
     });
 
     it('should not initialize when no token exists', () => {
