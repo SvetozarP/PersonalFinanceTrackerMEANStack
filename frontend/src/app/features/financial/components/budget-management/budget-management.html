@@ -1,0 +1,321 @@
+<div class="budget-management-container">
+    <!-- Header Section -->
+    <div class="budget-header">
+      <div class="header-content">
+        <h1>Budget Management</h1>
+        <p class="subtitle">Set, track, and manage your financial budgets</p>
+      </div>
+      
+      <div class="header-actions">
+        <button class="btn btn-outline-secondary" (click)="exportBudgetReport()">
+          <i class="fas fa-download"></i>
+          Export Report
+        </button>
+        
+        <button class="btn btn-outline-primary" (click)="printBudgetReport()">
+          <i class="fas fa-print"></i>
+          Print
+        </button>
+        
+        <button class="btn btn-primary" (click)="showAddBudgetForm()">
+          <i class="fas fa-plus"></i>
+          Add Budget
+        </button>
+      </div>
+    </div>
+  
+    <!-- Budget Overview -->
+    <div class="budget-overview">
+      <div class="overview-card total-budget">
+        <div class="card-icon">
+          <i class="fas fa-wallet"></i>
+        </div>
+        <div class="card-content">
+          <h3>Total Budget</h3>
+          <div class="card-value">{{ totalBudget | currency }}</div>
+          <div class="card-subtitle">This period</div>
+        </div>
+      </div>
+  
+      <div class="overview-card total-spent">
+        <div class="card-icon">
+          <i class="fas fa-shopping-cart"></i>
+        </div>
+        <div class="card-content">
+          <h3>Total Spent</h3>
+          <div class="card-value">{{ totalSpent | currency }}</div>
+          <div class="card-subtitle">This period</div>
+        </div>
+      </div>
+  
+      <div class="overview-card remaining">
+        <div class="card-icon">
+          <i class="fas fa-piggy-bank"></i>
+        </div>
+        <div class="card-content">
+          <h3>Remaining</h3>
+          <div class="card-value" [class.positive]="totalRemaining >= 0" [class.negative]="totalRemaining < 0">
+            {{ totalRemaining | currency }}
+          </div>
+          <div class="card-subtitle">Available to spend</div>
+        </div>
+      </div>
+  
+      <div class="overview-card progress">
+        <div class="card-icon">
+          <i class="fas fa-chart-pie"></i>
+        </div>
+        <div class="card-content">
+          <h3>Progress</h3>
+          <div class="card-value">{{ overallProgress | number:'1.1-1' }}%</div>
+          <div class="card-subtitle">Budget used</div>
+        </div>
+      </div>
+    </div>
+  
+    <!-- Filters and Controls -->
+    <div class="budget-controls">
+      <div class="control-group">
+        <label for="periodFilter">Period:</label>
+        <select id="periodFilter" [(ngModel)]="selectedPeriod" (change)="onPeriodChange(selectedPeriod)" class="form-control">
+          <option *ngFor="let period of periods" [value]="period.value">
+            {{ period.label }}
+          </option>
+        </select>
+      </div>
+  
+      <div class="control-group">
+        <label for="categoryFilter">Category:</label>
+        <select id="categoryFilter" [(ngModel)]="selectedCategory" (change)="onCategoryFilter(selectedCategory)" class="form-control">
+          <option value="">All Categories</option>
+          <option *ngFor="let category of categories" [value]="category._id">
+            {{ category.name }}
+          </option>
+        </select>
+      </div>
+    </div>
+  
+    <!-- Add Budget Form -->
+    <div class="add-budget-form" *ngIf="showAddBudget">
+      <div class="form-header">
+        <h3>Add New Budget</h3>
+        <button class="btn btn-outline-secondary" (click)="hideAddBudgetForm()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+  
+      <form [formGroup]="budgetForm" (ngSubmit)="onSubmitBudget()" class="budget-form">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="categoryId">Category</label>
+            <select id="categoryId" formControlName="categoryId" class="form-control">
+              <option value="">Select Category</option>
+              <option *ngFor="let category of categories" [value]="category._id">
+                {{ category.name }}
+              </option>
+            </select>
+          </div>
+  
+          <div class="form-group">
+            <label for="amount">Budget Amount</label>
+            <input type="number" id="amount" formControlName="amount" class="form-control" placeholder="0.00" step="0.01" min="0">
+          </div>
+        </div>
+  
+        <div class="form-row">
+          <div class="form-group">
+            <label for="period">Period</label>
+            <select id="period" formControlName="period" class="form-control">
+              <option *ngFor="let period of periods" [value]="period.value">
+                {{ period.label }}
+              </option>
+            </select>
+          </div>
+  
+          <div class="form-group">
+            <label for="startDate">Start Date</label>
+            <input type="date" id="startDate" formControlName="startDate" class="form-control">
+          </div>
+  
+          <div class="form-group">
+            <label for="endDate">End Date</label>
+            <input type="date" id="endDate" formControlName="endDate" class="form-control">
+          </div>
+        </div>
+  
+        <div class="form-actions">
+          <button type="button" class="btn btn-outline-secondary" (click)="hideAddBudgetForm()">
+            Cancel
+          </button>
+          <button type="submit" class="btn btn-primary" [disabled]="!budgetForm.valid">
+            <i class="fas fa-save"></i>
+            Create Budget
+          </button>
+        </div>
+      </form>
+    </div>
+  
+    <!-- Budget List -->
+    <div class="budget-list">
+      <div class="list-header">
+        <h3>Budget Details</h3>
+        <div class="list-stats">
+          <span class="stat-item">
+            <i class="fas fa-list"></i>
+            {{ budgets.length }} budgets
+          </span>
+          <span class="stat-item">
+            <i class="fas fa-check-circle"></i>
+            {{ getOnTrackCount() }} on track
+          </span>
+          <span class="stat-item">
+            <i class="fas fa-exclamation-triangle"></i>
+            {{ getOverBudgetCount() }} over budget
+          </span>
+        </div>
+      </div>
+  
+      <!-- Loading State -->
+      <div class="loading-state" *ngIf="isLoading">
+        <div class="loading-content">
+          <div class="spinner"></div>
+          <p>Loading budgets...</p>
+        </div>
+      </div>
+  
+      <!-- No Budgets State -->
+      <div class="no-budgets" *ngIf="!isLoading && budgets.length === 0">
+        <div class="no-budgets-content">
+          <i class="fas fa-chart-pie"></i>
+          <h3>No Budgets Set</h3>
+          <p>Start by creating your first budget to track your spending</p>
+          <button class="btn btn-primary" (click)="showAddBudgetForm()">
+            <i class="fas fa-plus"></i>
+            Create Budget
+          </button>
+        </div>
+      </div>
+  
+      <!-- Budget Items -->
+      <div class="budget-items" *ngIf="!isLoading && budgets.length > 0">
+        <div class="budget-item" *ngFor="let budget of budgets">
+          <div class="budget-header-row">
+            <div class="budget-info">
+              <h4>{{ budget.categoryName }}</h4>
+              <div class="budget-meta">
+                <span class="period-badge">{{ budget.period | titlecase }}</span>
+                <span class="status-badge" [class.active]="budget.isActive" [class.inactive]="!budget.isActive">
+                  {{ budget.isActive ? 'Active' : 'Inactive' }}
+                </span>
+              </div>
+            </div>
+  
+            <div class="budget-actions">
+              <button class="btn btn-sm btn-outline-primary" (click)="editBudget(budget)">
+                <i class="fas fa-edit"></i>
+              </button>
+              <button class="btn btn-sm btn-outline-warning" (click)="toggleBudgetStatus(budget)">
+                <i class="fas" [class.fa-toggle-on]="budget.isActive" [class.fa-toggle-off]="!budget.isActive"></i>
+              </button>
+              <button class="btn btn-sm btn-outline-danger" (click)="deleteBudget(budget._id)">
+                <i class="fas fa-trash"></i>
+              </button>
+            </div>
+          </div>
+  
+          <!-- Budget Progress -->
+          <div class="budget-progress" *ngIf="budget.isActive">
+            <div class="progress-info">
+              <div class="progress-stats">
+                <span class="stat">
+                  <strong>Budget:</strong> {{ budget.amount | currency }}
+                </span>
+                <span class="stat">
+                  <strong>Spent:</strong> {{ getBudgetProgress(budget.categoryId)?.spentAmount | currency }}
+                </span>
+                <span class="stat">
+                  <strong>Remaining:</strong> {{ getBudgetProgress(budget.categoryId)?.remainingAmount | currency }}
+                </span>
+              </div>
+  
+              <div class="progress-percentage">
+                {{ getBudgetProgress(budget.categoryId)?.percentageUsed | number:'1.1-1' }}% used
+              </div>
+            </div>
+  
+            <div class="progress-bar">
+              <div class="progress-fill" 
+                   [style.width.%]="getBudgetProgress(budget.categoryId)?.percentageUsed || 0"
+                   [style.background-color]="getProgressBarColor(getBudgetProgress(budget.categoryId)?.percentageUsed || 0)">
+              </div>
+            </div>
+  
+            <div class="progress-status">
+              <i [class]="getStatusIcon(getBudgetProgress(budget.categoryId)?.status || 'under')"
+                 [style.color]="getStatusColor(getBudgetProgress(budget.categoryId)?.status || 'under')">
+              </i>
+              <span class="status-text">
+                {{ getBudgetProgress(budget.categoryId)?.status === 'over' ? 'Over Budget' : 
+                   getBudgetProgress(budget.categoryId)?.status === 'at' ? 'At Budget Limit' : 'Under Budget' }}
+              </span>
+              <span class="days-remaining" *ngIf="getBudgetProgress(budget.categoryId)?.daysRemaining !== undefined">
+                {{ getBudgetProgress(budget.categoryId)?.daysRemaining }} days remaining
+              </span>
+            </div>
+          </div>
+  
+          <!-- Edit Budget Form -->
+          <div class="edit-budget-form" *ngIf="editingBudgetId === budget._id">
+            <form [formGroup]="editBudgetForm" (ngSubmit)="updateBudget()" class="budget-form">
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="editCategoryId">Category</label>
+                  <select id="editCategoryId" formControlName="categoryId" class="form-control">
+                    <option *ngFor="let category of categories" [value]="category._id">
+                      {{ category.name }}
+                    </option>
+                  </select>
+                </div>
+  
+                <div class="form-group">
+                  <label for="editAmount">Budget Amount</label>
+                  <input type="number" id="editAmount" formControlName="amount" class="form-control" step="0.01" min="0">
+                </div>
+              </div>
+  
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="editPeriod">Period</label>
+                  <select id="editPeriod" formControlName="period" class="form-control">
+                    <option *ngFor="let period of periods" [value]="period.value">
+                      {{ period.label }}
+                    </option>
+                  </select>
+                </div>
+  
+                <div class="form-group">
+                  <label for="editStartDate">Start Date</label>
+                  <input type="date" id="editStartDate" formControlName="startDate" class="form-control">
+                </div>
+  
+                <div class="form-group">
+                    <label for="editEndDate">End Date</label>
+                  <input type="date" id="editEndDate" formControlName="endDate" class="form-control">
+                </div>
+              </div>
+  
+              <div class="form-actions">
+                <button type="button" class="btn btn-outline-secondary" (click)="cancelEdit()">
+                  Cancel
+                </button>
+                <button type="submit" class="btn btn-primary" [disabled]="!editBudgetForm.valid">
+                  <i class="fas fa-save"></i>
+                  Update Budget
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>

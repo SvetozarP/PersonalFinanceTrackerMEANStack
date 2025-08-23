@@ -1,0 +1,413 @@
+<div class="financial-goals-container">
+    <!-- Header Section -->
+    <div class="goals-header">
+      <div class="header-content">
+        <h1>Financial Goals</h1>
+        <p class="subtitle">Set, track, and achieve your financial milestones</p>
+      </div>
+      
+      <div class="header-actions">
+        <button class="btn btn-outline-secondary" (click)="exportGoals()">
+          <i class="fas fa-download"></i>
+          Export
+        </button>
+        
+        <button class="btn btn-outline-primary" (click)="printGoals()">
+          <i class="fas fa-print"></i>
+          Print
+        </button>
+        
+        <button class="btn btn-primary" (click)="showAddGoalForm()">
+          <i class="fas fa-plus"></i>
+          Add Goal
+        </button>
+      </div>
+    </div>
+  
+    <!-- Goals Overview -->
+    <div class="goals-overview">
+      <div class="overview-card total-goals">
+        <div class="card-icon">
+          <i class="fas fa-bullseye"></i>
+        </div>
+        <div class="card-content">
+          <h3>Total Goals</h3>
+          <div class="card-value">{{ totalGoals }}</div>
+          <div class="card-subtitle">All time</div>
+        </div>
+      </div>
+  
+      <div class="overview-card active-goals">
+        <div class="card-icon">
+          <i class="fas fa-play-circle"></i>
+        </div>
+        <div class="card-content">
+          <h3>Active Goals</h3>
+          <div class="card-value">{{ activeGoals }}</div>
+          <div class="card-subtitle">In progress</div>
+        </div>
+      </div>
+  
+      <div class="overview-card completed-goals">
+        <div class="card-icon">
+          <i class="fas fa-check-circle"></i>
+        </div>
+        <div class="card-content">
+          <h3>Completed</h3>
+          <div class="card-value">{{ completedGoals }}</div>
+          <div class="card-subtitle">Achieved</div>
+        </div>
+      </div>
+  
+      <div class="overview-card overall-progress">
+        <div class="card-icon">
+          <i class="fas fa-chart-pie"></i>
+        </div>
+        <div class="card-content">
+          <h3>Overall Progress</h3>
+          <div class="card-value">{{ overallProgress | number:'1.1-1' }}%</div>
+          <div class="card-subtitle">{{ totalCurrentAmount | currency }} of {{ totalTargetAmount | currency }}</div>
+        </div>
+      </div>
+    </div>
+  
+    <!-- Filters and Controls -->
+    <div class="goals-controls">
+      <div class="filter-section">
+        <div class="filter-group">
+          <label for="goalType">Goal Type:</label>
+          <select id="goalType" [(ngModel)]="selectedGoalType" (change)="onGoalTypeChange(selectedGoalType)" class="form-control">
+            <option value="all">All Types</option>
+            <option *ngFor="let type of goalTypes" [value]="type.value">
+              {{ type.label }}
+            </option>
+          </select>
+        </div>
+  
+        <div class="filter-group">
+          <label for="goalStatus">Status:</label>
+          <select id="goalStatus" [(ngModel)]="selectedStatus" (change)="onStatusChange(selectedStatus)" class="form-control">
+            <option value="all">All Statuses</option>
+            <option *ngFor="let status of statuses" [value]="status.value">
+              {{ status.label }}
+            </option>
+          </select>
+        </div>
+  
+        <div class="filter-group">
+          <label for="goalPriority">Priority:</label>
+          <select id="goalPriority" [(ngModel)]="selectedPriority" (change)="onPriorityChange(selectedPriority)" class="form-control">
+            <option value="all">All Priorities</option>
+            <option *ngFor="let priority of priorities" [value]="priority.value">
+              {{ priority.label }}
+            </option>
+          </select>
+        </div>
+      </div>
+    </div>
+  
+    <!-- Add Goal Form -->
+    <div class="add-goal-form" *ngIf="showAddGoal">
+      <div class="form-header">
+        <h3>Add New Financial Goal</h3>
+        <button class="btn btn-outline-secondary" (click)="hideAddGoalForm()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+  
+      <form [formGroup]="goalForm" (ngSubmit)="onSubmitGoal()" class="goal-form">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="title">Goal Title</label>
+            <input type="text" id="title" formControlName="title" class="form-control" placeholder="e.g., Emergency Fund">
+          </div>
+  
+          <div class="form-group">
+            <label for="type">Goal Type</label>
+            <select id="type" formControlName="type" class="form-control">
+              <option *ngFor="let type of goalTypes" [value]="type.value">
+                {{ type.label }}
+              </option>
+            </select>
+          </div>
+        </div>
+  
+        <div class="form-row">
+          <div class="form-group">
+            <label for="description">Description</label>
+            <textarea id="description" formControlName="description" class="form-control" rows="3" placeholder="Describe your goal..."></textarea>
+          </div>
+        </div>
+  
+        <div class="form-row">
+          <div class="form-group">
+            <label for="targetAmount">Target Amount</label>
+            <input type="number" id="targetAmount" formControlName="targetAmount" class="form-control" placeholder="0.00" step="0.01" min="0">
+          </div>
+  
+          <div class="form-group">
+            <label for="category">Category</label>
+            <select id="category" formControlName="category" class="form-control">
+              <option value="">Select Category</option>
+              <option *ngFor="let category of categories" [value]="category.name">
+                {{ category.name }}
+              </option>
+            </select>
+          </div>
+  
+          <div class="form-group">
+            <label for="priority">Priority</label>
+            <select id="priority" formControlName="priority" class="form-control">
+              <option *ngFor="let priority of priorities" [value]="priority.value">
+                {{ priority.label }}
+              </option>
+            </select>
+          </div>
+        </div>
+  
+        <div class="form-row">
+          <div class="form-group">
+            <label for="startDate">Start Date</label>
+            <input type="date" id="startDate" formControlName="startDate" class="form-control">
+          </div>
+  
+          <div class="form-group">
+            <label for="targetDate">Target Date</label>
+            <input type="date" id="targetDate" formControlName="targetDate" class="form-control">
+          </div>
+        </div>
+  
+        <div class="form-actions">
+          <button type="button" class="btn btn-outline-secondary" (click)="hideAddGoalForm()">
+            Cancel
+          </button>
+          <button type="submit" class="btn btn-primary" [disabled]="!goalForm.valid">
+            <i class="fas fa-save"></i>
+            Create Goal
+          </button>
+        </div>
+      </form>
+    </div>
+  
+    <!-- Goals List -->
+    <div class="goals-list">
+      <div class="list-header">
+        <h3>Your Financial Goals</h3>
+        <div class="list-stats">
+          <span class="stat-item">
+            <i class="fas fa-filter"></i>
+            {{ getFilteredGoals().length }} of {{ totalGoals }} goals
+          </span>
+        </div>
+      </div>
+  
+      <!-- Loading State -->
+      <div class="loading-state" *ngIf="isLoading">
+        <div class="loading-content">
+          <div class="spinner"></div>
+          <p>Loading your financial goals...</p>
+        </div>
+      </div>
+  
+      <!-- No Goals State -->
+      <div class="no-goals" *ngIf="!isLoading && goals.length === 0">
+        <div class="no-goals-content">
+          <i class="fas fa-bullseye"></i>
+          <h3>No Goals Set</h3>
+          <p>Start by creating your first financial goal to track your progress</p>
+          <button class="btn btn-primary" (click)="showAddGoalForm()">
+            <i class="fas fa-plus"></i>
+            Create Goal
+          </button>
+        </div>
+      </div>
+  
+      <!-- No Filtered Goals State -->
+      <div class="no-filtered-goals" *ngIf="!isLoading && goals.length > 0 && getFilteredGoals().length === 0">
+        <div class="no-filtered-goals-content">
+          <i class="fas fa-search"></i>
+          <h3>No Goals Match Filters</h3>
+          <p>Try adjusting your filter criteria to see more goals</p>
+        </div>
+      </div>
+  
+      <!-- Goals Grid -->
+      <div class="goals-grid" *ngIf="!isLoading && getFilteredGoals().length > 0">
+        <div class="goal-card" 
+             *ngFor="let goal of getFilteredGoals()"
+             [class]="'goal-' + goal.type + ' priority-' + goal.priority + ' status-' + goal.status">
+          
+          <div class="goal-header">
+            <div class="goal-icon">
+              <i [class]="goal.icon" [style.color]="goal.color"></i>
+            </div>
+            
+            <div class="goal-meta">
+              <span class="goal-type">{{ goal.type | titlecase }}</span>
+              <span class="goal-priority" [style.background-color]="getPriorityColor(goal.priority)">
+                {{ goal.priority | titlecase }}
+              </span>
+              <span class="goal-status" [style.background-color]="getStatusColor(goal.status)">
+                {{ goal.status | titlecase }}
+              </span>
+            </div>
+            
+            <div class="goal-actions">
+              <button class="btn btn-sm btn-outline-primary" (click)="editGoal(goal)" title="Edit Goal">
+                <i class="fas fa-edit"></i>
+              </button>
+              <button class="btn btn-sm btn-outline-warning" (click)="toggleGoalStatus(goal)" title="Toggle Status">
+                <i class="fas fa-pause" *ngIf="goal.status === 'active'"></i>
+                <i class="fas fa-play" *ngIf="goal.status === 'paused'"></i>
+              </button>
+              <button class="btn btn-sm btn-outline-success" (click)="completeGoal(goal)" title="Mark Complete" *ngIf="goal.status === 'active'">
+                <i class="fas fa-check"></i>
+              </button>
+              <button class="btn btn-sm btn-outline-danger" (click)="deleteGoal(goal._id)" title="Delete Goal">
+                <i class="fas fa-trash"></i>
+              </button>
+            </div>
+          </div>
+  
+          <div class="goal-content">
+            <h4 class="goal-title">{{ goal.title }}</h4>
+            <p class="goal-description" *ngIf="goal.description">{{ goal.description }}</p>
+            
+            <div class="goal-progress">
+              <div class="progress-info">
+                <div class="progress-stats">
+                  <span class="stat">
+                    <strong>Target:</strong> {{ goal.targetAmount | currency }}
+                  </span>
+                  <span class="stat">
+                    <strong>Current:</strong> {{ goal.currentAmount | currency }}
+                  </span>
+                  <span class="stat">
+                    <strong>Remaining:</strong> {{ (goal.targetAmount - goal.currentAmount) | currency }}
+                  </span>
+                </div>
+  
+                <div class="progress-percentage">
+                  {{ getGoalProgress(goal._id)?.percentageComplete | number:'1.1-1' }}% complete
+                </div>
+              </div>
+  
+              <div class="progress-bar">
+                <div class="progress-fill" 
+                     [style.width.%]="getGoalProgress(goal._id)?.percentageComplete || 0"
+                     [style.background-color]="goal.color">
+                </div>
+              </div>
+            </div>
+  
+            <div class="goal-timeline">
+              <div class="timeline-item">
+                <i class="fas fa-calendar-plus"></i>
+                <span>Started: {{ goal.startDate | date:'shortDate' }}</span>
+              </div>
+              <div class="timeline-item">
+                <i class="fas fa-calendar-check"></i>
+                <span>Target: {{ goal.targetDate | date:'shortDate' }}</span>
+              </div>
+              <div class="timeline-item" *ngIf="getGoalProgress(goal._id)?.daysRemaining !== undefined">
+                <i class="fas fa-clock"></i>
+                <span>{{ getGoalProgress(goal._id)?.daysRemaining }} days remaining</span>
+              </div>
+            </div>
+  
+            <div class="goal-predictions" *ngIf="getGoalProgress(goal._id)">
+              <div class="prediction-item">
+                <i class="fas fa-chart-line"></i>
+                <span>Monthly: {{ getGoalProgress(goal._id)?.monthlyContribution | currency }}</span>
+              </div>
+              <div class="prediction-item">
+                <i class="fas fa-calendar-alt"></i>
+                <span>Estimated: {{ getGoalProgress(goal._id)?.estimatedCompletionDate | date:'shortDate' }}</span>
+              </div>
+              <div class="prediction-item">
+                <i class="fas fa-route"></i>
+                <span [class.on-track]="getGoalProgress(goal._id)?.isOnTrack" [class.off-track]="!getGoalProgress(goal._id)?.isOnTrack">
+                  {{ getGoalProgress(goal._id)?.isOnTrack ? 'On Track' : 'Off Track' }}
+                </span>
+              </div>
+            </div>
+          </div>
+  
+          <!-- Edit Goal Form -->
+          <div class="edit-goal-form" *ngIf="editingGoalId === goal._id">
+            <form [formGroup]="editGoalForm" (ngSubmit)="updateGoal()" class="goal-form">
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="editTitle">Goal Title</label>
+                  <input type="text" id="editTitle" formControlName="title" class="form-control">
+                </div>
+  
+                <div class="form-group">
+                  <label for="editType">Goal Type</label>
+                  <select id="editType" formControlName="type" class="form-control">
+                    <option *ngFor="let type of goalTypes" [value]="type.value">
+                      {{ type.label }}
+                    </option>
+                  </select>
+                </div>
+              </div>
+  
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="editDescription">Description</label>
+                  <textarea id="editDescription" formControlName="description" class="form-control" rows="3"></textarea>
+                </div>
+              </div>
+  
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="editTargetAmount">Target Amount</label>
+                  <input type="number" id="editTargetAmount" formControlName="targetAmount" class="form-control" step="0.01" min="0">
+                </div>
+  
+                <div class="form-group">
+                  <label for="editCategory">Category</label>
+                  <select id="editCategory" formControlName="category" class="form-control">
+                    <option *ngFor="let category of categories" [value]="category.name">
+                      {{ category.name }}
+                    </option>
+                  </select>
+                </div>
+  
+                <div class="form-group">
+                  <label for="editPriority">Priority</label>
+                  <select id="editPriority" formControlName="priority" class="form-control">
+                    <option *ngFor="let priority of priorities" [value]="priority.value">
+                      {{ priority.label }}
+                    </option>
+                  </select>
+                </div>
+              </div>
+  
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="editStartDate">Start Date</label>
+                  <input type="date" id="editStartDate" formControlName="startDate" class="form-control">
+                </div>
+  
+                <div class="form-group">
+                  <label for="editTargetDate">Target Date</label>
+                  <input type="date" id="editTargetDate" formControlName="targetDate" class="form-control">
+                </div>
+              </div>
+  
+              <div class="form-actions">
+                <button type="button" class="btn btn-outline-secondary" (click)="cancelEdit()">
+                  Cancel
+                </button>
+                <button type="submit" class="btn btn-primary" [disabled]="!editGoalForm.valid">
+                  <i class="fas fa-save"></i>
+                  Update Goal
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>

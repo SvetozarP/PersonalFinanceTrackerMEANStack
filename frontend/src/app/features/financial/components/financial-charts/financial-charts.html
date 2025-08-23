@@ -1,0 +1,142 @@
+<div class="financial-charts-container" *ngIf="showCharts">
+    <!-- Header Section -->
+    <div class="charts-header">
+      <h2>Financial Analytics</h2>
+      <p class="subtitle">Visual insights into your financial patterns</p>
+      
+      <div class="chart-controls">
+        <button class="btn btn-outline-secondary" (click)="exportChartData()">
+          <i class="fas fa-download"></i>
+          Export Data
+        </button>
+      </div>
+    </div>
+  
+    <!-- Charts Grid -->
+    <div class="charts-grid">
+      <!-- Expense Trend Chart -->
+      <div class="chart-card" *ngIf="expenseChartData">
+        <div class="chart-header">
+          <h3>Expense Trends</h3>
+          <p class="chart-description">Monthly expense patterns over time</p>
+        </div>
+        <div class="chart-container">
+          <canvas #expenseChart 
+                  [attr.data-chart]="'expense'"
+                  (click)="onChartClick($event)">
+          </canvas>
+        </div>
+        <div class="chart-footer">
+          <div class="chart-stats">
+            <div class="stat-item">
+              <span class="stat-label">Chart Type:</span>
+              <span class="stat-value">Line Chart</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Data Points:</span>
+              <span class="stat-value">{{ expenseChartData.labels.length || 0 }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+  
+      <!-- Income Trend Chart -->
+      <div class="chart-card" *ngIf="incomeChartData">
+        <div class="chart-header">
+          <h3>Income Trends</h3>
+          <p class="chart-description">Monthly income patterns over time</p>
+        </div>
+        <div class="chart-container">
+          <canvas #incomeChart 
+                  [attr.data-chart]="'income'"
+                  (click)="onChartClick($event)">
+          </canvas>
+        </div>
+        <div class="chart-footer">
+          <div class="chart-stats">
+            <div class="stat-item">
+              <span class="stat-label">Chart Type:</span>
+              <span class="stat-value">Line Chart</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Data Points:</span>
+              <span class="stat-value">{{ incomeChartData.labels.length || 0 }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+  
+      <!-- Category Spending Chart -->
+      <div class="chart-card" *ngIf="categoryChartData">
+        <div class="chart-header">
+          <h3>Spending by Category</h3>
+          <p class="chart-description">Top spending categories breakdown</p>
+        </div>
+        <div class="chart-container">
+          <canvas #categoryChart 
+                  [attr.data-chart]="'category'"
+                  (click)="onChartClick($event)">
+          </canvas>
+        </div>
+        <div class="chart-footer">
+          <div class="chart-stats">
+            <div class="stat-item">
+              <span class="stat-label">Chart Type:</span>
+              <span class="stat-value">Pie Chart</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Categories:</span>
+              <span class="stat-value">{{ categoryChartData.labels.length || 0 }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+  
+      <!-- Net Income Trend Chart -->
+      <div class="chart-card" *ngIf="trendChartData">
+        <div class="chart-header">
+          <h3>Net Income Trends</h3>
+          <p class="chart-description">Monthly net income and cash flow</p>
+        </div>
+        <div class="chart-container">
+          <canvas #trendChart 
+                  [attr.data-chart]="'trend'"
+                  (click)="onChartClick($event)">
+          </canvas>
+        </div>
+        <div class="chart-footer">
+          <div class="chart-stats">
+            <div class="stat-item">
+              <span class="stat-label">Chart Type:</span>
+              <span class="stat-value">Multi-line Chart</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Data Points:</span>
+              <span class="stat-value">{{ trendChartData.labels.length || 0 }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  
+    <!-- No Data State -->
+    <div class="no-data-state" *ngIf="!expenseChartData && !incomeChartData && !categoryChartData && !trendChartData">
+      <div class="no-data-content">
+        <i class="fas fa-chart-line"></i>
+        <h3>No Chart Data Available</h3>
+        <p>Start adding transactions to see your financial analytics</p>
+        <button class="btn btn-primary" routerLink="/financial/transactions/new">
+          <i class="fas fa-plus"></i>
+          Add Transaction
+        </button>
+      </div>
+    </div>
+  
+    <!-- Chart Loading State -->
+    <div class="loading-state" *ngIf="transactions.length === 0">
+      <div class="loading-content">
+        <div class="spinner"></div>
+        <p>Loading transaction data...</p>
+      </div>
+    </div>
+  </div>

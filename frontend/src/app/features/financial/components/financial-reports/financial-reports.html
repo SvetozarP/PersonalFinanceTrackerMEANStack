@@ -1,0 +1,274 @@
+<div class="financial-reports-container">
+    <!-- Header Section -->
+    <div class="reports-header">
+      <div class="header-content">
+        <h1>Financial Reports</h1>
+        <p class="subtitle">Generate comprehensive financial insights and analysis</p>
+      </div>
+      
+      <div class="header-actions">
+        <button class="btn btn-outline-secondary" (click)="toggleAdvancedOptions()">
+          <i class="fas fa-cog"></i>
+          {{ showAdvancedOptions ? 'Hide' : 'Show' }} Options
+        </button>
+        
+        <button class="btn btn-primary" (click)="exportReport('pdf')" *ngIf="reportData">
+          <i class="fas fa-download"></i>
+          Export Report
+        </button>
+        
+        <button class="btn btn-outline-primary" (click)="printReport()" *ngIf="reportData">
+          <i class="fas fa-print"></i>
+          Print
+        </button>
+      </div>
+    </div>
+  
+    <!-- Report Configuration -->
+    <div class="report-configuration">
+      <div class="config-section">
+        <div class="config-group">
+          <label for="period">Report Period:</label>
+          <select id="period" [(ngModel)]="selectedPeriod" (change)="onPeriodChange(selectedPeriod)" class="form-control">
+            <option *ngFor="let period of periods" [value]="period.value">
+              {{ period.label }}
+            </option>
+          </select>
+        </div>
+  
+        <div class="config-group">
+          <label for="reportType">Report Type:</label>
+          <select id="reportType" [(ngModel)]="selectedReportType" (change)="onReportTypeChange(selectedReportType)" class="form-control">
+            <option *ngFor="let reportType of reportTypes" [value]="reportType.value">
+              <i [class]="reportType.icon"></i>
+              {{ reportType.label }}
+            </option>
+          </select>
+        </div>
+  
+        <!-- Custom Date Range -->
+        <div class="config-group" *ngIf="customDateRange">
+          <label for="startDate">Start Date:</label>
+          <input type="date" id="startDate" [(ngModel)]="startDate" (change)="onDateRangeChange()" class="form-control">
+        </div>
+  
+        <div class="config-group" *ngIf="customDateRange">
+          <label for="endDate">End Date:</label>
+          <input type="date" id="endDate" [(ngModel)]="endDate" (change)="onDateRangeChange()" class="form-control">
+        </div>
+      </div>
+  
+      <!-- Advanced Options -->
+      <div class="advanced-options" *ngIf="showAdvancedOptions">
+        <div class="options-header">
+          <h3>Advanced Options</h3>
+          <p>Customize your report generation</p>
+        </div>
+        
+        <div class="options-grid">
+          <div class="option-item">
+            <label class="checkbox-label">
+              <input type="checkbox" checked>
+              <span class="checkmark"></span>
+              Include Category Breakdown
+            </label>
+          </div>
+          
+          <div class="option-item">
+            <label class="checkbox-label">
+              <input type="checkbox" checked>
+              <span class="checkmark"></span>
+              Include Trend Analysis
+            </label>
+          </div>
+          
+          <div class="option-item">
+            <label class="checkbox-label">
+              <input type="checkbox" checked>
+              <span class="checkmark"></span>
+              Include Insights
+            </label>
+          </div>
+          
+          <div class="option-item">
+            <label class="checkbox-label">
+              <input type="checkbox">
+              <span class="checkmark"></span>
+              Include Budget Comparison
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+  
+    <!-- Loading State -->
+    <div class="loading-state" *ngIf="isLoading">
+      <div class="loading-content">
+        <div class="spinner"></div>
+        <h3>Generating Report...</h3>
+        <p>Please wait while we analyze your financial data</p>
+      </div>
+    </div>
+  
+    <!-- Report Content -->
+    <div class="report-content" *ngIf="!isLoading && reportData">
+      <!-- Report Header -->
+      <div class="report-header">
+        <div class="report-title">
+          <h2>{{ selectedReportType | titlecase }} Report</h2>
+          <p class="report-period">
+            {{ reportData.period.start | date:'mediumDate' }} - {{ reportData.period.end | date:'mediumDate' }}
+          </p>
+        </div>
+        
+        <div class="report-meta">
+          <span class="meta-item">
+            <i class="fas fa-calendar"></i>
+            Generated: {{ getCurrentDate() | date:'medium' }}
+          </span>
+          <span class="meta-item">
+            <i class="fas fa-chart-bar"></i>
+            {{ reportData.summary.transactionCount }} transactions
+          </span>
+        </div>
+      </div>
+  
+      <!-- Summary Section -->
+      <div class="report-section summary-section">
+        <h3>Executive Summary</h3>
+        <div class="summary-grid">
+          <div class="summary-card income">
+            <div class="card-header">
+              <i class="fas fa-arrow-up"></i>
+              <span>Total Income</span>
+            </div>
+            <div class="card-value">{{ reportData.summary.totalIncome | currency }}</div>
+            <div class="card-change positive">+12.5% vs last period</div>
+          </div>
+  
+          <div class="summary-card expenses">
+            <div class="card-header">
+              <i class="fas fa-arrow-down"></i>
+              <span>Total Expenses</span>
+            </div>
+            <div class="card-value">{{ reportData.summary.totalExpenses | currency }}</div>
+            <div class="card-change negative">+8.2% vs last period</div>
+          </div>
+  
+          <div class="summary-card net">
+            <div class="card-header">
+              <i class="fas fa-balance-scale"></i>
+              <span>Net Income</span>
+            </div>
+            <div class="card-value" [class.positive]="reportData.summary.netAmount >= 0" [class.negative]="reportData.summary.netAmount < 0">
+              {{ reportData.summary.netAmount | currency }}
+            </div>
+            <div class="card-change" [class.positive]="reportData.summary.netAmount >= 0" [class.negative]="reportData.summary.netAmount < 0">
+              {{ reportData.summary.netAmount >= 0 ? '+' : '' }}{{ reportData.summary.netAmount >= 0 ? '12.5' : '8.2' }}% vs last period
+            </div>
+          </div>
+  
+          <div class="summary-card transfers">
+            <div class="card-header">
+              <i class="fas fa-exchange-alt"></i>
+              <span>Total Transfers</span>
+            </div>
+            <div class="card-value">{{ reportData.summary.totalTransfers | currency }}</div>
+            <div class="card-change neutral">No change</div>
+          </div>
+        </div>
+      </div>
+  
+      <!-- Category Analysis Section -->
+      <div class="report-section category-section" *ngIf="reportData.categories.length > 0">
+        <h3>Category Analysis</h3>
+        <div class="category-table">
+          <div class="table-header">
+            <div class="header-cell">Category</div>
+            <div class="header-cell">Amount</div>
+            <div class="header-cell">Count</div>
+            <div class="header-cell">Percentage</div>
+            <div class="header-cell">Trend</div>
+          </div>
+          
+          <div class="table-row" *ngFor="let category of reportData.categories.slice(0, 10)">
+            <div class="table-cell category-name">
+              <i class="fas fa-tag"></i>
+              {{ category.name }}
+            </div>
+            <div class="table-cell amount">{{ category.amount | currency }}</div>
+            <div class="table-cell count">{{ category.count }}</div>
+            <div class="table-cell percentage">
+              <div class="percentage-bar">
+                <div class="bar-fill" [style.width.%]="category.percentage"></div>
+              </div>
+              {{ category.percentage | number:'1.1-1' }}%
+            </div>
+            <div class="table-cell trend">
+              <i class="fas fa-arrow-up text-success"></i>
+              +5.2%
+            </div>
+          </div>
+        </div>
+      </div>
+  
+      <!-- Trends Section -->
+      <div class="report-section trends-section" *ngIf="reportData.trends.length > 0">
+        <h3>Trend Analysis</h3>
+        <div class="trends-chart">
+          <div class="chart-placeholder">
+            <i class="fas fa-chart-line"></i>
+            <p>Trend visualization would be displayed here</p>
+            <small>Monthly income vs expenses over time</small>
+          </div>
+        </div>
+      </div>
+  
+      <!-- Insights Section -->
+      <div class="report-section insights-section" *ngIf="reportData.insights.length > 0">
+        <h3>Key Insights</h3>
+        <div class="insights-grid">
+          <div class="insight-card" *ngFor="let insight of reportData.insights">
+            <div class="insight-icon">
+              <i class="fas fa-lightbulb"></i>
+            </div>
+            <div class="insight-content">
+              <p>{{ insight }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+  
+      <!-- Report Footer -->
+      <div class="report-footer">
+        <div class="footer-content">
+          <p class="disclaimer">
+            This report is generated based on your transaction data. For financial advice, please consult with a qualified professional.
+          </p>
+          <div class="footer-actions">
+            <button class="btn btn-outline-primary" (click)="exportReport('csv')">
+              <i class="fas fa-file-csv"></i>
+              Export CSV
+            </button>
+            <button class="btn btn-outline-primary" (click)="exportReport('excel')">
+              <i class="fas fa-file-excel"></i>
+              Export Excel
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  
+    <!-- No Data State -->
+    <div class="no-data-state" *ngIf="!isLoading && !reportData && transactions.length === 0">
+      <div class="no-data-content">
+        <i class="fas fa-chart-bar"></i>
+        <h3>No Data Available</h3>
+        <p>No transactions found for the selected period. Try adjusting your date range or add some transactions.</p>
+        <button class="btn btn-primary" routerLink="/financial/transactions/new">
+          <i class="fas fa-plus"></i>
+          Add Transaction
+        </button>
+      </div>
+    </div>
+  </div>

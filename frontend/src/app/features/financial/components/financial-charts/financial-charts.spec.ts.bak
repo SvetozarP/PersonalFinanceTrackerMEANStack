@@ -1,0 +1,23 @@
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+
+import { FinancialCharts } from './financial-charts';
+
+describe('FinancialCharts', () => {
+  let component: FinancialCharts;
+  let fixture: ComponentFixture<FinancialCharts>;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [FinancialCharts]
+    })
+    .compileComponents();
+
+    fixture = TestBed.createComponent(FinancialCharts);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+  });
+
+  it('should create', () => {
+    expect(component).toBeTruthy();
+  });
+});

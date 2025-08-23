@@ -1,0 +1,291 @@
+<div class="financial-insights-container">
+    <!-- Header Section -->
+    <div class="insights-header">
+      <div class="header-content">
+        <h1>Financial Insights</h1>
+        <p class="subtitle">AI-powered analysis of your financial patterns and recommendations</p>
+      </div>
+      
+      <div class="header-actions">
+        <button class="btn btn-outline-secondary" (click)="exportInsights()">
+          <i class="fas fa-download"></i>
+          Export
+        </button>
+        
+        <button class="btn btn-outline-primary" (click)="printInsights()">
+          <i class="fas fa-print"></i>
+          Print
+        </button>
+      </div>
+    </div>
+  
+    <!-- Insights Overview -->
+    <div class="insights-overview">
+      <div class="overview-card total-insights">
+        <div class="card-icon">
+          <i class="fas fa-lightbulb"></i>
+        </div>
+        <div class="card-content">
+          <h3>Total Insights</h3>
+          <div class="card-value">{{ totalInsights }}</div>
+          <div class="card-subtitle">Generated today</div>
+        </div>
+      </div>
+  
+      <div class="overview-card high-priority">
+        <div class="card-icon">
+          <i class="fas fa-exclamation-triangle"></i>
+        </div>
+        <div class="card-content">
+          <h3>High Priority</h3>
+          <div class="card-value">{{ highPriorityInsights }}</div>
+          <div class="card-subtitle">Require attention</div>
+        </div>
+      </div>
+  
+      <div class="overview-card actionable">
+        <div class="card-icon">
+          <i class="fas fa-hand-pointer"></i>
+        </div>
+        <div class="card-content">
+          <h3>Actionable</h3>
+          <div class="card-value">{{ actionableInsights }}</div>
+          <div class="card-subtitle">Ready to act on</div>
+        </div>
+      </div>
+  
+      <div class="overview-card trends">
+        <div class="card-icon">
+          <i class="fas fa-chart-line"></i>
+        </div>
+        <div class="card-content">
+          <h3>Trends</h3>
+          <div class="card-value">{{ trends.length }}</div>
+          <div class="card-subtitle">Identified patterns</div>
+        </div>
+      </div>
+    </div>
+  
+    <!-- Filters and Controls -->
+    <div class="insights-controls">
+      <div class="filter-section">
+        <label for="insightType">Filter by Type:</label>
+        <select id="insightType" [(ngModel)]="selectedInsightType" (change)="onInsightTypeChange(selectedInsightType)" class="form-control">
+          <option *ngFor="let type of insightTypes" [value]="type.value">
+            <i [class]="type.icon"></i>
+            {{ type.label }}
+          </option>
+        </select>
+      </div>
+  
+      <div class="view-controls">
+        <button class="btn btn-outline-secondary" (click)="showInsights = !showInsights">
+          <i class="fas" [class.fa-eye]="showInsights" [class.fa-eye-slash]="!showInsights"></i>
+          {{ showInsights ? 'Hide' : 'Show' }} Insights
+        </button>
+        
+        <button class="btn btn-outline-secondary" (click)="showTrends = !showTrends">
+          <i class="fas" [class.fa-chart-line]="showTrends" [class.fa-chart-line]="!showTrends"></i>
+          {{ showTrends ? 'Hide' : 'Show' }} Trends
+        </button>
+      </div>
+    </div>
+  
+    <!-- Loading State -->
+    <div class="loading-state" *ngIf="isLoading">
+      <div class="loading-content">
+        <div class="spinner"></div>
+        <h3>Analyzing Your Finances...</h3>
+        <p>Our AI is processing your transaction data to generate personalized insights</p>
+      </div>
+    </div>
+  
+    <!-- Insights Section -->
+    <div class="insights-section" *ngIf="!isLoading && showInsights">
+      <div class="section-header">
+        <h2>Financial Insights</h2>
+        <p class="section-description">Personalized recommendations based on your financial behavior</p>
+      </div>
+  
+      <!-- No Insights State -->
+      <div class="no-insights" *ngIf="insights.length === 0">
+        <div class="no-insights-content">
+          <i class="fas fa-chart-bar"></i>
+          <h3>No Insights Available</h3>
+          <p>Add more transactions to generate personalized financial insights</p>
+          <button class="btn btn-primary" routerLink="/financial/transactions/new">
+            <i class="fas fa-plus"></i>
+            Add Transaction
+          </button>
+        </div>
+      </div>
+  
+      <!-- Insights Grid -->
+      <div class="insights-grid" *ngIf="insights.length > 0">
+        <div class="insight-card" 
+             *ngFor="let insight of getFilteredInsightsList()"
+             [class]="'insight-' + insight.type"
+             [class.severity-high]="insight.severity === 'high'"
+             [class.severity-medium]="insight.severity === 'medium'"
+             [class.severity-low]="insight.severity === 'low'">
+          
+          <div class="insight-header">
+            <div class="insight-icon">
+              <i [class]="insight.icon" [style.color]="insight.color"></i>
+            </div>
+            
+            <div class="insight-meta">
+              <span class="insight-type">{{ insight.type | titlecase }}</span>
+              <span class="insight-severity" [class]="'severity-' + insight.severity">
+                {{ insight.severity | titlecase }}
+              </span>
+            </div>
+            
+            <div class="insight-actions">
+              <button class="btn btn-sm btn-outline-secondary" (click)="dismissInsight(insight.id)" title="Dismiss">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+          </div>
+  
+          <div class="insight-content">
+            <h3 class="insight-title">{{ insight.title }}</h3>
+            <p class="insight-description">{{ insight.description }}</p>
+            
+            <div class="insight-stats">
+              <div class="stat-item">
+                <span class="stat-label">Value:</span>
+                <span class="stat-value">{{ insight.value | currency }}</span>
+              </div>
+              
+              <div class="stat-item" *ngIf="insight.change !== 0">
+                <span class="stat-label">Change:</span>
+                <span class="stat-value" [class.positive]="insight.changeType === 'increase'" [class.negative]="insight.changeType === 'decrease'">
+                  {{ insight.change > 0 ? '+' : '' }}{{ insight.change | number:'1.1-1' }}%
+                </span>
+              </div>
+            </div>
+  
+            <div class="insight-category" *ngIf="insight.category">
+              <i class="fas fa-tag"></i>
+              <span>{{ insight.category }}</span>
+            </div>
+          </div>
+  
+          <div class="insight-footer" *ngIf="insight.actionable">
+            <button class="btn btn-primary btn-sm" (click)="onInsightAction(insight)">
+              <i class="fas fa-arrow-right"></i>
+              {{ insight.actionText }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  
+    <!-- Trends Section -->
+    <div class="trends-section" *ngIf="!isLoading && showTrends">
+      <div class="section-header">
+        <h2>Spending Trends</h2>
+        <p class="section-description">Patterns and changes in your spending behavior</p>
+      </div>
+  
+      <!-- No Trends State -->
+      <div class="no-trends" *ngIf="trends.length === 0">
+        <div class="no-trends-content">
+          <i class="fas fa-chart-line"></i>
+          <h3>No Trend Data</h3>
+          <p>Not enough data to identify spending trends</p>
+        </div>
+      </div>
+  
+      <!-- Trends List -->
+      <div class="trends-list" *ngIf="trends.length > 0">
+        <div class="trend-item" *ngFor="let trend of trends">
+          <div class="trend-header">
+            <div class="trend-category">
+              <i class="fas fa-tag"></i>
+              <span>{{ trend.category }}</span>
+            </div>
+            
+            <div class="trend-direction" [class]="'trend-' + trend.trend">
+              <i class="fas" 
+                 [class.fa-arrow-up]="trend.trend === 'rising'"
+                 [class.fa-arrow-down]="trend.trend === 'falling'"
+                 [class.fa-minus]="trend.trend === 'stable'">
+              </i>
+              <span>{{ trend.trend | titlecase }}</span>
+            </div>
+          </div>
+  
+          <div class="trend-content">
+            <p class="trend-description">{{ trend.description }}</p>
+            
+            <div class="trend-stats">
+              <div class="stat-item">
+                <span class="stat-label">Change:</span>
+                <span class="stat-value" [class.positive]="trend.trend === 'rising'" [class.negative]="trend.trend === 'falling'">
+                  {{ trend.change | number:'1.1-1' }}%
+                </span>
+              </div>
+              
+              <div class="stat-item">
+                <span class="stat-label">Confidence:</span>
+                <span class="stat-value">{{ (trend.confidence * 100) | number:'1.0-0' }}%</span>
+              </div>
+              
+              <div class="stat-item">
+                <span class="stat-label">Period:</span>
+                <span class="stat-value">{{ trend.period | titlecase }}</span>
+              </div>
+            </div>
+          </div>
+  
+          <div class="trend-visualization">
+            <div class="trend-bar" [class]="'trend-' + trend.trend">
+              <div class="bar-fill" [style.width.%]="getTrendBarWidth(trend.change)"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  
+    <!-- Summary Section -->
+    <div class="summary-section" *ngIf="!isLoading && (insights.length > 0 || trends.length > 0)">
+      <div class="summary-content">
+        <h3>Summary</h3>
+        <div class="summary-stats">
+          <div class="summary-stat">
+            <span class="stat-label">Total Insights:</span>
+            <span class="stat-value">{{ totalInsights }}</span>
+          </div>
+          
+          <div class="summary-stat">
+            <span class="stat-label">High Priority:</span>
+            <span class="stat-value">{{ highPriorityInsights }}</span>
+          </div>
+          
+          <div class="summary-stat">
+            <span class="stat-label">Actionable:</span>
+            <span class="stat-value">{{ actionableInsights }}</span>
+          </div>
+          
+          <div class="summary-stat">
+            <span class="stat-label">Trends Identified:</span>
+            <span class="stat-value">{{ trends.length }}</span>
+          </div>
+        </div>
+        
+        <div class="summary-actions">
+          <button class="btn btn-outline-primary" (click)="exportInsights()">
+            <i class="fas fa-download"></i>
+            Export Report
+          </button>
+          
+          <button class="btn btn-outline-secondary" (click)="printInsights()">
+            <i class="fas fa-print"></i>
+            Print Summary
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>

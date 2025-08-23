@@ -1,0 +1,444 @@
+<div class="transaction-form-container">
+    <!-- Header Section -->
+    <div class="header-section">
+      <div class="title-section">
+        <h1>{{ isEditMode ? 'Edit Transaction' : 'New Transaction' }}</h1>
+        <p class="subtitle">{{ isEditMode ? 'Update transaction details' : 'Add a new financial transaction' }}</p>
+      </div>
+      <div class="actions-section">
+        <button class="btn btn-secondary" (click)="onCancel()">
+          <i class="fas fa-times"></i>
+          Cancel
+        </button>
+      </div>
+    </div>
+  
+    <!-- Error Display -->
+    <div *ngIf="error" class="alert alert-danger">
+      <i class="fas fa-exclamation-triangle"></i>
+      {{ error }}
+    </div>
+  
+    <!-- Transaction Form -->
+    <form [formGroup]="transactionForm" (ngSubmit)="onSubmit()" class="transaction-form">
+      <div class="form-sections">
+        
+        <!-- Basic Information Section -->
+        <div class="form-section">
+          <h3 class="section-title">
+            <i class="fas fa-info-circle"></i>
+            Basic Information
+          </h3>
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label for="title">Title *</label>
+              <input
+                type="text"
+                id="title"
+                [formControlName]="formFields.title"
+                class="form-control"
+                [class.is-invalid]="isFieldInvalid(formFields.title)"
+                placeholder="Enter transaction title"
+              />
+              <div *ngIf="isFieldInvalid(formFields.title)" class="invalid-feedback">
+                {{ getFieldError(formFields.title) }}
+              </div>
+            </div>
+  
+            <div class="form-group">
+              <label for="description">Description</label>
+              <textarea
+                id="description"
+                [formControlName]="formFields.description"
+                class="form-control"
+                rows="3"
+                placeholder="Optional description"
+              ></textarea>
+            </div>
+          </div>
+  
+          <div class="form-row">
+            <div class="form-group">
+              <label for="amount">Amount *</label>
+              <div class="amount-input-group">
+                <input
+                  type="number"
+                  id="amount"
+                  [formControlName]="formFields.amount"
+                  class="form-control"
+                  [class.is-invalid]="isFieldInvalid(formFields.amount)"
+                  placeholder="0.00"
+                  step="0.01"
+                  min="0.01"
+                />
+                <select [formControlName]="formFields.currency" class="currency-select">
+                  <option value="USD">USD</option>
+                  <option value="EUR">EUR</option>
+                  <option value="GBP">GBP</option>
+                  <option value="JPY">JPY</option>
+                  <option value="CAD">CAD</option>
+                  <option value="AUD">AUD</option>
+                </select>
+              </div>
+              <div *ngIf="isFieldInvalid(formFields.amount)" class="invalid-feedback">
+                {{ getFieldError(formFields.amount) }}
+              </div>
+            </div>
+  
+            <div class="form-group">
+              <label for="type">Type *</label>
+              <select
+                id="type"
+                [formControlName]="formFields.type"
+                class="form-control"
+                [class.is-invalid]="isFieldInvalid(formFields.type)"
+              >
+                <option *ngFor="let type of transactionTypes" [value]="type">
+                  {{ type | titlecase }}
+                </option>
+              </select>
+              <div *ngIf="isFieldInvalid(formFields.type)" class="invalid-feedback">
+                {{ getFieldError(formFields.type) }}
+              </div>
+            </div>
+          </div>
+  
+          <div class="form-row">
+            <div class="form-group">
+              <label for="status">Status *</label>
+              <select
+                id="status"
+                [formControlName]="formFields.status"
+                class="form-control"
+                [class.is-invalid]="isFieldInvalid(formFields.status)"
+              >
+                <option *ngFor="let status of transactionStatuses" [value]="status">
+                  {{ status | titlecase }}
+                </option>
+              </select>
+              <div *ngIf="isFieldInvalid(formFields.status)" class="invalid-feedback">
+                {{ getFieldError(formFields.status) }}
+              </div>
+            </div>
+  
+            <div class="form-group">
+              <label for="tags">Tags</label>
+              <input
+                type="text"
+                id="tags"
+                [formControlName]="formFields.tags"
+                class="form-control"
+                placeholder="Enter tags separated by commas"
+              />
+              <small class="form-text">Separate multiple tags with commas</small>
+            </div>
+          </div>
+        </div>
+  
+        <!-- Category Section -->
+        <div class="form-section">
+          <h3 class="section-title">
+            <i class="fas fa-tags"></i>
+            Category & Classification
+          </h3>
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label for="categoryId">Category *</label>
+              <select
+                id="categoryId"
+                [formControlName]="formFields.categoryId"
+                class="form-control"
+                [class.is-invalid]="isFieldInvalid(formFields.categoryId)"
+              >
+                <option value="">Select a category</option>
+                <option *ngFor="let category of categories" [value]="category._id">
+                  {{ category.name }}
+                </option>
+              </select>
+              <div *ngIf="isFieldInvalid(formFields.categoryId)" class="invalid-feedback">
+                {{ getFieldError(formFields.categoryId) }}
+              </div>
+            </div>
+  
+            <div class="form-group">
+              <label for="subcategoryId">Subcategory</label>
+              <select
+                id="subcategoryId"
+                [formControlName]="formFields.subcategoryId"
+                class="form-control"
+                [disabled]="!subcategories.length"
+              >
+                <option value="">Select a subcategory</option>
+                <option *ngFor="let subcategory of subcategories" [value]="subcategory._id">
+                  {{ subcategory.name }}
+                </option>
+              </select>
+              <small *ngIf="!subcategories.length" class="form-text">No subcategories available</small>
+            </div>
+          </div>
+        </div>
+  
+        <!-- Date & Time Section -->
+        <div class="form-section">
+          <h3 class="section-title">
+            <i class="fas fa-calendar-alt"></i>
+            Date & Time
+          </h3>
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label for="date">Date *</label>
+              <input
+                type="date"
+                id="date"
+                [formControlName]="formFields.date"
+                class="form-control"
+                [class.is-invalid]="isFieldInvalid(formFields.date)"
+              />
+              <div *ngIf="isFieldInvalid(formFields.date)" class="invalid-feedback">
+                {{ getFieldError(formFields.date) }}
+              </div>
+            </div>
+  
+            <div class="form-group">
+              <label for="time">Time</label>
+              <input
+                type="time"
+                id="time"
+                [formControlName]="formFields.time"
+                class="form-control"
+              />
+            </div>
+  
+            <div class="form-group">
+              <label for="timezone">Timezone *</label>
+              <select
+                id="timezone"
+                [formControlName]="formFields.timezone"
+                class="form-control"
+                [class.is-invalid]="isFieldInvalid(formFields.timezone)"
+              >
+                <option value="America/New_York">Eastern Time (ET)</option>
+                <option value="America/Chicago">Central Time (CT)</option>
+                <option value="America/Denver">Mountain Time (MT)</option>
+                <option value="America/Los_Angeles">Pacific Time (PT)</option>
+                <option value="Europe/London">London (GMT)</option>
+                <option value="Europe/Paris">Paris (CET)</option>
+                <option value="Asia/Tokyo">Tokyo (JST)</option>
+              </select>
+              <div *ngIf="isFieldInvalid(formFields.timezone)" class="invalid-feedback">
+                {{ getFieldError(formFields.timezone) }}
+              </div>
+            </div>
+          </div>
+        </div>
+  
+        <!-- Payment & Merchant Section -->
+        <div class="form-section">
+          <h3 class="section-title">
+            <i class="fas fa-credit-card"></i>
+            Payment & Merchant
+          </h3>
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label for="paymentMethod">Payment Method *</label>
+              <select
+                id="paymentMethod"
+                [formControlName]="formFields.paymentMethod"
+                class="form-control"
+                [class.is-invalid]="isFieldInvalid(formFields.paymentMethod)"
+              >
+                <option *ngFor="let method of paymentMethods" [value]="method">
+                  {{ method.replace('_', ' ') | titlecase }}
+                </option>
+              </select>
+              <div *ngIf="isFieldInvalid(formFields.paymentMethod)" class="invalid-feedback">
+                {{ getFieldError(formFields.paymentMethod) }}
+              </div>
+            </div>
+  
+            <div class="form-group">
+              <label for="paymentReference">Payment Reference</label>
+              <input
+                type="text"
+                id="paymentReference"
+                [formControlName]="formFields.paymentReference"
+                class="form-control"
+                placeholder="Transaction ID, check number, etc."
+              />
+            </div>
+          </div>
+  
+          <div class="form-row">
+            <div class="form-group">
+              <label for="merchantName">Merchant Name</label>
+              <input
+                type="text"
+                id="merchantName"
+                [formControlName]="formFields.merchantName"
+                class="form-control"
+                placeholder="Store, business, or service name"
+              />
+            </div>
+          </div>
+        </div>
+  
+        <!-- Location Section -->
+        <div class="form-section">
+          <h3 class="section-title">
+            <i class="fas fa-map-marker-alt"></i>
+            Location
+          </h3>
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label for="locationName">Location Name</label>
+              <input
+                type="text"
+                id="locationName"
+                [formControlName]="formFields.location + '.name'"
+                class="form-control"
+                placeholder="Store name, venue, etc."
+              />
+            </div>
+  
+            <div class="form-group">
+              <label for="locationAddress">Address</label>
+              <input
+                type="text"
+                id="locationAddress"
+                [formControlName]="formFields.location + '.address'"
+                class="form-control"
+                placeholder="Street address"
+              />
+            </div>
+          </div>
+  
+          <div class="form-row">
+            <div class="form-group">
+              <label for="latitude">Latitude</label>
+              <input
+                type="number"
+                id="latitude"
+                [formControlName]="formFields.location + '.coordinates.latitude'"
+                class="form-control"
+                placeholder="Latitude coordinate"
+                step="any"
+              />
+            </div>
+  
+            <div class="form-group">
+              <label for="longitude">Longitude</label>
+              <input
+                type="number"
+                id="longitude"
+                [formControlName]="formFields.location + '.coordinates.longitude'"
+                class="form-control"
+                placeholder="Longitude coordinate"
+                step="any"
+              />
+            </div>
+          </div>
+        </div>
+  
+        <!-- Recurring Transaction Section -->
+        <div class="form-section">
+          <h3 class="section-title">
+            <i class="fas fa-redo"></i>
+            Recurring Transaction
+          </h3>
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label class="checkbox-label">
+                <input
+                  type="checkbox"
+                  [formControlName]="formFields.isRecurring"
+                  class="form-checkbox"
+                />
+                <span class="checkmark"></span>
+                This is a recurring transaction
+              </label>
+            </div>
+          </div>
+  
+          <div class="recurrence-fields" [class.disabled]="!getFieldControl(formFields.isRecurring)?.value">
+            <div class="form-row">
+              <div class="form-group">
+                <label for="recurrencePattern">Pattern</label>
+                <select
+                  id="recurrencePattern"
+                  [formControlName]="formFields.recurrencePattern"
+                  class="form-control"
+                  [disabled]="!getFieldControl(formFields.isRecurring)?.value"
+                >
+                  <option *ngFor="let pattern of recurrencePatterns" [value]="pattern">
+                    {{ pattern.replace('_', ' ') | titlecase }}
+                  </option>
+                </select>
+              </div>
+  
+              <div class="form-group">
+                <label for="recurrenceInterval">Interval</label>
+                <input
+                  type="number"
+                  id="recurrenceInterval"
+                  [formControlName]="formFields.recurrenceInterval"
+                  class="form-control"
+                  [disabled]="!getFieldControl(formFields.isRecurring)?.value"
+                  min="1"
+                  placeholder="1"
+                />
+                <small class="form-text">Every X days/weeks/months</small>
+              </div>
+  
+              <div class="form-group">
+                <label for="recurrenceEndDate">End Date</label>
+                <input
+                  type="date"
+                  id="recurrenceEndDate"
+                  [formControlName]="formFields.recurrenceEndDate"
+                  class="form-control"
+                  [disabled]="!getFieldControl(formFields.isRecurring)?.value"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+  
+        <!-- Notes Section -->
+        <div class="form-section">
+          <h3 class="section-title">
+            <i class="fas fa-sticky-note"></i>
+            Additional Notes
+          </h3>
+          
+          <div class="form-group">
+            <label for="notes">Notes</label>
+            <textarea
+              id="notes"
+              [formControlName]="formFields.notes"
+              class="form-control"
+              rows="4"
+              placeholder="Any additional notes or comments about this transaction"
+            ></textarea>
+          </div>
+        </div>
+      </div>
+  
+      <!-- Form Actions -->
+      <div class="form-actions">
+        <button type="button" class="btn btn-secondary" (click)="onCancel()">
+          <i class="fas fa-times"></i>
+          Cancel
+        </button>
+        <button type="submit" class="btn btn-primary" [disabled]="isSubmitting || transactionForm.invalid">
+          <i class="fas" [class.fa-save]="!isSubmitting" [class.fa-spinner]="isSubmitting"></i>
+          {{ isSubmitting ? 'Saving...' : (isEditMode ? 'Update Transaction' : 'Create Transaction') }}
+        </button>
+      </div>
+    </form>
+  </div>

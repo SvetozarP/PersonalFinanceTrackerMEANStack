@@ -13,6 +13,10 @@ export const routes: Routes = [
     title: 'Dashboard - Finance Tracker'
   },
   {
+    path: 'financial',
+    loadChildren: () => import('./features/financial/financial.routes').then(m => m.FINANCIAL_ROUTES)
+  },
+  {
     path: '',
     redirectTo: 'auth/login',
     pathMatch: 'full'

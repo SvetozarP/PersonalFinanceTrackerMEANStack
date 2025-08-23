@@ -1,0 +1,319 @@
+<div class="transaction-details-container">
+    <!-- Header Section -->
+    <div class="header-section">
+      <div class="header-content">
+        <button class="btn btn-outline-secondary back-btn" (click)="onBack()">
+          <i class="fas fa-arrow-left"></i>
+          Back to Transactions
+        </button>
+        
+        <div class="header-actions">
+          <button class="btn btn-outline-primary" (click)="onEdit()">
+            <i class="fas fa-edit"></i>
+            Edit
+          </button>
+          <button class="btn btn-outline-danger" (click)="onDelete()">
+            <i class="fas fa-trash"></i>
+            Delete
+          </button>
+        </div>
+      </div>
+    </div>
+  
+    <!-- Error Display -->
+    <div *ngIf="error" class="alert alert-danger">
+      <i class="fas fa-exclamation-triangle"></i>
+      {{ error }}
+    </div>
+  
+    <!-- Loading State -->
+    <div *ngIf="isLoading" class="loading-container">
+      <div class="spinner"></div>
+      <p>Loading transaction details...</p>
+    </div>
+  
+    <!-- Transaction Details -->
+    <div *ngIf="!isLoading && transaction" class="transaction-details">
+      
+      <!-- Main Transaction Info -->
+      <div class="main-info-section">
+        <div class="transaction-header">
+          <div class="transaction-icon" [style.background-color]="getCategoryColor(transaction.categoryId)">
+            <span class="icon">{{ getTransactionTypeIcon(transaction.type) }}</span>
+          </div>
+          
+          <div class="transaction-title">
+            <h1>{{ transaction.title }}</h1>
+            <div class="transaction-meta">
+              <span class="type-badge {{ getTransactionTypeClass(transaction.type) }}">
+                {{ transaction.type | titlecase }}
+              </span>
+              <span class="status-badge {{ getStatusBadgeClass(transaction.status) }}">
+                {{ transaction.status | titlecase }}
+              </span>
+              <span class="date-info">
+                {{ formatDateTime(transaction.date, transaction.time) }}
+              </span>
+            </div>
+          </div>
+          
+          <div class="transaction-amount" [class]="getAmountClass(transaction.amount, transaction.type)">
+            <div class="amount-value">{{ formatAmount(transaction.amount, transaction.currency) }}</div>
+            <div class="amount-currency">{{ transaction.currency }}</div>
+          </div>
+        </div>
+  
+        <!-- Description -->
+        <div *ngIf="transaction.description" class="description-section">
+          <h3>Description</h3>
+          <p>{{ transaction.description }}</p>
+        </div>
+  
+        <!-- Tags -->
+        <div *ngIf="transaction.tags && transaction.tags.length > 0" class="tags-section">
+          <h3>Tags</h3>
+          <div class="tags-list">
+            <span *ngFor="let tag of transaction.tags" class="tag">{{ tag }}</span>
+          </div>
+        </div>
+      </div>
+  
+      <!-- Details Grid -->
+      <div class="details-grid">
+        
+        <!-- Category Information -->
+        <div class="detail-card category-card">
+          <div class="card-header">
+            <h3><i class="fas fa-tags"></i> Category</h3>
+          </div>
+          <div class="card-content">
+            <div class="category-info">
+              <div class="category-item">
+                <div class="category-color" [style.background-color]="getCategoryColor(transaction.categoryId)"></div>
+                <div class="category-details">
+                  <div class="category-name">{{ getCategoryName(transaction.categoryId) }}</div>
+                  <div class="category-type">Main Category</div>
+                </div>
+                <button class="btn btn-sm btn-outline-primary" (click)="navigateToCategory(transaction.categoryId)">
+                  <i class="fas fa-external-link-alt"></i>
+                </button>
+              </div>
+              
+              <div *ngIf="transaction.subcategoryId" class="category-item subcategory">
+                <div class="category-color" [style.background-color]="getCategoryColor(transaction.subcategoryId)"></div>
+                <div class="category-details">
+                  <div class="category-name">{{ getCategoryName(transaction.subcategoryId) }}</div>
+                  <div class="category-type">Subcategory</div>
+                </div>
+                <button class="btn btn-sm btn-outline-primary" (click)="navigateToCategory(transaction.subcategoryId)">
+                  <i class="fas fa-external-link-alt"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+  
+        <!-- Payment Information -->
+        <div class="detail-card payment-card">
+          <div class="card-header">
+            <h3><i class="fas fa-credit-card"></i> Payment Details</h3>
+          </div>
+          <div class="card-content">
+            <div class="payment-info">
+              <div class="payment-method">
+                <span class="method-icon">{{ getPaymentMethodIcon(transaction.paymentMethod) }}</span>
+                <span class="method-name">{{ transaction.paymentMethod.replace('_', ' ') | titlecase }}</span>
+              </div>
+              
+              <div *ngIf="transaction.paymentReference" class="payment-reference">
+                <strong>Reference:</strong> {{ transaction.paymentReference }}
+              </div>
+              
+              <div *ngIf="transaction.merchantName" class="merchant-name">
+                <strong>Merchant:</strong> {{ transaction.merchantName }}
+              </div>
+            </div>
+          </div>
+        </div>
+  
+        <!-- Recurring Information -->
+        <div class="detail-card recurring-card" *ngIf="isRecurring()">
+          <div class="card-header">
+            <h3><i class="fas fa-redo"></i> Recurring Details</h3>
+          </div>
+          <div class="card-content">
+            <div class="recurring-info">
+              <div class="recurring-pattern">
+                <span class="pattern-icon">{{ getRecurrenceIcon(transaction.recurrencePattern) }}</span>
+                <span class="pattern-text">{{ getRecurrenceText() }}</span>
+              </div>
+              
+              <div *ngIf="transaction.recurrenceEndDate" class="recurring-end">
+                <strong>Ends:</strong> {{ getRecurrenceEndDate() }}
+              </div>
+              
+              <div *ngIf="transaction.nextOccurrence" class="next-occurrence">
+                <strong>Next:</strong> {{ getNextOccurrence() }}
+              </div>
+            </div>
+          </div>
+        </div>
+  
+        <!-- Location Information -->
+        <div class="detail-card location-card" *ngIf="hasLocation()">
+          <div class="card-header">
+            <h3><i class="fas fa-map-marker-alt"></i> Location</h3>
+          </div>
+          <div class="card-content">
+            <div class="location-info">
+              <div *ngIf="getLocationName()" class="location-name">
+                <strong>Name:</strong> {{ getLocationName() }}
+              </div>
+              
+              <div *ngIf="getLocationAddress()" class="location-address">
+                <strong>Address:</strong> {{ getLocationAddress() }}
+              </div>
+              
+              <div *ngIf="getLocationCoordinates()" class="location-coordinates">
+                <strong>Coordinates:</strong> 
+                {{ getLocationCoordinates() }}
+              </div>
+            </div>
+          </div>
+        </div>
+  
+        <!-- Financial Details -->
+        <div class="detail-card financial-card">
+          <div class="card-header">
+            <h3><i class="fas fa-calculator"></i> Financial Details</h3>
+          </div>
+          <div class="card-content">
+            <div class="financial-info">
+              <div class="info-row">
+                <span class="label">Original Amount:</span>
+                <span class="value">{{ formatAmount(transaction.originalAmount || transaction.amount, transaction.originalCurrency || transaction.currency) }}</span>
+              </div>
+              
+              <div *ngIf="transaction.exchangeRate" class="info-row">
+                <span class="label">Exchange Rate:</span>
+                <span class="value">{{ transaction.exchangeRate.toFixed(4) }}</span>
+              </div>
+              
+              <div *ngIf="transaction.fees" class="info-row">
+                <span class="label">Fees:</span>
+                <span class="value">{{ formatAmount(transaction.fees, transaction.currency) }}</span>
+              </div>
+              
+              <div *ngIf="transaction.tax" class="info-row">
+                <span class="label">Tax:</span>
+                <span class="value">{{ formatAmount(transaction.tax, transaction.currency) }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+  
+        <!-- Additional Information -->
+        <div class="detail-card additional-card">
+          <div class="card-header">
+            <h3><i class="fas fa-info-circle"></i> Additional Information</h3>
+          </div>
+          <div class="card-content">
+            <div class="additional-info">
+              <div class="info-row">
+                <span class="label">Source:</span>
+                <span class="value">{{ transaction.source }}</span>
+              </div>
+              
+              <div *ngIf="transaction.externalId" class="info-row">
+                <span class="label">External ID:</span>
+                <span class="value">{{ transaction.externalId }}</span>
+              </div>
+              
+              <div *ngIf="transaction.lastSyncedAt" class="info-row">
+                <span class="label">Last Synced:</span>
+                <span class="value">{{ formatDate(transaction.lastSyncedAt) }}</span>
+              </div>
+              
+              <div class="info-row">
+                <span class="label">Created:</span>
+                <span class="value">{{ formatDate(transaction.createdAt) }}</span>
+              </div>
+              
+              <div class="info-row">
+                <span class="label">Updated:</span>
+                <span class="value">{{ formatDate(transaction.updatedAt) }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+  
+        <!-- Notes -->
+        <div class="detail-card notes-card" *ngIf="hasNotes()">
+          <div class="card-header">
+            <h3><i class="fas fa-sticky-note"></i> Notes</h3>
+          </div>
+          <div class="card-content">
+            <div class="notes-content">
+              {{ transaction.notes }}
+            </div>
+          </div>
+        </div>
+  
+        <!-- Attachments -->
+        <div class="detail-card attachments-card" *ngIf="hasAttachments()">
+          <div class="card-header">
+            <h3><i class="fas fa-paperclip"></i> Attachments</h3>
+          </div>
+          <div class="card-content">
+            <div class="attachments-list">
+              <div *ngFor="let attachment of transaction.attachments" class="attachment-item">
+                <div class="attachment-icon">
+                  <i class="fas fa-file"></i>
+                </div>
+                <div class="attachment-details">
+                  <div class="attachment-name">{{ attachment.originalName }}</div>
+                  <div class="attachment-meta">
+                    {{ formatFileSize(attachment.size) }} • {{ formatDate(attachment.uploadedAt) }}
+                  </div>
+                </div>
+                <a [href]="attachment.url" target="_blank" class="btn btn-sm btn-outline-primary">
+                  <i class="fas fa-download"></i>
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+  
+      <!-- Action Footer -->
+      <div class="action-footer">
+        <div class="action-buttons">
+          <button class="btn btn-outline-secondary" (click)="exportTransaction()">
+            <i class="fas fa-download"></i>
+            Export
+          </button>
+          <button class="btn btn-outline-secondary" (click)="shareTransaction()">
+            <i class="fas fa-share-alt"></i>
+            Share
+          </button>
+          <button class="btn btn-primary" (click)="onEdit()">
+            <i class="fas fa-edit"></i>
+            Edit Transaction
+          </button>
+        </div>
+      </div>
+    </div>
+  
+    <!-- Empty State -->
+    <div *ngIf="!isLoading && !transaction && !error" class="empty-state">
+      <div class="empty-icon">
+        <i class="fas fa-receipt"></i>
+      </div>
+      <h3>Transaction not found</h3>
+      <p>The transaction you're looking for doesn't exist or has been removed.</p>
+      <button class="btn btn-primary" (click)="onBack()">
+        <i class="fas fa-arrow-left"></i>
+        Back to Transactions
+      </button>
+    </div>
+  </div>

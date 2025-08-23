@@ -1,0 +1,191 @@
+<div class="category-tree-container">
+    <!-- Header Section -->
+    <div class="tree-header">
+      <div class="header-content">
+        <h2>Category Tree</h2>
+        <p class="subtitle">Hierarchical view of your financial categories</p>
+      </div>
+      
+      <div class="header-actions">
+        <button class="btn btn-primary" (click)="onCategoryAdd()">
+          <i class="fas fa-plus"></i>
+          Add Category
+        </button>
+      </div>
+    </div>
+  
+    <!-- Controls Section -->
+    <div class="tree-controls">
+      <div class="search-section">
+        <div class="search-input">
+          <i class="fas fa-search"></i>
+          <input 
+            type="text" 
+            placeholder="Search categories..." 
+            [(ngModel)]="searchTerm"
+            (input)="onSearchChange()"
+            class="form-control">
+        </div>
+      </div>
+  
+      <div class="filter-section">
+        <div class="filter-group">
+          <label for="sortBy">Sort by:</label>
+          <select id="sortBy" [(ngModel)]="sortBy" (change)="onSortChange()" class="form-control">
+            <option value="name">Name</option>
+            <option value="level">Level</option>
+            <option value="transactionCount">Transaction Count</option>
+          </select>
+        </div>
+  
+        <div class="filter-group">
+          <label for="sortOrder">Order:</label>
+          <select id="sortOrder" [(ngModel)]="sortOrder" (change)="onSortChange()" class="form-control">
+            <option value="asc">Ascending</option>
+            <option value="desc">Descending</option>
+          </select>
+        </div>
+  
+        <div class="filter-group">
+          <label class="checkbox-label">
+            <input type="checkbox" [(ngModel)]="showInactive" (change)="onShowInactiveChange()">
+            <span class="checkmark"></span>
+            Show Inactive
+          </label>
+        </div>
+      </div>
+    </div>
+  
+    <!-- Tree Content -->
+    <div class="tree-content">
+      <!-- Loading State -->
+      <div class="loading-state" *ngIf="isLoading">
+        <div class="loading-content">
+          <div class="spinner"></div>
+          <p>Loading categories...</p>
+        </div>
+      </div>
+  
+      <!-- No Categories State -->
+      <div class="no-categories" *ngIf="!isLoading && categories.length === 0">
+        <div class="no-categories-content">
+          <i class="fas fa-folder-open"></i>
+          <h3>No Categories Found</h3>
+          <p>Start by creating your first financial category</p>
+          <button class="btn btn-primary" (click)="onCategoryAdd()">
+            <i class="fas fa-plus"></i>
+            Create Category
+          </button>
+        </div>
+      </div>
+  
+      <!-- Tree Structure -->
+      <div class="tree-structure" *ngIf="!isLoading && categories.length > 0">
+        <div class="tree-nodes">
+          <ng-container *ngTemplateOutlet="treeNodeTemplate; context: { $implicit: getFilteredCategories() }">
+          </ng-container>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Tree Node Template -->
+  <ng-template #treeNodeTemplate let-nodes>
+    <div class="tree-node" *ngFor="let node of nodes">
+      <div class="node-content" 
+           [class.selected]="isCategorySelected(node.category._id)"
+           [class.dragging]="draggedCategory?._id === node.category._id"
+           [class.drop-target]="dropTarget?._id === node.category._id"
+           [class.can-drop]="canDropOn(node.category)"
+           (click)="onCategoryClick(node.category)"
+           (dblclick)="onCategoryToggle(node)"
+           draggable="true"
+           (dragstart)="onDragStart($event, node.category)"
+           (dragover)="onDragOver($event, node.category)"
+           (dragleave)="onDragLeave($event)"
+           (drop)="onDrop($event, node.category)">
+        
+        <!-- Expand/Collapse Toggle -->
+        <div class="expand-toggle" *ngIf="node.children.length > 0">
+          <i class="fas" 
+             [class.fa-chevron-right]="!node.isExpanded"
+             [class.fa-chevron-down]="node.isExpanded"
+             (click)="onCategoryToggle(node); $event.stopPropagation()">
+          </i>
+        </div>
+        
+        <div class="expand-toggle-placeholder" *ngIf="node.children.length === 0"></div>
+  
+        <!-- Category Icon -->
+        <div class="category-icon">
+          <i [class]="getCategoryIcon(node.category)" 
+             [style.color]="getCategoryColor(node.category)">
+          </i>
+        </div>
+  
+        <!-- Category Info -->
+        <div class="category-info">
+          <div class="category-name">{{ node.category.name }}</div>
+          <div class="category-description" *ngIf="node.category.description">
+            {{ node.category.description }}
+          </div>
+          <div class="category-meta">
+            <span class="level-badge">Level {{ node.level + 1 }}</span>
+            <span class="children-count" *ngIf="node.children.length > 0">
+              {{ node.children.length }} subcategor{{ node.children.length === 1 ? 'y' : 'ies' }}
+            </span>
+          </div>
+        </div>
+  
+        <!-- Category Status -->
+        <div class="category-status">
+          <span class="status-badge" 
+                [class.active]="node.category.isActive"
+                [class.inactive]="!node.category.isActive">
+            {{ node.category.isActive ? 'Active' : 'Inactive' }}
+          </span>
+          <span class="system-badge" *ngIf="node.category.isSystem">
+            System
+          </span>
+        </div>
+  
+        <!-- Actions -->
+        <div class="category-actions" *ngIf="showActions" (click)="$event.stopPropagation()">
+          <button class="btn btn-sm btn-outline-primary" 
+                  (click)="onCategoryEdit(node.category, $event)"
+                  title="Edit Category">
+            <i class="fas fa-edit"></i>
+          </button>
+          
+          <button class="btn btn-sm btn-outline-danger" 
+                  (click)="onCategoryDelete(node.category, $event)"
+                  [disabled]="node.category.isSystem"
+                  title="Delete Category">
+            <i class="fas fa-trash"></i>
+          </button>
+          
+          <button class="btn btn-sm btn-outline-success" 
+                  (click)="onCategoryAdd(node.category._id)"
+                  title="Add Subcategory">
+            <i class="fas fa-plus"></i>
+          </button>
+        </div>
+      </div>
+  
+      <!-- Children -->
+      <div class="node-children" 
+           *ngIf="node.children.length > 0 && node.isExpanded"
+           [style.padding-left]="(node.level + 1) * 20 + 'px'">
+        <ng-container *ngTemplateOutlet="treeNodeTemplate; context: { $implicit: node.children }">
+        </ng-container>
+      </div>
+    </div>
+  </ng-template>
+  
+  <!-- Drag and Drop Visual Feedback -->
+  <div class="drag-overlay" *ngIf="draggedCategory" [class.visible]="draggedCategory">
+    <div class="drag-content">
+      <i [class]="getCategoryIcon(draggedCategory!)"></i>
+      <span>{{ draggedCategory!.name }}</span>
+    </div>
+  </div>
