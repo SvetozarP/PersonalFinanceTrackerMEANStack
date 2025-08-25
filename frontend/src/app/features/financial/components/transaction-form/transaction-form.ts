@@ -334,7 +334,18 @@ export class TransactionFormComponent implements OnInit, OnDestroy {
     Object.keys(this.transactionForm.controls).forEach(key => {
       const control = this.transactionForm.get(key);
       if (control instanceof FormGroup) {
-        this.markFormGroupTouched();
+        this.markFormGroupTouchedRecursive(control);
+      } else {
+        control?.markAsTouched();
+      }
+    });
+  }
+
+  private markFormGroupTouchedRecursive(formGroup: FormGroup): void {
+    Object.keys(formGroup.controls).forEach(key => {
+      const control = formGroup.get(key);
+      if (control instanceof FormGroup) {
+        this.markFormGroupTouchedRecursive(control);
       } else {
         control?.markAsTouched();
       }
