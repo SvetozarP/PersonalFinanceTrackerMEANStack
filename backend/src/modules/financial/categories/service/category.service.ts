@@ -178,7 +178,8 @@ export class CategoryService {
         query,
         page,
         limit,
-        { level: 1, name: 1 }
+        { level: 1, name: 1 },
+        undefined // projection parameter
       );
 
       logger.info('Retrieved user categories', {

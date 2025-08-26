@@ -6,7 +6,6 @@ import { Subject, takeUntil, debounceTime, distinctUntilChanged } from 'rxjs';
 import { Transaction, TransactionType, TransactionStatus, PaymentMethod, QueryOptions } from '../../../../core/models/financial.model';
 import { TransactionService } from '../../../../core/services/transaction.service';
 import { CategoryService } from '../../../../core/services/category.service';
-import { LoadingSpinnerComponent } from '../../../../shared/components/loading-spinner/loading-spinner';
 import { SkeletonContentLoaderComponent } from '../../../../shared';
 
 
@@ -18,7 +17,6 @@ import { SkeletonContentLoaderComponent } from '../../../../shared';
     RouterModule,
     FormsModule,
     ReactiveFormsModule,
-    LoadingSpinnerComponent,
     SkeletonContentLoaderComponent,
   ],
   templateUrl: './transaction-list.html',

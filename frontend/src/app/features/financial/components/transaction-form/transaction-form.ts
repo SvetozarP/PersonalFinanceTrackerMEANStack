@@ -94,9 +94,57 @@ export class TransactionFormComponent implements OnInit, OnDestroy {
     'Europe/London', 'Europe/Paris', 'Europe/Berlin', 'Asia/Tokyo', 'Asia/Shanghai'
   ];
 
+  // Computed properties for button states
+  get isSubmitDisabled(): boolean {
+    return !this.transactionForm.valid || this.isAnyActionLoading;
+  }
+
+  get isCancelDisabled(): boolean {
+    return this.isAnyActionLoading;
+  }
+
+  get isDeleteDisabled(): boolean {
+    return this.isAnyActionLoading;
+  }
+
   ngOnInit(): void {
     this.loadCategories();
     this.checkEditMode();
+    this.setupFormControlStates();
+  }
+
+  private setupFormControlStates(): void {
+    // Set up disabled states for form controls
+    this.transactionForm.get('categoryId')?.disable();
+    this.transactionForm.get('subcategoryId')?.disable();
+    
+    // Enable category control when categories are loaded
+    this.categoryService.isLoading$.subscribe(isLoading => {
+      if (!isLoading) {
+        this.transactionForm.get('categoryId')?.enable();
+      }
+    });
+
+    // Handle subcategory state based on category selection
+    this.transactionForm.get('categoryId')?.valueChanges.subscribe(categoryId => {
+      const subcategoryControl = this.transactionForm.get('subcategoryId');
+      if (categoryId) {
+        subcategoryControl?.enable();
+      } else {
+        subcategoryControl?.disable();
+        subcategoryControl?.setValue('');
+      }
+    });
+
+    // Handle subcategory loading state
+    this.categoryService.isLoading$.subscribe(isLoading => {
+      const subcategoryControl = this.transactionForm.get('subcategoryId');
+      if (isLoading) {
+        subcategoryControl?.disable();
+      } else if (this.transactionForm.get('categoryId')?.value) {
+        subcategoryControl?.enable();
+      }
+    });
   }
 
   ngOnDestroy(): void {

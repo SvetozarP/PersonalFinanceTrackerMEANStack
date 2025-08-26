@@ -13,6 +13,7 @@ import { Subject, takeUntil } from 'rxjs';
 
 import { AuthService } from '../../services/auth.service';
 import { RegisterRequest } from '../../../../core/models/auth.models';
+import { LoadingSpinnerComponent } from '../../../../shared/components/loading-spinner/loading-spinner';
 
 @Component({
   selector: 'app-register',
@@ -26,7 +27,8 @@ import { RegisterRequest } from '../../../../core/models/auth.models';
     MatInputModule,
     MatButtonModule,
     MatCheckboxModule,
-    MatIconModule
+    MatIconModule,
+    LoadingSpinnerComponent
   ],
   templateUrl: './register.html',
   styleUrl: './register.scss'
@@ -34,7 +36,10 @@ import { RegisterRequest } from '../../../../core/models/auth.models';
 export class RegisterComponent implements OnInit, OnDestroy {
   registerForm!: FormGroup;
   isLoading = false;
+  isFormLoading = false;
+  isSubmitting = false;
   hidePassword = true;
+  error: string | null = null;
   private destroy$ = new Subject<void>();
 
 
@@ -53,6 +58,15 @@ export class RegisterComponent implements OnInit, OnDestroy {
     this.initForm();
     
     // GuestGuard already handles authentication check, no need to duplicate here
+    
+    // Clear errors when user starts typing
+    this.registerForm.valueChanges.pipe(
+      takeUntil(this.destroy$)
+    ).subscribe(() => {
+      if (this.error) {
+        this.error = null;
+      }
+    });
   }
 
   private initForm(): void {
@@ -68,6 +82,12 @@ export class RegisterComponent implements OnInit, OnDestroy {
       confirmPassword: ['', [Validators.required]],
       acceptTerms: [false, [Validators.requiredTrue]]
     }, { validators: this.passwordMatchValidator });
+    
+    // Simulate initial form loading if needed
+    this.isFormLoading = true;
+    setTimeout(() => {
+      this.isFormLoading = false;
+    }, 500);
   }
 
   ngOnDestroy(): void {
@@ -114,10 +134,9 @@ export class RegisterComponent implements OnInit, OnDestroy {
   }
 
   onSubmit(): void {
-    if (this.registerForm.valid && !this.isLoading) {
-      // Use markForCheck to avoid change detection issues
-      this.isLoading = true;
-      this.cdr.markForCheck();
+    if (this.registerForm.valid && !this.isSubmitting) {
+      this.isSubmitting = true;
+      this.error = null;
       
       // Only send the fields the backend expects
       const userData: RegisterRequest = {
@@ -127,10 +146,11 @@ export class RegisterComponent implements OnInit, OnDestroy {
         lastName: this.registerForm.get('lastName')?.value
       };
 
-      this.authService.register(userData).subscribe({
+      this.authService.register(userData).pipe(
+        takeUntil(this.destroy$)
+      ).subscribe({
         next: (response) => {
-          this.isLoading = false;
-          this.cdr.markForCheck();
+          this.isSubmitting = false;
           
           this.snackBar.open('Account created successfully!', 'Close', {
             duration: 3000,
@@ -140,8 +160,7 @@ export class RegisterComponent implements OnInit, OnDestroy {
           this.router.navigate(['/dashboard']);
         },
         error: (error) => {
-          this.isLoading = false;
-          this.cdr.markForCheck();
+          this.isSubmitting = false;
           
           console.error('Registration error:', error);
           
@@ -160,12 +179,7 @@ export class RegisterComponent implements OnInit, OnDestroy {
             errorMessage = error.message;
           }
           
-          this.snackBar.open(errorMessage, 'Close', {
-            duration: 5000,
-            horizontalPosition: 'center',
-            verticalPosition: 'top',
-            panelClass: ['error-snackbar']
-          });
+          this.error = errorMessage;
         }
       });
     } else {

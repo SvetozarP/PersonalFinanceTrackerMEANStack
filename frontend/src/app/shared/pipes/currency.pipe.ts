@@ -8,7 +8,7 @@ export class CurrencyPipe implements PipeTransform {
   transform(
     value: number | string | null | undefined,
     currencyCode: string = 'USD',
-    display: 'symbol' | 'code' | 'symbol-narrow' = 'symbol',
+    display: 'symbol' | 'code' | 'narrowSymbol' = 'symbol',
     digitsInfo: string = '1.2-2',
     locale: string = 'en-US'
   ): string {

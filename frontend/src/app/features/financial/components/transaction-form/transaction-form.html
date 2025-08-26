@@ -8,11 +8,11 @@
       </p>
     </div>
     <div class="header-actions">
-      <button class="btn btn-outline-secondary" (click)="onCancel()" [disabled]="isAnyActionLoading">
+      <button class="btn btn-outline-secondary" (click)="onCancel()" [disabled]="isCancelDisabled">
         <i class="fas fa-times"></i>
         Cancel
       </button>
-      <button class="btn btn-outline-primary" (click)="resetForm()" [disabled]="isAnyActionLoading">
+      <button class="btn btn-outline-primary" (click)="resetForm()" [disabled]="isCancelDisabled">
         <i class="fas fa-undo"></i>
         Reset
       </button>
@@ -152,8 +152,7 @@
                 formControlName="categoryId"
                 class="form-control"
                 (change)="onCategoryChange($any($event.target).value)"
-                [class.is-invalid]="isFieldInvalid('categoryId')"
-                [disabled]="isCategoriesLoading">
+                [class.is-invalid]="isFieldInvalid('categoryId')">
                 <option value="">Select a category</option>
                 <option *ngFor="let category of categories" [value]="category._id">
                   {{ category.name }}
@@ -178,8 +177,7 @@
               <select
                 id="subcategoryId"
                 formControlName="subcategoryId"
-                class="form-control"
-                [disabled]="isSubcategoriesLoading || !getFieldControl('categoryId')?.value">
+                class="form-control">
                 <option value="">No subcategory</option>
                 <option *ngFor="let subcategory of subcategories" [value]="subcategory._id">
                   {{ subcategory.name }}
@@ -361,8 +359,10 @@
               (keyup.enter)="onTagAdd($any($event.target).value); $any($event.target).value = ''"
             />
             <button type="button" class="btn btn-outline-primary" 
-                    (click)="onTagAdd($any($event.target).value); $any($event.target).value = ''">
+                    (click)="onTagAdd($any($event.target).value); $any($event.target).value = ''"
+                    title="Add Tag">
               <i class="fas fa-plus"></i>
+              <span class="btn-text">Add</span>
             </button>
           </div>
           
@@ -401,8 +401,8 @@
       <div class="form-actions">
         <div class="action-buttons">
           <button type="submit" 
-                  class="btn btn-primary" 
-                  [disabled]="!transactionForm.valid || isAnyActionLoading">
+                  class="btn btn-primary"
+                  [disabled]="isSubmitDisabled">
             <i class="fas fa-save" *ngIf="!isSubmitting"></i>
             <app-loading-spinner *ngIf="isSubmitting" size="small" message=""></app-loading-spinner>
             {{ submitButtonText }}
@@ -411,7 +411,7 @@
           <button type="button" 
                   class="btn btn-outline-secondary" 
                   (click)="onCancel()"
-                  [disabled]="isAnyActionLoading">
+                  [disabled]="isCancelDisabled">
             <i class="fas fa-times"></i>
             Cancel
           </button>
@@ -422,7 +422,7 @@
           <button type="button" 
                   class="btn btn-danger" 
                   (click)="onDelete()"
-                  [disabled]="isAnyActionLoading">
+                  [disabled]="isDeleteDisabled">
             <i class="fas fa-trash" *ngIf="!isDeleting"></i>
             <app-loading-spinner *ngIf="isDeleting" size="small" message=""></app-loading-spinner>
             {{ deleteButtonText }}

@@ -9,8 +9,16 @@
 
     <mat-card-content>
       <form [formGroup]="registerForm" (ngSubmit)="onSubmit()">
+        <div *ngIf="isFormLoading" class="loading-overlay">
+          <app-loading-spinner></app-loading-spinner>
+        </div>
+        
+        <div *ngIf="error" class="error-message">
+          {{ error }}
+          <button type="button" (click)="error = null" class="error-close">×</button>
+        </div>
         <div class="name-fields">
-          <mat-form-field appearance="outline" class="full-width">
+          <mat-form-field appearance="fill" class="full-width">
             <mat-label>First Name</mat-label>
             <input matInput formControlName="firstName" required>
             <mat-error *ngIf="hasError('firstName')">
@@ -82,9 +90,9 @@
           color="primary" 
           type="submit" 
           class="full-width register-button"
-          [disabled]="registerForm.invalid || isLoading">
-          <mat-icon *ngIf="isLoading" class="spinner">hourglass_empty</mat-icon>
-          {{ isLoading ? 'Creating Account...' : 'Create Account' }}
+          [disabled]="registerForm.invalid || isSubmitting">
+          <mat-icon *ngIf="isSubmitting" class="spinner">hourglass_empty</mat-icon>
+          {{ isSubmitting ? 'Creating Account...' : 'Create Account' }}
         </button>
       </form>
     </mat-card-content>
