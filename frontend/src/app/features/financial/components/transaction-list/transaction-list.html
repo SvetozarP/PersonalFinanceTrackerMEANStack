@@ -1,247 +1,246 @@
 <div class="transaction-list-container">
-    <!-- Header Section -->
-    <div class="header-section">
-      <div class="title-section">
-        <h1>Transactions</h1>
-        <p class="subtitle">Manage and track your financial transactions</p>
-      </div>
-      <div class="actions-section">
-        <button class="btn btn-primary" routerLink="/financial/transactions/new">
-          <i class="fas fa-plus"></i>
-          New Transaction
-        </button>
-      </div>
+  <!-- Header Section -->
+  <div class="header-section">
+    <div class="title-section">
+      <h1>Transactions</h1>
+      <p class="subtitle">Manage and track your financial transactions</p>
     </div>
-  
-    <!-- Filters Section -->
-    <div class="filters-section">
-      <div class="filters-row">
-        <!-- Search Input -->
-        <div class="filter-group">
-          <label for="search">Search</label>
-          <input
-            type="text"
-            id="search"
-            [(ngModel)]="searchTerm"
-            placeholder="Search transactions..."
-            class="form-control"
-            (keyup.enter)="onSearch()"
-          />
-        </div>
-  
-        <!-- Transaction Type Filter -->
-        <div class="filter-group">
-          <label for="type">Type</label>
-          <select id="type" [(ngModel)]="selectedType" (change)="onFilterChange()" class="form-control">
-            <option value="">All Types</option>
-            <option *ngFor="let type of transactionTypes" [value]="type">
-              {{ type | titlecase }}
-            </option>
-          </select>
-        </div>
-  
-        <!-- Status Filter -->
-        <div class="filter-group">
-          <label for="status">Status</label>
-          <select id="status" [(ngModel)]="selectedStatus" (change)="onFilterChange()" class="form-control">
-            <option value="">All Statuses</option>
-            <option *ngFor="let status of transactionStatuses" [value]="status">
-              {{ status | titlecase }}
-            </option>
-          </select>
-        </div>
-  
-        <!-- Category Filter -->
-        <div class="filter-group">
-          <label for="category">Category</label>
-          <select id="category" [(ngModel)]="selectedCategory" (change)="onFilterChange()" class="form-control">
-            <option value="">All Categories</option>
-            <option *ngFor="let category of categories" [value]="category._id">
-              {{ category.name }}
-            </option>
-          </select>
-        </div>
-      </div>
-  
-      <div class="filters-row">
-        <!-- Date Range Filters -->
-        <div class="filter-group">
-          <label for="startDate">Start Date</label>
-          <input
-            type="date"
-            id="startDate"
-            [(ngModel)]="dateRange.start"
-            (change)="onFilterChange()"
-            class="form-control"
-          />
-        </div>
-  
-        <div class="filter-group">
-          <label for="endDate">End Date</label>
-          <input
-            type="date"
-            id="endDate"
-            [(ngModel)]="dateRange.end"
-            (change)="onFilterChange()"
-            class="form-control"
-          />
-        </div>
-  
-        <!-- Clear Filters Button -->
-        <div class="filter-group">
-          <button class="btn btn-secondary" (click)="clearFilters()">
-            <i class="fas fa-times"></i>
-            Clear Filters
-          </button>
-        </div>
-      </div>
-    </div>
-  
-    <!-- Error Display -->
-    <div *ngIf="error" class="alert alert-danger">
-      <i class="fas fa-exclamation-triangle"></i>
-      {{ error }}
-    </div>
-  
-    <!-- Loading State -->
-    <div *ngIf="isLoading" class="loading-container">
-      <div class="spinner"></div>
-      <p>Loading transactions...</p>
-    </div>
-  
-    <!-- Transactions Table -->
-    <div *ngIf="!isLoading && transactions.length > 0" class="table-container">
-      <table class="transactions-table">
-        <thead>
-          <tr>
-            <th (click)="onSort('date')" class="sortable">
-              Date
-              <i class="fas" [class.fa-sort-up]="sortBy === 'date' && sortOrder === 'asc'" 
-                 [class.fa-sort-down]="sortBy === 'date' && sortOrder === 'desc'"></i>
-            </th>
-            <th (click)="onSort('title')" class="sortable">
-              Description
-              <i class="fas" [class.fa-sort-up]="sortBy === 'title' && sortOrder === 'asc'" 
-                 [class.fa-sort-down]="sortBy === 'title' && sortOrder === 'desc'"></i>
-            </th>
-            <th>Category</th>
-            <th (click)="onSort('amount')" class="sortable">
-              Amount
-              <i class="fas" [class.fa-sort-up]="sortBy === 'amount' && sortOrder === 'asc'" 
-                 [class.fa-sort-down]="sortBy === 'amount' && sortOrder === 'desc'"></i>
-            </th>
-            <th>Type</th>
-            <th>Status</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let transaction of filteredTransactions" class="transaction-row">
-            <td class="date-cell">
-              <div class="date-info">
-                <div class="date">{{ formatDate(transaction.date) }}</div>
-                <div class="time" *ngIf="transaction.time">{{ transaction.time }}</div>
-              </div>
-            </td>
-            <td class="description-cell">
-              <div class="transaction-info">
-                <div class="title">{{ transaction.title }}</div>
-                <div class="description" *ngIf="transaction.description">{{ transaction.description }}</div>
-                <div class="tags" *ngIf="transaction.tags.length > 0">
-                  <span *ngFor="let tag of transaction.tags" class="tag">{{ tag }}</span>
-                </div>
-              </div>
-            </td>
-            <td class="category-cell">
-              <div class="category-info">
-                <span class="category-name">{{ getCategoryName(transaction.categoryId) }}</span>
-                <span class="subcategory" *ngIf="transaction.subcategoryId">
-                  {{ getCategoryName(transaction.subcategoryId) }}
-                </span>
-              </div>
-            </td>
-            <td class="amount-cell">
-              <div class="amount-info" [class.income]="transaction.type === 'income'" 
-                   [class.expense]="transaction.type === 'expense'">
-                <span class="amount">{{ formatAmount(transaction.amount, transaction.currency) }}</span>
-                <span class="type-icon">{{ getTransactionTypeIcon(transaction.type) }}</span>
-              </div>
-            </td>
-            <td class="type-cell">
-              <span class="type-badge type-{{ transaction.type }}">
-                {{ transaction.type | titlecase }}
-              </span>
-            </td>
-            <td class="status-cell">
-              <span class="status-badge {{ getStatusBadgeClass(transaction.status) }}">
-                {{ transaction.status | titlecase }}
-              </span>
-            </td>
-            <td class="actions-cell">
-              <div class="action-buttons">
-                <button class="btn btn-sm btn-outline-primary" 
-                        [routerLink]="['/financial/transactions', transaction._id]"
-                        title="View Details">
-                  <i class="fas fa-eye"></i>
-                </button>
-                <button class="btn btn-sm btn-outline-secondary" 
-                        [routerLink]="['/financial/transactions', transaction._id, 'edit']"
-                        title="Edit">
-                  <i class="fas fa-edit"></i>
-                </button>
-                <button class="btn btn-sm btn-outline-danger" 
-                        (click)="onTransactionDelete(transaction._id)"
-                        title="Delete">
-                  <i class="fas fa-trash"></i>
-                </button>
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  
-    <!-- Empty State -->
-    <div *ngIf="!isLoading && transactions.length === 0" class="empty-state">
-      <div class="empty-icon">
-        <i class="fas fa-receipt"></i>
-      </div>
-      <h3>No transactions found</h3>
-      <p>Start by adding your first transaction or adjust your filters.</p>
+    <div class="actions-section">
       <button class="btn btn-primary" routerLink="/financial/transactions/new">
         <i class="fas fa-plus"></i>
-        Add Transaction
+        New Transaction
       </button>
     </div>
-  
-    <!-- Pagination -->
-    <div *ngIf="totalPages > 1" class="pagination-container">
-      <div class="pagination-info">
-        Showing {{ getPaginationStart() }} to {{ getPaginationEnd() }} of {{ totalItems }} transactions
+  </div>
+
+  <!-- Filters Section -->
+  <div class="filters-section">
+    <div class="filters-row">
+      <!-- Search Input -->
+      <div class="filter-group">
+        <label for="search">Search</label>
+        <input
+          type="text"
+          id="search"
+          [(ngModel)]="searchTerm"
+          placeholder="Search transactions..."
+          class="form-control"
+          (keyup.enter)="onSearch()"
+        />
       </div>
-      <div class="pagination-controls">
-        <button class="btn btn-outline-primary" 
-                [disabled]="currentPage === 1"
-                (click)="onPageChange(currentPage - 1)">
-          <i class="fas fa-chevron-left"></i>
-          Previous
-        </button>
-        
-        <div class="page-numbers">
-          <button *ngFor="let page of [].constructor(totalPages); let i = index" 
-                  class="btn btn-outline-primary page-btn"
-                  [class.active]="currentPage === i + 1"
-                  (click)="onPageChange(i + 1)">
-            {{ i + 1 }}
-          </button>
-        </div>
-        
-        <button class="btn btn-outline-primary" 
-                [disabled]="currentPage === totalPages"
-                (click)="onPageChange(currentPage + 1)">
-          Next
-          <i class="fas fa-chevron-right"></i>
+
+      <!-- Transaction Type Filter -->
+      <div class="filter-group">
+        <label for="type">Type</label>
+        <select id="type" [(ngModel)]="selectedType" (change)="onFilterChange()" class="form-control">
+          <option value="">All Types</option>
+          <option *ngFor="let type of transactionTypes" [value]="type">
+            {{ type | titlecase }}
+          </option>
+        </select>
+      </div>
+
+      <!-- Status Filter -->
+      <div class="filter-group">
+        <label for="status">Status</label>
+        <select id="status" [(ngModel)]="selectedStatus" (change)="onFilterChange()" class="form-control">
+          <option value="">All Statuses</option>
+          <option *ngFor="let status of transactionStatuses" [value]="status">
+            {{ status | titlecase }}
+          </option>
+        </select>
+      </div>
+
+      <!-- Category Filter -->
+      <div class="filter-group">
+        <label for="category">Category</label>
+        <select id="category" [(ngModel)]="selectedCategory" (change)="onFilterChange()" class="form-control">
+          <option value="">All Categories</option>
+          <option *ngFor="let category of categories" [value]="category._id">
+            {{ category.name }}
+          </option>
+        </select>
+      </div>
+    </div>
+
+    <div class="filters-row">
+      <!-- Date Range Filters -->
+      <div class="filter-group">
+        <label for="startDate">Start Date</label>
+        <input
+          type="date"
+          id="startDate"
+          [(ngModel)]="dateRange.start"
+          (change)="onFilterChange()"
+          class="form-control"
+        />
+      </div>
+
+      <div class="filter-group">
+        <label for="endDate">End Date</label>
+        <input
+          type="date"
+          id="endDate"
+          [(ngModel)]="dateRange.end"
+          (change)="onFilterChange()"
+          class="form-control"
+        />
+      </div>
+
+      <!-- Clear Filters Button -->
+      <div class="filter-group">
+        <button class="btn btn-secondary" (click)="clearFilters()">
+          <i class="fas fa-times"></i>
+          Clear Filters
         </button>
       </div>
     </div>
   </div>
+
+  <!-- Error Display -->
+  <div *ngIf="error" class="alert alert-danger">
+    <i class="fas fa-exclamation-triangle"></i>
+    {{ error }}
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="isLoading" class="loading-container">
+    <div class="spinner"></div>
+    <p>Loading transactions...</p>
+  </div>
+
+  <!-- Transactions Table -->
+  <div *ngIf="!isLoading && transactions.length > 0" class="table-container">
+    <table class="transactions-table">
+      <thead>
+        <tr>
+          <th (click)="onSort('date')" class="sortable">
+            Date
+            <i class="fas" [class.fa-sort-up]="sortBy === 'date' && sortOrder === 'asc'" 
+               [class.fa-sort-down]="sortBy === 'date' && sortOrder === 'desc'"></i>
+          </th>
+          <th (click)="onSort('title')" class="sortable">
+            Description
+            <i class="fas" [class.fa-sort-up]="sortBy === 'title' && sortOrder === 'asc'" 
+               [class.fa-sort-down]="sortBy === 'title' && sortOrder === 'desc'"></i>
+          </th>
+          <th>Category</th>
+          <th (click)="onSort('amount')" class="sortable">
+            Amount
+            <i class="fas" [class.fa-sort-up]="sortBy === 'amount' && sortOrder === 'asc'" 
+               [class.fa-sort-down]="sortBy === 'amount' && sortOrder === 'desc'"></i>
+          </th>
+          <th>Type</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let transaction of filteredTransactions" class="transaction-row">
+          <td class="date-cell">
+            <div class="date-info">
+              <div class="date">{{ formatDate(transaction.date) }}</div>
+              <div class="time" *ngIf="transaction.time">{{ transaction.time }}</div>
+            </div>
+          </td>
+          <td class="description-cell">
+            <div class="transaction-info">
+              <div class="title">{{ transaction.title }}</div>
+              <div class="description" *ngIf="transaction.description">{{ transaction.description }}</div>
+              <div class="tags" *ngIf="transaction.tags && transaction.tags.length > 0">
+                <span *ngFor="let tag of transaction.tags" class="tag">{{ tag }}</span>
+              </div>
+            </div>
+          </td>
+          <td class="category-cell">
+            <div class="category-info">
+              <span class="category-name">{{ getCategoryName(transaction.categoryId) }}</span>
+              <span class="subcategory" *ngIf="transaction.subcategoryId">
+                {{ getCategoryName(transaction.subcategoryId) }}
+              </span>
+            </div>
+          </td>
+          <td class="amount-cell">
+            <div class="amount-info" [ngClass]="getAmountClass(transaction.type)">
+              <span class="amount">{{ formatAmount(transaction.amount, transaction.currency) }}</span>
+              <span class="type-icon">{{ getTransactionTypeIcon(transaction.type) }}</span>
+            </div>
+          </td>
+          <td class="type-cell">
+            <span class="type-badge type-{{ transaction.type }}">
+              {{ transaction.type | titlecase }}
+            </span>
+          </td>
+          <td class="status-cell">
+            <span class="status-badge {{ getStatusBadgeClass(transaction.status) }}">
+              {{ transaction.status | titlecase }}
+            </span>
+          </td>
+          <td class="actions-cell">
+            <div class="action-buttons">
+              <button class="btn btn-sm btn-outline-primary" 
+                      [routerLink]="['/financial/transactions', transaction._id]"
+                      title="View Details">
+                <i class="fas fa-eye"></i>
+              </button>
+              <button class="btn btn-sm btn-outline-secondary" 
+                      [routerLink]="['/financial/transactions', transaction._id, 'edit']"
+                      title="Edit">
+                <i class="fas fa-edit"></i>
+              </button>
+              <button class="btn btn-sm btn-outline-danger" 
+                      (click)="onTransactionDelete(transaction._id)"
+                      title="Delete">
+                <i class="fas fa-trash"></i>
+              </button>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Empty State -->
+  <div *ngIf="!isLoading && transactions.length === 0" class="empty-state">
+    <div class="empty-icon">
+      <i class="fas fa-receipt"></i>
+    </div>
+    <h3>No transactions found</h3>
+    <p>Start by adding your first transaction or adjust your filters.</p>
+    <button class="btn btn-primary" routerLink="/financial/transactions/new">
+      <i class="fas fa-plus"></i>
+      Add Transaction
+    </button>
+  </div>
+
+  <!-- Pagination -->
+  <div *ngIf="totalPages > 1" class="pagination-container">
+    <div class="pagination-info">
+      Showing {{ getPaginationStart() }} to {{ getPaginationEnd() }} of {{ totalItems }} transactions
+    </div>
+    <div class="pagination-controls">
+      <button class="btn btn-outline-primary" 
+              [disabled]="currentPage === 1"
+              (click)="onPageChange(currentPage - 1)">
+        <i class="fas fa-chevron-left"></i>
+        Previous
+      </button>
+      
+      <div class="page-numbers">
+        <button *ngFor="let page of getPageNumbers()" 
+                class="btn btn-outline-primary page-btn"
+                [class.active]="currentPage === page"
+                (click)="onPageChange(page)">
+          {{ page }}
+        </button>
+      </div>
+      
+      <button class="btn btn-outline-primary" 
+              [disabled]="currentPage === totalPages"
+              (click)="onPageChange(currentPage + 1)">
+        Next
+        <i class="fas fa-chevron-right"></i>
+      </button>
+    </div>
+  </div>
+</div>

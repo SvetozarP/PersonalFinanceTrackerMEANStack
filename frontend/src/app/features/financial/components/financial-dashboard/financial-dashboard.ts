@@ -13,6 +13,7 @@ import { FinancialService } from '../../../../core/services/financial.service';
 import { TransactionService } from '../../../../core/services/transaction.service';
 import { CategoryService } from '../../../../core/services/category.service';
 import { FormsModule } from '@angular/forms';
+import { LoadingSpinnerComponent } from '../../../../shared/components/loading-spinner/loading-spinner';
 
 @Component({
   selector: 'app-financial-dashboard',
@@ -20,7 +21,8 @@ import { FormsModule } from '@angular/forms';
   imports: [
     CommonModule,
     RouterModule,
-    FormsModule
+    FormsModule,
+    LoadingSpinnerComponent
   ],
   templateUrl: './financial-dashboard.html',
   styleUrls: ['./financial-dashboard.scss']
@@ -34,7 +36,13 @@ export class FinancialDashboardComponent implements OnInit, OnDestroy {
   dashboard: FinancialDashboard | null = null;
   recentTransactions: Transaction[] = [];
   categories: Category[] = [];
-  isLoading = false;
+  
+  // Granular loading states
+  isDashboardLoading = false;
+  isTransactionsLoading = false;
+  isCategoriesLoading = false;
+  isRefreshing = false;
+  
   error: string | null = null;
   
   // Date range for dashboard
@@ -65,7 +73,7 @@ export class FinancialDashboardComponent implements OnInit, OnDestroy {
   }
 
   private loadDashboard(): void {
-    this.isLoading = true;
+    this.isDashboardLoading = true;
     this.error = null;
 
     const options = {
@@ -79,45 +87,119 @@ export class FinancialDashboardComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (dashboard) => {
           this.dashboard = dashboard;
-          this.isLoading = false;
+          this.isDashboardLoading = false;
         },
         error: (error) => {
           this.error = 'Failed to load dashboard';
-          this.isLoading = false;
+          this.isDashboardLoading = false;
           console.error('Error loading dashboard:', error);
         }
       });
   }
 
   private loadRecentTransactions(): void {
+    this.isTransactionsLoading = true;
+    
     this.transactionService.getUserTransactions({ limit: 10 })
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {
           this.recentTransactions = response.data;
+          this.isTransactionsLoading = false;
         },
         error: (error) => {
           console.error('Error loading recent transactions:', error);
+          this.isTransactionsLoading = false;
         }
       });
   }
 
   private loadCategories(): void {
+    this.isCategoriesLoading = true;
+    
     this.categoryService.getUserCategories()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (categories) => {
           this.categories = categories;
+          this.isCategoriesLoading = false;
         },
         error: (error) => {
           console.error('Error loading categories:', error);
+          this.isCategoriesLoading = false;
         }
       });
   }
 
   private refreshDashboard(): void {
-    this.loadDashboard();
-    this.loadRecentTransactions();
+    this.isRefreshing = true;
+    
+    // Load all data in parallel
+    Promise.all([
+      this.loadDashboardAsync(),
+      this.loadRecentTransactionsAsync(),
+      this.loadCategoriesAsync()
+    ]).finally(() => {
+      this.isRefreshing = false;
+    });
+  }
+
+  private async loadDashboardAsync(): Promise<void> {
+    return new Promise((resolve) => {
+      const options = {
+        startDate: this.getStartDate(),
+        endDate: new Date(),
+        accountId: undefined
+      };
+
+      this.financialService.getFinancialDashboard(options)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: (dashboard) => {
+            this.dashboard = dashboard;
+            resolve();
+          },
+          error: (error) => {
+            this.error = 'Failed to refresh dashboard';
+            console.error('Error refreshing dashboard:', error);
+            resolve();
+          }
+        });
+    });
+  }
+
+  private async loadRecentTransactionsAsync(): Promise<void> {
+    return new Promise((resolve) => {
+      this.transactionService.getUserTransactions({ limit: 10 })
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: (response) => {
+            this.recentTransactions = response.data;
+            resolve();
+          },
+          error: (error) => {
+            console.error('Error refreshing recent transactions:', error);
+            resolve();
+          }
+        });
+    });
+  }
+
+  private async loadCategoriesAsync(): Promise<void> {
+    return new Promise((resolve) => {
+      this.categoryService.getUserCategories()
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: (categories) => {
+            this.categories = categories;
+            resolve();
+          },
+          error: (error) => {
+            console.error('Error refreshing categories:', error);
+            resolve();
+          }
+        });
+    });
   }
 
   onPeriodChange(period: 'week' | 'month' | 'quarter' | 'year'): void {
@@ -200,8 +282,8 @@ export class FinancialDashboardComponent implements OnInit, OnDestroy {
     switch (status) {
       case TransactionStatus.COMPLETED: return 'status-completed';
       case TransactionStatus.PENDING: return 'status-pending';
-      case TransactionStatus.CANCELLED: return 'status-cancelled';
       case TransactionStatus.FAILED: return 'status-failed';
+      case TransactionStatus.CANCELLED: return 'status-cancelled';
       default: return 'status-unknown';
     }
   }
@@ -216,32 +298,32 @@ export class FinancialDashboardComponent implements OnInit, OnDestroy {
     return category?.color || '#667eea';
   }
 
-  // Dashboard data helpers
+  // Dashboard data helpers - using safe navigation
   getTotalBalance(): number {
-    return this.dashboard?.overview.totalBalance || 0;
+    return this.dashboard?.overview?.totalBalance || 0;
   }
 
   getMonthlyIncome(): number {
-    return this.dashboard?.overview.monthlyIncome || 0;
+    return this.dashboard?.overview?.monthlyIncome || 0;
   }
 
   getMonthlyExpenses(): number {
-    return this.dashboard?.overview.monthlyExpenses || 0;
+    return this.dashboard?.overview?.monthlyExpenses || 0;
   }
 
   getMonthlyNet(): number {
-    return this.dashboard?.overview.monthlyNet || 0;
+    return this.dashboard?.overview?.monthlyNet || 0;
   }
 
   getPendingTransactionsCount(): number {
-    return this.dashboard?.overview.pendingTransactions || 0;
+    return this.dashboard?.overview?.pendingTransactions || 0;
   }
 
   getUpcomingRecurringCount(): number {
-    return this.dashboard?.overview.upcomingRecurring || 0;
+    return this.dashboard?.overview?.upcomingRecurring || 0;
   }
 
-  // Chart data helpers
+  // Chart data helpers - using safe navigation
   getTopCategories(): any[] {
     return this.dashboard?.topCategories || [];
   }
@@ -301,5 +383,23 @@ export class FinancialDashboardComponent implements OnInit, OnDestroy {
   exportData(): void {
     // This would trigger data export
     console.log('Export data');
+  }
+
+  // Check if any data is loading
+  get isLoading(): boolean {
+    return this.isDashboardLoading || this.isTransactionsLoading || this.isCategoriesLoading;
+  }
+
+  // Check if any specific section is loading
+  get isOverviewLoading(): boolean {
+    return this.isDashboardLoading;
+  }
+
+  get isTransactionsSectionLoading(): boolean {
+    return this.isTransactionsLoading;
+  }
+
+  get isCategoriesSectionLoading(): boolean {
+    return this.isCategoriesLoading;
   }
 }
