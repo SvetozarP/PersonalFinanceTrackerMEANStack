@@ -5,6 +5,7 @@ import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, AbstractContro
 import { Subject, takeUntil, switchMap, of } from 'rxjs';
 import { Category } from '../../../../core/models/financial.model';
 import { CategoryService } from '../../../../core/services/category.service';
+import { LoadingSpinnerComponent } from '../../../../shared/components/loading-spinner/loading-spinner';
 
 @Component({
   selector: 'app-category-form',
@@ -12,7 +13,8 @@ import { CategoryService } from '../../../../core/services/category.service';
   imports: [
     CommonModule,
     RouterModule,
-    ReactiveFormsModule
+    ReactiveFormsModule,
+    LoadingSpinnerComponent
   ],
   templateUrl: './category-form.html',
   styleUrls: ['./category-form.scss']
@@ -24,16 +26,46 @@ export class CategoryFormComponent implements OnInit, OnDestroy {
   private router = inject(Router);
   private fb = inject(FormBuilder);
 
-  categoryForm!: FormGroup;
-  categories: Category[] = [];
+  // Initialize the form group
+  categoryForm: FormGroup = this.fb.group({
+    name: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(50)]],
+    description: ['', [Validators.maxLength(200)]],
+    color: ['#667eea', Validators.required],
+    icon: ['🏷️', Validators.required],
+    parentId: [''],
+    isActive: [true]
+  });
+
+  category: Category | null = null;
+  parentCategories: Category[] = [];
+  
+  // Granular loading states
+  isFormLoading = false;
+  isParentCategoriesLoading = false;
+  isSubmitting = false;
+  
+  error: string | null = null;
+  
+  // Form mode
   isEditMode = false;
   categoryId: string | null = null;
-  isLoading = false;
-  isSubmitting = false;
-  error: string | null = null;
+  
+  // Color and icon options
+  colorOptions = [
+    '#667eea', '#764ba2', '#f093fb', '#f5576c', '#4facfe', '#00f2fe',
+    '#43e97b', '#38f9d7', '#fa709a', '#fee140', '#a8edea', '#fed6e3',
+    '#ffecd2', '#fcb69f', '#ff9a9e', '#fecfef', '#fecfef', '#fad0c4'
+  ];
 
-  // Form field names for easy access
-  readonly formFields = {
+  iconOptions = [
+    '🏠', '🏢', '🏪', '🏥', '🏦', '🏨', '🏫', '🏬', '🏭', '🏯', '🏰',
+    '💼', '📱', '💻', '🎮', '🎬', '🎵', '📚', '✈️', '🚗', '🚌', '🚲',
+    '��', '��', '🍽️', '��', '��', '☕', '🍺', '🍷', '💊', '🩺', '💉',
+    '👕', '👖', '👗', '👠', '👟', '👜', '💄', '💍', '💎', '🎁', '🎈'
+  ];
+
+  // Form field references for template
+  formFields = {
     name: 'name',
     description: 'description',
     color: 'color',
@@ -42,25 +74,8 @@ export class CategoryFormComponent implements OnInit, OnDestroy {
     isActive: 'isActive'
   };
 
-  // Predefined color options
-  readonly colorOptions = [
-    '#667eea', '#764ba2', '#f093fb', '#f5576c', '#4facfe', '#00f2fe',
-    '#43e97b', '#38f9d7', '#fa709a', '#fee140', '#a8edea', '#fed6e3',
-    '#ffecd2', '#fcb69f', '#ff9a9e', '#fecfef', '#fecfef', '#a18cd1',
-    '#fbc2eb', '#a6c0fe', '#d299c2', '#fef9d7', '#ffecd2', '#fcb69f'
-  ];
-
-  // Predefined icon options
-  readonly iconOptions = [
-    '🏠', '🚗', '🍔', '🛒', '💊', '🎓', '��', '��', '✈️', '��️',
-    '🏥', '🏦', '🎮', '📱', '💻', '��', '🎨', '��', '⚽', '🏀',
-    '💰', '💳', '��', '��', '��', '⭐', '🔥', '💎', '🌱', '🌍',
-    '��', '��', '��', '☕', '🍕', '🍣', '🍜', '🥗', '🍰', '🍺'
-  ];
-
   ngOnInit(): void {
-    this.initializeForm();
-    this.loadCategories();
+    this.loadParentCategories();
     this.checkEditMode();
   }
 
@@ -69,127 +84,163 @@ export class CategoryFormComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
-  private initializeForm(): void {
-    this.categoryForm = this.fb.group({
-      [this.formFields.name]: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(50)]],
-      [this.formFields.description]: ['', [Validators.maxLength(200)]],
-      [this.formFields.color]: ['#667eea', [Validators.required]],
-      [this.formFields.icon]: ['🏷️', [Validators.required]],
-      [this.formFields.parentId]: [''],
-      [this.formFields.isActive]: [true, [Validators.required]]
-    });
-  }
-
   private checkEditMode(): void {
-    this.route.params.pipe(
-      takeUntil(this.destroy$),
-      switchMap(params => {
-        const id = params['id'];
-        if (id && id !== 'new') {
-          this.isEditMode = true;
-          this.categoryId = id;
-          return this.categoryService.getCategoryById(id);
-        }
-        return of(null);
-      })
-    ).subscribe({
-      next: (category) => {
-        if (category) {
-          this.populateForm(category);
-        }
-      },
-      error: (error) => {
-        console.error('Error loading category:', error);
-        this.error = 'Failed to load category';
-      }
-    });
+    this.route.paramMap
+      .pipe(
+        takeUntil(this.destroy$),
+        switchMap(params => {
+          const id = params.get('id');
+          if (id && id !== 'new') {
+            this.isEditMode = true;
+            this.categoryId = id;
+            // loadCategory returns void, so we need to return an observable
+            this.loadCategory(id);
+            return of(null); // Return observable that completes immediately
+          } else {
+            // Return an observable that completes immediately for new category mode
+            return of(null);
+          }
+        })
+      )
+      .subscribe();
   }
 
-  private populateForm(category: Category): void {
-    this.categoryForm.patchValue({
-      [this.formFields.name]: category.name,
-      [this.formFields.description]: category.description,
-      [this.formFields.color]: category.color || '#667eea',
-      [this.formFields.icon]: category.icon || '🏷️',
-      [this.formFields.parentId]: category.parentId || '',
-      [this.formFields.isActive]: category.isActive
-    });
-  }
+  private loadCategory(categoryId: string): void {
+    this.isFormLoading = true;
+    this.error = null;
 
-  private loadCategories(): void {
-    this.categoryService.getUserCategories()
+    this.categoryService.getCategoryById(categoryId)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (categories) => {
-          this.categories = categories;
+        next: (category) => {
+          this.category = category;
+          this.populateForm(category);
+          this.isFormLoading = false;
         },
         error: (error) => {
-          console.error('Error loading categories:', error);
-          this.error = 'Failed to load categories';
+          this.error = 'Failed to load category';
+          this.isFormLoading = false;
+          console.error('Error loading category:', error);
         }
       });
   }
 
-  onSubmit(): void {
-    if (this.categoryForm.invalid) {
-      this.markFormGroupTouched();
-      return;
-    }
+  private loadParentCategories(): void {
+    this.isParentCategoriesLoading = true;
 
-    this.isSubmitting = true;
-    this.error = null;
+    this.categoryService.getUserCategories()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (categories) => {
+          // Filter out the current category if in edit mode
+          if (this.isEditMode && this.categoryId) {
+            this.parentCategories = categories.filter(cat => cat._id !== this.categoryId);
+          } else {
+            this.parentCategories = categories;
+          }
+          this.isParentCategoriesLoading = false;
+        },
+        error: (error) => {
+          console.error('Error loading parent categories:', error);
+          this.isParentCategoriesLoading = false;
+        }
+      });
+  }
 
-    const formValue = this.categoryForm.value;
-    
-    // Prepare category data
-    const categoryData: Partial<Category> = {
-      name: formValue[this.formFields.name],
-      description: formValue[this.formFields.description] || undefined,
-      color: formValue[this.formFields.color],
-      icon: formValue[this.formFields.icon],
-      parentId: formValue[this.formFields.parentId] || undefined,
-      isActive: formValue[this.formFields.isActive]
-    };
-
-    const request$ = this.isEditMode && this.categoryId ?
-      this.categoryService.updateCategory(this.categoryId, categoryData) :
-      this.categoryService.createCategory(categoryData);
-
-    request$.pipe(takeUntil(this.destroy$)).subscribe({
-      next: (category) => {
-        this.isSubmitting = false;
-        this.router.navigate(['/financial/categories']);
-      },
-      error: (error) => {
-        this.isSubmitting = false;
-        this.error = 'Failed to save category';
-        console.error('Error saving category:', error);
-      }
+  private populateForm(category: Category): void {
+    this.categoryForm.patchValue({
+      name: category.name,
+      description: category.description || '',
+      color: category.color || '#667eea',
+      icon: category.icon || '��️',
+      parentId: category.parentId || '',
+      isActive: category.isActive !== undefined ? category.isActive : true
     });
+  }
+
+  onParentCategoryChange(parentId: string): void {
+    // This method is called when parent category changes
+    // You can add logic here if needed
+    console.log('Parent category changed to:', parentId);
+  }
+
+  onColorSelect(color: string): void {
+    this.categoryForm.patchValue({ color });
+  }
+
+  onIconSelect(icon: string): void {
+    this.categoryForm.patchValue({ icon });
+  }
+
+  onSubmit(): void {
+    if (this.categoryForm.valid) {
+      this.isSubmitting = true;
+      this.error = null;
+
+      const formData = this.categoryForm.value;
+      
+      // Prepare the category data
+      const categoryData: Partial<Category> = {
+        name: formData.name,
+        description: formData.description,
+        color: formData.color,
+        icon: formData.icon,
+        parentId: formData.parentId || null,
+        isActive: formData.isActive
+      };
+
+      if (this.isEditMode && this.categoryId) {
+        // Update existing category
+        this.categoryService.updateCategory(this.categoryId, categoryData)
+          .pipe(takeUntil(this.destroy$))
+          .subscribe({
+            next: (updatedCategory) => {
+              this.isSubmitting = false;
+              this.router.navigate(['/financial/categories']);
+            },
+            error: (error) => {
+              this.error = 'Failed to update category';
+              this.isSubmitting = false;
+              console.error('Error updating category:', error);
+            }
+          });
+      } else {
+        // Create new category
+        this.categoryService.createCategory(categoryData)
+          .pipe(takeUntil(this.destroy$))
+          .subscribe({
+            next: (newCategory) => {
+              this.isSubmitting = false;
+              this.router.navigate(['/financial/categories']);
+            },
+            error: (error) => {
+              this.error = 'Failed to create category';
+              this.isSubmitting = false;
+              console.error('Error creating category:', error);
+            }
+          });
+      }
+    } else {
+      this.markFormGroupTouched();
+    }
   }
 
   onCancel(): void {
     this.router.navigate(['/financial/categories']);
   }
 
-  onColorSelect(color: string): void {
-    this.categoryForm.patchValue({ [this.formFields.color]: color });
-  }
-
-  onIconSelect(icon: string): void {
-    this.categoryForm.patchValue({ [this.formFields.icon]: icon });
-  }
-
-  onParentCategoryChange(parentId: string): void {
-    // Update form validation based on parent selection
-    if (parentId) {
-      // If parent is selected, ensure it's not a system category or inactive
-      const parentCategory = this.categories.find(c => c._id === parentId);
-      if (parentCategory && (!parentCategory.isActive || parentCategory.isSystem)) {
-        this.categoryForm.patchValue({ [this.formFields.parentId]: '' });
-        this.error = 'Cannot select inactive or system categories as parent';
-        setTimeout(() => this.error = null, 3000);
-      }
+  resetForm(): void {
+    if (this.category) {
+      this.populateForm(this.category);
+    } else {
+      this.categoryForm.reset({
+        name: '',
+        description: '',
+        color: '#667eea',
+        icon: '🏷️',
+        parentId: '',
+        isActive: true
+      });
     }
   }
 
@@ -204,92 +255,63 @@ export class CategoryFormComponent implements OnInit, OnDestroy {
     });
   }
 
-  // Helper methods for template
-  isFieldInvalid(fieldName: string): boolean {
-    const field = this.categoryForm.get(fieldName);
-    return !!(field && field.invalid && (field.dirty || field.touched));
-  }
-
-  getFieldError(fieldName: string): string {
-    const field = this.categoryForm.get(fieldName);
-    if (field && field.errors) {
-      if (field.errors['required']) return 'This field is required';
-      if (field.errors['minlength']) return `Minimum length is ${field.errors['minlength'].requiredLength} characters`;
-      if (field.errors['maxlength']) return `Maximum length is ${field.errors['maxlength'].requiredLength} characters`;
-    }
-    return '';
-  }
-
+  // Template helper methods
   getFieldControl(fieldName: string): AbstractControl | null {
     return this.categoryForm.get(fieldName);
   }
 
-  // Category hierarchy methods
+  isFieldInvalid(fieldName: string): boolean {
+    const control = this.getFieldControl(fieldName);
+    return control ? control.invalid && control.touched : false;
+  }
+
+  getFieldError(fieldName: string): string {
+    const control = this.getFieldControl(fieldName);
+    if (!control || !control.errors) return '';
+
+    if (control.errors['required']) return 'This field is required';
+    if (control.errors['minlength']) return `Minimum length is ${control.errors['minlength'].requiredLength} characters`;
+    if (control.errors['maxlength']) return `Maximum length is ${control.errors['maxlength'].requiredLength} characters`;
+    
+    return 'Invalid input';
+  }
+
   getParentCategories(): Category[] {
-    // Return only active, non-system categories that can be parents
-    return this.categories.filter(cat => 
-      cat.isActive && !cat.isSystem && cat._id !== this.categoryId
-    );
+    return this.parentCategories.filter(cat => cat.isActive && !cat.isSystem);
   }
 
   getCategoryPath(categoryId: string): string {
-    const category = this.categories.find(c => c._id === categoryId);
-    if (!category) return '';
-    
-    if (!category.parentId) return category.name;
-    
-    const parent = this.categories.find(c => c._id === category.parentId);
-    if (!parent) return category.name;
-    
-    return `${this.getCategoryPath(category.parentId)} > ${category.name}`;
+    const category = this.parentCategories.find(cat => cat._id === categoryId);
+    if (category && category.path && Array.isArray(category.path) && category.path.length > 0) {
+      return category.path.join(' > ') + ' > ' + category.name;
+    }
+    return category ? category.name : '';
   }
 
-  // Color and icon preview methods
   getPreviewStyle(): any {
-    const color = this.categoryForm.get(this.formFields.color)?.value || '#667eea';
-    const icon = this.categoryForm.get(this.formFields.icon)?.value || '��️';
-    
+    const color = this.getFieldControl(this.formFields.color)?.value || '#667eea';
     return {
-      backgroundColor: color,
-      color: this.getContrastColor(color)
+      'background-color': color,
+      'color': this.getContrastColor(color)
     };
   }
 
   getContrastColor(hexColor: string): string {
-    // Convert hex to RGB and calculate luminance
+    // Simple contrast calculation
     const hex = hexColor.replace('#', '');
     const r = parseInt(hex.substr(0, 2), 16);
     const g = parseInt(hex.substr(2, 2), 16);
     const b = parseInt(hex.substr(4, 2), 16);
-    
-    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-    return luminance > 0.5 ? '#000000' : '#ffffff';
-  }
-
-  // Form validation helpers
-  isFormValid(): boolean {
-    return this.categoryForm.valid && !this.isSubmitting;
+    const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+    return brightness > 128 ? '#000000' : '#ffffff';
   }
 
   canSubmit(): boolean {
-    return this.isFormValid() && this.categoryForm.dirty;
+    return this.categoryForm.valid && !this.isSubmitting;
   }
 
-  // Reset form to initial values
-  resetForm(): void {
-    if (this.isEditMode) {
-      this.populateForm(this.categories.find(c => c._id === this.categoryId) as Category);
-    } else {
-      this.categoryForm.reset({
-        [this.formFields.name]: '',
-        [this.formFields.description]: '',
-        [this.formFields.color]: '#667eea',
-        [this.formFields.icon]: '🏷️',
-        [this.formFields.parentId]: '',
-        [this.formFields.isActive]: true
-      });
-    }
-    this.categoryForm.markAsUntouched();
-    this.error = null;
+  // Computed properties for loading states
+  get isLoading(): boolean {
+    return this.isFormLoading || this.isParentCategoriesLoading;
   }
 }

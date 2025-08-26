@@ -1,25 +1,35 @@
 <div class="category-form-container">
-    <!-- Header Section -->
-    <div class="header-section">
-      <div class="title-section">
-        <h1>{{ isEditMode ? 'Edit Category' : 'New Category' }}</h1>
-        <p class="subtitle">{{ isEditMode ? 'Update category details' : 'Create a new financial category' }}</p>
-      </div>
-      <div class="actions-section">
-        <button class="btn btn-secondary" (click)="onCancel()">
-          <i class="fas fa-times"></i>
-          Cancel
-        </button>
-      </div>
+  <!-- Header Section -->
+  <div class="header-section">
+    <div class="title-section">
+      <h1>{{ isEditMode ? 'Edit Category' : 'New Category' }}</h1>
+      <p class="subtitle">{{ isEditMode ? 'Update category details' : 'Create a new financial category' }}</p>
     </div>
-  
-    <!-- Error Display -->
-    <div *ngIf="error" class="alert alert-danger">
-      <i class="fas fa-exclamation-triangle"></i>
-      {{ error }}
+    <div class="actions-section">
+      <button class="btn btn-secondary" (click)="onCancel()">
+        <i class="fas fa-times"></i>
+        Cancel
+      </button>
     </div>
-  
-    <!-- Category Form -->
+  </div>
+
+  <!-- Error Display -->
+  <div *ngIf="error" class="alert alert-danger">
+    <i class="fas fa-exclamation-triangle"></i>
+    {{ error }}
+  </div>
+
+  <!-- Main Loading State -->
+  <div *ngIf="isFormLoading" class="loading-container">
+    <app-loading-spinner 
+      message="Loading category data..." 
+      size="large" 
+      [overlay]="false">
+    </app-loading-spinner>
+  </div>
+
+  <!-- Form Content -->
+  <div *ngIf="!isFormLoading" class="form-content">
     <form [formGroup]="categoryForm" (ngSubmit)="onSubmit()" class="category-form">
       <div class="form-sections">
         
@@ -45,7 +55,7 @@
                 {{ getFieldError(formFields.name) }}
               </div>
             </div>
-  
+
             <div class="form-group">
               <label for="description">Description</label>
               <textarea
@@ -59,7 +69,7 @@
             </div>
           </div>
         </div>
-  
+
         <!-- Visual Customization Section -->
         <div class="form-section">
           <h3 class="section-title">
@@ -100,7 +110,7 @@
                 {{ getFieldError(formFields.color) }}
               </div>
             </div>
-  
+
             <div class="form-group">
               <label for="icon">Icon *</label>
               <div class="icon-picker">
@@ -129,7 +139,7 @@
             </div>
           </div>
         </div>
-  
+
         <!-- Category Hierarchy Section -->
         <div class="form-section">
           <h3 class="section-title">
@@ -140,25 +150,34 @@
           <div class="form-row">
             <div class="form-group">
               <label for="parentId">Parent Category</label>
-              <select
-                id="parentId"
-                [formControlName]="formFields.parentId"
-                class="form-control"
-                (change)="onParentCategoryChange($any($event.target).value)"
-              >
-                <option value="">No Parent (Top Level)</option>
-                <option *ngFor="let category of getParentCategories()" [value]="category._id">
-                  {{ getCategoryPath(category._id) }}
-                </option>
-              </select>
-              <small class="form-text">
-                Leave empty to create a top-level category. 
-                Only active, non-system categories can be selected as parents.
-              </small>
+              <div class="parent-category-selector">
+                <div *ngIf="isParentCategoriesLoading" class="loading-overlay">
+                  <app-loading-spinner 
+                    message="Loading categories..." 
+                    size="small">
+                  </app-loading-spinner>
+                </div>
+                
+                <select
+                  id="parentId"
+                  [formControlName]="formFields.parentId"
+                  class="form-control"
+                  (change)="onParentCategoryChange($any($event.target).value)"
+                  [disabled]="isParentCategoriesLoading">
+                  <option value="">No Parent (Top Level)</option>
+                  <option *ngFor="let category of getParentCategories()" [value]="category._id">
+                    {{ getCategoryPath(category._id) }}
+                  </option>
+                </select>
+                <small class="form-text">
+                  Leave empty to create a top-level category. 
+                  Only active, non-system categories can be selected as parents.
+                </small>
+              </div>
             </div>
           </div>
         </div>
-  
+
         <!-- Status Section -->
         <div class="form-section">
           <h3 class="section-title">
@@ -183,7 +202,7 @@
             </div>
           </div>
         </div>
-  
+
         <!-- Preview Section -->
         <div class="form-section">
           <h3 class="section-title">
@@ -209,7 +228,7 @@
           </div>
         </div>
       </div>
-  
+
       <!-- Form Actions -->
       <div class="form-actions">
         <div class="left-actions">
@@ -232,3 +251,4 @@
       </div>
     </form>
   </div>
+</div>
