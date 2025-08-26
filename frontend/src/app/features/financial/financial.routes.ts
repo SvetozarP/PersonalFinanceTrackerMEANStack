@@ -3,7 +3,7 @@ import { AuthGuard } from '../../core/guards/auth.guard';
 
 export const FINANCIAL_ROUTES: Routes = [
   {
-    path: 'financial',
+    path: '',
     canActivate: [AuthGuard],
     children: [
       {

@@ -173,24 +173,28 @@ export class CategoryService {
       // Get total count
       const total = await this.categoryRepository.count(query);
 
-      // Get paginated results
-      const categories = await this.categoryRepository.find(query, {
-        skip: (page - 1) * limit,
+      // Get paginated results using the proper pagination method
+      const result = await this.categoryRepository.findWithPagination(
+        query,
+        page,
         limit,
-        sort: { level: 1, name: 1 },
-      });
-
-      const totalPages = Math.ceil(total / limit);
+        { level: 1, name: 1 }
+      );
 
       logger.info('Retrieved user categories', {
         userId,
-        count: categories.length,
-        total,
-        page,
-        totalPages,
+        count: result.documents.length,
+        total: result.total,
+        page: result.page,
+        totalPages: result.totalPages,
       });
 
-      return { categories, total, page, totalPages };
+      return {
+        categories: result.documents,
+        total: result.total,
+        page: result.page,
+        totalPages: result.totalPages,
+      };
     } catch (error) {
       logger.error('Error getting user categories', {
         error: String(error),

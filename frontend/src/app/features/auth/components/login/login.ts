@@ -13,6 +13,7 @@ import { Subject, takeUntil } from 'rxjs';
 
 import { AuthService } from '../../services/auth.service';
 import { LoginRequest } from '../../../../core/models/auth.models';
+import { LoadingSpinnerComponent } from '../../../../shared/components/loading-spinner/loading-spinner';
 
 @Component({
   selector: 'app-login',
@@ -27,13 +28,16 @@ import { LoginRequest } from '../../../../core/models/auth.models';
     MatButtonModule,
     MatCheckboxModule,
     MatIconModule,
+    LoadingSpinnerComponent
   ],
   templateUrl: './login.html',
   styleUrl: './login.scss'
 })
 export class LoginComponent implements OnInit, OnDestroy {
   loginForm!: FormGroup;
-  isLoading = false;
+  isFormLoading = false;
+  isSubmitting = false;
+  error: string | null = null;
   hidePassword = true;
   private destroy$ = new Subject<void>();
 
@@ -61,47 +65,22 @@ export class LoginComponent implements OnInit, OnDestroy {
   }
 
   onSubmit(): void {
-    if (this.loginForm.valid && !this.isLoading) {
-      // Use markForCheck to avoid change detection issues
-      this.isLoading = true;
-      this.cdr.markForCheck();
+    if (this.loginForm.valid) {
+      this.isSubmitting = true;
+      this.error = null;
       
-      const credentials: LoginRequest = this.loginForm.value;
-
-      this.authService.login(credentials).subscribe({
-        next: (response) => {
-          this.isLoading = false;
-          this.cdr.markForCheck();
-          
-          this.snackBar.open('Login successful!', 'Close', { 
-            duration: 3000,
-            horizontalPosition: 'center',
-            verticalPosition: 'top'
-           });
-           this.router.navigate(['/dashboard']);
+      const credentials = this.loginForm.value;
+      
+      this.authService.login(credentials).pipe(
+        takeUntil(this.destroy$)
+      ).subscribe({
+        next: () => {
+          this.isSubmitting = false;
+          this.router.navigate(['/dashboard']);
         },
         error: (error) => {
-          this.isLoading = false;
-          this.cdr.markForCheck();
-          
-          console.error('Login error:', error);
-          
-          // Show more detailed error message
-          let errorMessage = 'Login failed. Please try again.';
-          if (error.error && error.error.errors && Array.isArray(error.error.errors)) {
-            errorMessage = error.error.errors.join(', ');
-          } else if (error.error && error.error.message) {
-            errorMessage = error.error.message;
-          } else if (error.message) {
-            errorMessage = error.message;
-          }
-          
-          this.snackBar.open(errorMessage, 'Close', {
-            duration: 5000,
-            horizontalPosition: 'center',
-            verticalPosition: 'top',
-            panelClass: ['error-snackbar']
-          });
+          this.isSubmitting = false;
+          this.error = error.error?.message || 'Login failed. Please try again.';
         }
       });
     }

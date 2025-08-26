@@ -75,6 +75,7 @@
   .actions-section {
     display: flex;
     gap: 12px;
+    align-items: center;
   }
   
   /* Buttons */
@@ -113,6 +114,15 @@
   
   .btn-secondary:hover:not(:disabled) {
     background-color: #cbd5e0;
+  }
+  
+  .btn-danger {
+    background-color: #dc2626;
+    color: white;
+  }
+  
+  .btn-danger:hover:not(:disabled) {
+    background-color: #b91c1c;
   }
   
   .btn-sm {

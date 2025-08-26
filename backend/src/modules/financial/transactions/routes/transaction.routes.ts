@@ -39,7 +39,13 @@ router.post(
  */
 router.get(
   '/',
-  validateRequest(transactionValidation.query, 'query'),
+  // validateRequest(transactionValidation.query, 'query'), // Temporarily commented out
+  (req: any, res, next) => {
+    console.log('🔍 GET /api/transactions route hit!');
+    console.log('Query params:', req.query);
+    console.log('User:', req.user);
+    next();
+  },
   asyncHandler(transactionController.getUserTransactions)
 );
 

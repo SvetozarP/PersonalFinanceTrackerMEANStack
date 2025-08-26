@@ -53,7 +53,15 @@ router.get('/tree', asyncHandler(categoryController.getCategoryTree));
  * @desc    Get category statistics for the authenticated user
  * @access  Private
  */
-router.get('/stats', asyncHandler(categoryController.getCategoryStats));
+router.get('/stats', 
+  (req: any, res, next) => {
+    console.log('🔍 GET /api/categories/stats route hit!');
+    console.log('Query params:', req.query);
+    console.log('User:', req.user);
+    next();
+  },
+  asyncHandler(categoryController.getCategoryStats)
+);
 
 /**
  * @route   GET /api/categories/:id

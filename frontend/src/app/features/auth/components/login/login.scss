@@ -34,16 +34,176 @@
     isolation: isolate;
   }
 
+  /* Ensure proper spacing for form fields */
   .full-width {
     width: 100%;
+    margin-bottom: 20px;
+    /* Add extra margin to prevent label overlap */
+    margin-top: 8px;
+  }
+
+  .mat-card-actions {
+    padding: 0;
+    margin: 0;
+  }
+
+  /* Form styling for Angular Material */
+  .login-form {
+    width: 100%;
+  }
+
+  /* Angular Material form field styling - Fix floating label overflow */
+  .mat-form-field {
+    width: 100%;
     margin-bottom: 16px;
-    /* Ensure form fields are properly isolated */
-    position: relative;
-    z-index: 2;
+    display: block;
+  }
+
+  .mat-form-field.mat-form-field-appearance-outline .mat-form-field-wrapper {
+    margin: 0;
+    padding-bottom: 1.34375em;
+    padding-top: 0;
+  }
+
+  .mat-form-field.mat-form-field-appearance-outline .mat-form-field-outline {
+    border-radius: 8px;
+  }
+
+  .mat-form-field.mat-form-field-appearance-outline .mat-form-field-outline-thick {
+    color: #667eea;
+  }
+
+  .mat-form-field.mat-form-field-appearance-outline.mat-focused .mat-form-field-outline-thick {
+    color: #667eea;
+  }
+
+  .mat-form-field.mat-form-field-appearance-outline .mat-form-field-infix {
+    border-top: none;
+    padding-top: 16px;
+    padding-bottom: 8px;
+  }
+
+  .mat-form-field.mat-form-field-appearance-outline .mat-form-field-label {
+    color: #666;
+    font-weight: 500;
+    top: 1.84375em;
+  }
+
+  .mat-form-field.mat-form-field-appearance-outline.mat-focused .mat-form-field-label,
+  .mat-form-field.mat-form-field-appearance-outline.mat-form-field-can-float.mat-form-field-should-float .mat-form-field-label {
+    color: #667eea;
+    transform: translateY(-1.5em) scale(0.75);
+    width: 133.33333%;
+  }
+
+  .mat-form-field input.mat-input-element {
+    font-size: 16px;
+    color: #333;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .mat-form-field input.mat-input-element::placeholder {
+    color: #999;
+  }
+
+  /* Fix form field container overflow */
+  .mat-form-field-appearance-outline .mat-form-field-outline-gap {
+    border-top: 1px solid transparent;
+  }
+
+  .mat-form-field-appearance-outline .mat-form-field-flex {
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+
+  /* Fix label positioning to prevent overflow */
+  .mat-form-field-appearance-outline .mat-form-field-label-wrapper {
+    top: 0;
+    padding-top: 0;
+  }
+
+  /* Submit button styling */
+  .submit-btn {
+    width: 100%;
+    height: 48px;
+    font-size: 16px;
+    font-weight: 500;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-top: 16px;
+    display: block;
     /* Prevent duplication during hydration */
     contain: layout style;
     /* Force single instance rendering */
     isolation: isolate;
+  }
+
+  .submit-btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.3);
+  }
+
+  .submit-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .submit-btn.loading {
+    opacity: 0.8;
+    cursor: wait;
+  }
+
+  /* Error message styling */
+  .error-message {
+    background: #fee;
+    border: 1px solid #fcc;
+    color: #c33;
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .error-close {
+    background: none;
+    border: none;
+    color: #c33;
+    font-size: 18px;
+    cursor: pointer;
+    padding: 0;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .error-close:hover {
+    background: rgba(204, 51, 51, 0.1);
+    border-radius: 4px;
+  }
+
+  /* Loading overlay */
+  .loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 16px;
+    z-index: 10;
   }
 
   .form-actions {
@@ -132,7 +292,6 @@
   .signup-link:hover {
     text-decoration: underline;
   }
-
   mat-card-header {
     text-align: center;
     margin-bottom: 24px;

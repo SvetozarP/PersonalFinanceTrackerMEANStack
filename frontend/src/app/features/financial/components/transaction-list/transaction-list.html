@@ -104,13 +104,12 @@
   </div>
 
   <!-- Loading State -->
-  <div *ngIf="isLoading" class="loading-container">
-    <div class="spinner"></div>
-    <p>Loading transactions...</p>
+  <div *ngIf="isTransactionsLoading" class="loading-container">
+    <app-skeleton-content-loader layout="table" [count]="5"></app-skeleton-content-loader>
   </div>
 
   <!-- Transactions Table -->
-  <div *ngIf="!isLoading && transactions.length > 0" class="table-container">
+  <div *ngIf="!isTransactionsLoading && transactions.length > 0" class="table-container">
     <table class="transactions-table">
       <thead>
         <tr>
@@ -201,7 +200,7 @@
   </div>
 
   <!-- Empty State -->
-  <div *ngIf="!isLoading && transactions.length === 0" class="empty-state">
+  <div *ngIf="!isTransactionsLoading && transactions.length === 0" class="empty-state">
     <div class="empty-icon">
       <i class="fas fa-receipt"></i>
     </div>

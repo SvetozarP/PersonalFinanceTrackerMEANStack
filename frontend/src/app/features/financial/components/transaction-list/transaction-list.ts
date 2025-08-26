@@ -7,6 +7,8 @@ import { Transaction, TransactionType, TransactionStatus, PaymentMethod, QueryOp
 import { TransactionService } from '../../../../core/services/transaction.service';
 import { CategoryService } from '../../../../core/services/category.service';
 import { LoadingSpinnerComponent } from '../../../../shared/components/loading-spinner/loading-spinner';
+import { SkeletonContentLoaderComponent } from '../../../../shared';
+
 
 @Component({
   selector: 'app-transaction-list',
@@ -16,7 +18,8 @@ import { LoadingSpinnerComponent } from '../../../../shared/components/loading-s
     RouterModule,
     FormsModule,
     ReactiveFormsModule,
-    LoadingSpinnerComponent
+    LoadingSpinnerComponent,
+    SkeletonContentLoaderComponent,
   ],
   templateUrl: './transaction-list.html',
   styleUrls: ['./transaction-list.scss']

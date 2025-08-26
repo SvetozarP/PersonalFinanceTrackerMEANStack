@@ -33,6 +33,10 @@
             <i class="fas fa-plus"></i>
             New Transaction
           </button>
+          <button class="btn btn-danger" (click)="logout()">
+            <i class="fas fa-sign-out-alt"></i>
+            Logout
+          </button>
         </div>
       </div>
   
@@ -107,14 +111,14 @@
               <div *ngIf="isLoading" class="chart-loading">
                 <app-loading-spinner [size]="'medium'" [message]="'Loading chart...'"></app-loading-spinner>
               </div>
-              <div *ngIf="!isLoading && spendingChartData.length > 0" class="chart-container">
+              <div *ngIf="!isLoading && spendingChartData && spendingChartData.length > 0" class="chart-container">
                 <!-- Chart component would go here -->
                 <div class="chart-placeholder">
                   <i class="fas fa-chart-area"></i>
                   <p>Spending trend chart</p>
                 </div>
               </div>
-              <div *ngIf="!isLoading && spendingChartData.length === 0" class="chart-empty">
+              <div *ngIf="!isLoading && (!spendingChartData || spendingChartData.length === 0)" class="chart-empty">
                 <i class="fas fa-chart-area"></i>
                 <p>No spending data available</p>
               </div>
@@ -135,14 +139,14 @@
               <div *ngIf="isLoading" class="chart-loading">
                 <app-loading-spinner [size]="'medium'" [message]="'Loading chart...'"></app-loading-spinner>
               </div>
-              <div *ngIf="!isLoading && incomeChartData.length > 0" class="chart-container">
+              <div *ngIf="!isLoading && incomeChartData && incomeChartData.length > 0" class="chart-container">
                 <!-- Chart component would go here -->
                 <div class="chart-placeholder">
                   <i class="fas fa-chart-line"></i>
                   <p>Income trend chart</p>
                 </div>
               </div>
-              <div *ngIf="!isLoading && incomeChartData.length === 0" class="chart-empty">
+              <div *ngIf="!isLoading && (!incomeChartData || incomeChartData.length === 0)" class="chart-empty">
                 <i class="fas fa-chart-line"></i>
                 <p>No income data available</p>
               </div>
@@ -164,14 +168,14 @@
             <div *ngIf="isCategoryStatsLoading" class="chart-loading">
               <app-loading-spinner [size]="'medium'" [message]="'Loading category data...'"></app-loading-spinner>
             </div>
-            <div *ngIf="!isCategoryStatsLoading && categoryChartData.length > 0" class="chart-container">
+            <div *ngIf="!isCategoryStatsLoading && categoryChartData && categoryChartData.length > 0" class="chart-container">
               <!-- Chart component would go here -->
               <div class="chart-placeholder">
                 <i class="fas fa-chart-pie"></i>
                 <p>Category spending chart</p>
               </div>
             </div>
-            <div *ngIf="!isCategoryStatsLoading && categoryChartData.length === 0" class="chart-empty">
+            <div *ngIf="!isCategoryStatsLoading && (!categoryChartData || categoryChartData.length === 0)" class="chart-empty">
               <i class="fas fa-chart-pie"></i>
               <p>No category data available</p>
             </div>
@@ -198,14 +202,14 @@
             <app-loading-spinner [size]="'medium'" [message]="'Loading transactions...'"></app-loading-spinner>
           </div>
           
-          <div *ngIf="!isRecentTransactionsLoading && recentTransactions.length > 0" class="transactions-list">
+          <div *ngIf="!isRecentTransactionsLoading && recentTransactions && recentTransactions.length > 0" class="transactions-list">
             <div *ngFor="let transaction of recentTransactions" class="transaction-item">
               <div class="transaction-icon">
                 <i class="fas fa-credit-card"></i>
               </div>
               <div class="transaction-details">
                 <div class="transaction-title">{{ transaction.title }}</div>
-                <div class="transaction-category">{{ getCategoryName(transaction.categoryId) }}</div>
+                <div class="transaction-category">{{ transaction.categoryId ? getCategoryName(transaction.categoryId) : 'Unknown' }}</div>
                 <div class="transaction-date">{{ transaction.date | date:'shortDate' }}</div>
               </div>
               <div class="transaction-amount" [class.negative]="transaction.type === 'expense'" [class.positive]="transaction.type === 'income'">
@@ -214,7 +218,7 @@
             </div>
           </div>
           
-          <div *ngIf="!isRecentTransactionsLoading && recentTransactions.length === 0" class="transactions-empty">
+          <div *ngIf="!isRecentTransactionsLoading && (!recentTransactions || recentTransactions.length === 0)" class="transactions-empty">
             <i class="fas fa-receipt"></i>
             <p>No recent transactions</p>
             <button class="btn btn-primary" routerLink="/financial/transactions/new">

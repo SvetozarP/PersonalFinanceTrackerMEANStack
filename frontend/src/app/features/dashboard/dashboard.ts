@@ -1,6 +1,6 @@
 import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import { RouterLink, RouterLinkActive, RouterModule } from '@angular/router';
 import { Subject, takeUntil, combineLatest } from 'rxjs';
 import { FinancialDashboard, CategoryStats, Transaction } from '../../core/models/financial.model';
 import { DashboardService } from '../../core/services/dashboard.service';
@@ -8,6 +8,8 @@ import { FinancialService } from '../../core/services/financial.service';
 import { CategoryService } from '../../core/services/category.service';
 import { TransactionService } from '../../core/services/transaction.service';
 import { LoadingSpinnerComponent } from '../../shared/components/loading-spinner/loading-spinner';
+import { AuthService } from '../../features/auth/services/auth.service';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-dashboard',
@@ -15,7 +17,9 @@ import { LoadingSpinnerComponent } from '../../shared/components/loading-spinner
   imports: [
     CommonModule,
     RouterModule,
-    LoadingSpinnerComponent
+    LoadingSpinnerComponent,
+    RouterLink,
+    RouterModule,
   ],
   templateUrl: './dashboard.html',
   styleUrls: ['./dashboard.css']
@@ -26,6 +30,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private financialService = inject(FinancialService);
   private categoryService = inject(CategoryService);
   private transactionService = inject(TransactionService);
+  private authService = inject(AuthService);
+  private router = inject(Router);
 
   // Component state
   private destroy$ = new Subject<void>();
@@ -191,5 +197,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   get isDataLoaded(): boolean {
     return !this.isLoading && !this.error && this.dashboardData !== null;
+  }
+
+  logout(): void {
+    this.authService.logout();
+    this.router.navigate(['/auth/login']);
   }
 }
