@@ -5,6 +5,7 @@ import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { Subject, takeUntil, switchMap, of } from 'rxjs';
 import { Category, CategoryStats, QueryOptions } from '../../../../core/models/financial.model';
 import { CategoryService } from '../../../../core/services/category.service';
+import { LoadingSpinnerComponent } from '../../../../shared/components/loading-spinner/loading-spinner';
 
 @Component({
   selector: 'app-category-list',
@@ -13,7 +14,8 @@ import { CategoryService } from '../../../../core/services/category.service';
     CommonModule,
     RouterModule,
     FormsModule,
-    ReactiveFormsModule
+    ReactiveFormsModule,
+    LoadingSpinnerComponent
   ],
   templateUrl: './category-list.html',
   styleUrls: ['./category-list.scss']
@@ -25,7 +27,15 @@ export class CategoryListComponent implements OnInit, OnDestroy {
   categories: Category[] = [];
   categoryTree: Category[] = [];
   stats: CategoryStats | null = null;
-  isLoading = false;
+  
+  // Granular loading states
+  isCategoriesLoading = false;
+  isStatsLoading = false;
+  isTreeLoading = false;
+  isFiltering = false;
+  isDeleting = false;
+  isExporting = false;
+  
   error: string | null = null;
   
   // Pagination
@@ -62,7 +72,7 @@ export class CategoryListComponent implements OnInit, OnDestroy {
   }
 
   private loadCategories(): void {
-    this.isLoading = true;
+    this.isCategoriesLoading = true;
     this.error = null;
 
     const options: QueryOptions & {
@@ -87,59 +97,66 @@ export class CategoryListComponent implements OnInit, OnDestroy {
           this.categories = categories;
           this.totalItems = categories.length; // Assuming no pagination from service
           this.totalPages = Math.ceil(this.totalItems / this.pageSize);
-          this.isLoading = false;
+          this.isCategoriesLoading = false;
         },
         error: (error) => {
           this.error = 'Failed to load categories';
-          this.isLoading = false;
+          this.isCategoriesLoading = false;
           console.error('Error loading categories:', error);
         }
       });
   }
 
   private loadCategoryStats(): void {
+    this.isStatsLoading = true;
+    
     this.categoryService.getCategoryStats()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (stats) => {
           this.stats = stats;
+          this.isStatsLoading = false;
         },
         error: (error) => {
           console.error('Error loading category stats:', error);
+          this.isStatsLoading = false;
         }
       });
   }
 
   private loadCategoryTree(): void {
+    this.isTreeLoading = true;
+    
     this.categoryService.getCategoryTree()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (tree) => {
           this.categoryTree = tree;
+          this.isTreeLoading = false;
         },
         error: (error) => {
           console.error('Error loading category tree:', error);
+          this.isTreeLoading = false;
         }
       });
   }
 
   onSearch(): void {
-    this.currentPage = 1;
-    this.loadCategories();
+    this.isFiltering = true;
+    this.currentPage = 1; // Reset to first page when searching
+    
+    // Simulate a small delay to show loading state
+    setTimeout(() => {
+      this.loadCategories();
+      this.isFiltering = false;
+    }, 300);
   }
 
   onFilterChange(): void {
-    this.currentPage = 1;
-    this.loadCategories();
+    this.onSearch();
   }
 
-  onSort(column: string): void {
-    if (this.sortBy === column) {
-      this.sortOrder = this.sortOrder === 'asc' ? 'desc' : 'asc';
-    } else {
-      this.sortBy = column;
-      this.sortOrder = 'asc';
-    }
+  onSortChange(): void {
     this.loadCategories();
   }
 
@@ -148,41 +165,148 @@ export class CategoryListComponent implements OnInit, OnDestroy {
     this.loadCategories();
   }
 
+  onPageSizeChange(pageSize: number): void {
+    this.pageSize = pageSize;
+    this.currentPage = 1;
+    this.loadCategories();
+  }
+
   onViewModeChange(mode: 'list' | 'tree' | 'grid'): void {
     this.viewMode = mode;
   }
 
-  onCategoryDelete(categoryId: string): void {
-    if (confirm('Are you sure you want to delete this category? This will also affect all subcategories and transactions.')) {
+  deleteCategory(categoryId: string): void {
+    if (confirm('Are you sure you want to delete this category? This will also delete all subcategories and affect existing transactions.')) {
+      this.isDeleting = true;
+      
       this.categoryService.deleteCategory(categoryId)
         .pipe(takeUntil(this.destroy$))
         .subscribe({
           next: () => {
-            this.loadCategories();
+            // Remove from local arrays
+            this.categories = this.categories.filter(c => c._id !== categoryId);
+            this.totalItems--;
+            this.totalPages = Math.ceil(this.totalItems / this.pageSize);
+            
+            // Reload tree and stats
             this.loadCategoryTree();
             this.loadCategoryStats();
+            
+            // If current page is now empty and not the first page, go to previous page
+            if (this.categories.length === 0 && this.currentPage > 1) {
+              this.currentPage--;
+            }
+            
+            this.isDeleting = false;
           },
           error: (error) => {
-            console.error('Error deleting category:', error);
             this.error = 'Failed to delete category';
+            this.isDeleting = false;
+            console.error('Error deleting category:', error);
           }
         });
     }
   }
 
-  onCategoryToggleActive(categoryId: string, currentStatus: boolean): void {
-    this.categoryService.updateCategory(categoryId, { isActive: !currentStatus })
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: () => {
-          this.loadCategories();
-          this.loadCategoryStats();
-        },
-        error: (error) => {
-          console.error('Error updating category status:', error);
-          this.error = 'Failed to update category status';
-        }
-      });
+  exportCategories(): void {
+    this.isExporting = true;
+    
+    // Simulate export process
+    setTimeout(() => {
+      // This would trigger actual export logic
+      console.log('Exporting categories...');
+      this.isExporting = false;
+    }, 2000);
+  }
+
+  clearFilters(): void {
+    this.searchTerm = '';
+    this.selectedLevel = '';
+    this.showActiveOnly = true;
+    this.showSystemCategories = false;
+    this.currentPage = 1;
+    this.onSearch();
+  }
+
+  // Helper methods
+  getCategoryIcon(category: Category): string {
+    if (category.icon) return category.icon;
+    
+    // Default icons based on category type or level
+    switch (category.level) {
+      case 0: return '🏠'; // Root categories
+      case 1: return '📁'; // Main categories
+      case 2: return '��'; // Subcategories
+      default: return '📄'; // Deep subcategories
+    }
+  }
+
+  getCategoryLevelClass(level: number): string {
+    return `level-${level}`;
+  }
+
+  getCategoryStatusClass(category: Category): string {
+    if (!category.isActive) return 'inactive';
+    if (category.isSystem) return 'system';
+    return 'active';
+  }
+
+  formatCurrency(amount: number, currency: string = 'USD'): string {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: currency
+    }).format(amount);
+  }
+
+  formatPercentage(value: number, total: number): string {
+    if (total === 0) return '0%';
+    const percentage = (value / total) * 100;
+    return `${percentage.toFixed(1)}%`;
+  }
+
+  // Computed properties for loading states
+  get isLoading(): boolean {
+    return this.isCategoriesLoading || this.isStatsLoading || this.isTreeLoading;
+  }
+
+  get isAnyActionLoading(): boolean {
+    return this.isFiltering || this.isDeleting || this.isExporting;
+  }
+
+  get hasCategories(): boolean {
+    return this.categories.length > 0;
+  }
+
+  get hasStats(): boolean {
+    return this.stats !== null;
+  }
+
+  get hasTree(): boolean {
+    return this.categoryTree.length > 0;
+  }
+
+  get showPagination(): boolean {
+    return this.totalPages > 1;
+  }
+
+  get pageNumbers(): number[] {
+    const pages: number[] = [];
+    const maxVisiblePages = 5;
+    
+    if (this.totalPages <= maxVisiblePages) {
+      for (let i = 1; i <= this.totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      const start = Math.max(1, this.currentPage - Math.floor(maxVisiblePages / 2));
+      const end = Math.min(this.totalPages, start + maxVisiblePages - 1);
+      
+      for (let i = start; i <= end; i++) {
+        pages.push(i);
+      }
+    }
+    
+    return pages;
   }
 
   // Pagination helper methods
@@ -194,98 +318,154 @@ export class CategoryListComponent implements OnInit, OnDestroy {
     return Math.min(this.currentPage * this.pageSize, this.totalItems);
   }
 
-  // Helper methods for template
-  getCategoryIcon(category: Category): string {
-    if (category.icon) return category.icon;
-    
-    // Default icons based on category level or name
-    if (category.level === 0) return '��';
-    if (category.level === 1) return '��';
-    if (category.level === 2) return '📋';
-    return '🏷️';
+  // Tree view helper methods
+  getRootCategories(): Category[] {
+    return this.categoryTree.filter(cat => cat.level === 0);
   }
 
-  getCategoryColor(category: Category): string {
-    if (category.color) return category.color;
-    
-    // Default colors based on level
-    const colors = ['#667eea', '#764ba2', '#f093fb', '#f5576c', '#4facfe', '#00f2fe'];
-    return colors[category.level % colors.length];
-  }
-
-  getCategoryPath(category: Category): string {
-    if (!category.path || category.path.length === 0) return category.name;
-    return category.path.join(' > ') + ' > ' + category.name;
-  }
-
-  getCategoryLevelIndent(level: number): string {
-    return `${level * 20}px`;
-  }
-
-  getCategoryStatusClass(isActive: boolean): string {
-    return isActive ? 'status-active' : 'status-inactive';
-  }
-
-  getCategoryTypeClass(isSystem: boolean): string {
-    return isSystem ? 'type-system' : 'type-custom';
-  }
-
-  formatDate(date: Date): string {
-    return new Date(date).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
-  }
-
-  clearFilters(): void {
-    this.searchTerm = '';
-    this.selectedLevel = '';
-    this.showActiveOnly = true;
-    this.showSystemCategories = false;
-    this.currentPage = 1;
-    this.loadCategories();
-  }
-
-  // Tree view methods
-  getChildCategories(parentId?: string): Category[] {
-    if (!parentId) {
-      return this.categoryTree.filter(cat => !cat.parentId);
-    }
+  getSubcategories(parentId: string): Category[] {
     return this.categoryTree.filter(cat => cat.parentId === parentId);
   }
 
-  hasChildren(categoryId: string): boolean {
+  hasSubcategories(categoryId: string): boolean {
     return this.categoryTree.some(cat => cat.parentId === categoryId);
   }
 
-  toggleCategoryExpansion(categoryId: string): void {
-    // This would be implemented with a separate expansion state tracking
-    // For now, we'll show all categories
-  }
-
-  // Grid view methods
-  getGridCategories(): Category[][] {
-    const grid: Category[][] = [];
-    const itemsPerRow = 3;
-    
-    for (let i = 0; i < this.categories.length; i += itemsPerRow) {
-      grid.push(this.categories.slice(i, i + itemsPerRow));
-    }
-    
-    return grid;
-  }
-
   // Stats helper methods
-  getActiveCategoriesCount(): number {
+  getTotalCategories(): number {
+    return this.stats?.totalCategories || 0;
+  }
+
+  getActiveCategories(): number {
     return this.stats?.activeCategories || 0;
   }
 
-  getTotalCategoriesCount(): number {
-    return this.stats?.totalCategories || 0;
+  getTopLevelCategories(): number {
+    return this.stats?.categoriesByLevel?.[0] || 0;
   }
 
   getTopCategories(): any[] {
     return this.stats?.topCategories || [];
   }
+
+    // Additional methods needed for the updated template
+    getTotalCategoriesCount(): number {
+      return this.stats?.totalCategories || 0;
+    }
+  
+    getActiveCategoriesCount(): number {
+      return this.stats?.activeCategories || 0;
+    }
+  
+    getCategoryColor(category: Category): string {
+      return category.color || '#667eea';
+    }
+  
+    getCategoryPath(category: Category): string {
+      if (category.path && Array.isArray(category.path) && category.path.length > 0) {
+        return category.path.join(' > ') + ' > ' + category.name;
+      }
+      return category.name;
+    }
+  
+    getCategoryTypeClass(isSystem: boolean): string {
+      return isSystem ? 'type-system' : 'type-custom';
+    }
+  
+    formatDate(date: Date): string {
+      return new Date(date).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
+    }
+  
+    // Tree view helper methods
+    getChildCategories(parentId?: string): Category[] {
+      if (!parentId) {
+        return this.categories.filter(cat => cat.level === 0);
+      }
+      return this.categories.filter(cat => cat.parentId === parentId);
+    }
+  
+    hasChildren(categoryId: string): boolean {
+      return this.categories.some(cat => cat.parentId === categoryId);
+    }
+  
+    getCategoryLevelIndent(level: number): string {
+      return `${level * 20}px`;
+    }
+  
+    toggleCategoryExpansion(categoryId: string): void {
+      // This would implement expand/collapse functionality
+      console.log('Toggle expansion for category:', categoryId);
+    }
+  
+    // Grid view helper methods
+    getGridCategories(): Category[][] {
+      const itemsPerRow = 3;
+      const rows: Category[][] = [];
+      
+      for (let i = 0; i < this.categories.length; i += itemsPerRow) {
+        rows.push(this.categories.slice(i, i + itemsPerRow));
+      }
+      
+      return rows;
+    }
+  
+    // Category management methods
+    onCategoryToggleActive(categoryId: string, currentStatus: boolean): void {
+      this.isDeleting = true; // Reuse loading state
+      
+      this.categoryService.updateCategory(categoryId, { isActive: !currentStatus })
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: () => {
+            // Update local state
+            const category = this.categories.find(c => c._id === categoryId);
+            if (category) {
+              category.isActive = !currentStatus;
+            }
+            this.isDeleting = false;
+          },
+          error: (error) => {
+            this.error = 'Failed to update category status';
+            this.isDeleting = false;
+            console.error('Error updating category status:', error);
+          }
+        });
+    }
+  
+    onCategoryDelete(categoryId: string): void {
+      if (confirm('Are you sure you want to delete this category? This will also delete all subcategories and affect existing transactions.')) {
+        this.isDeleting = true;
+        
+        this.categoryService.deleteCategory(categoryId)
+          .pipe(takeUntil(this.destroy$))
+          .subscribe({
+            next: () => {
+              // Remove from local arrays
+              this.categories = this.categories.filter(c => c._id !== categoryId);
+              this.totalItems--;
+              this.totalPages = Math.ceil(this.totalItems / this.pageSize);
+              
+              // Reload tree and stats
+              this.loadCategoryTree();
+              this.loadCategoryStats();
+              
+              // If current page is now empty and not the first page, go to previous page
+              if (this.categories.length === 0 && this.currentPage > 1) {
+                this.currentPage--;
+              }
+              
+              this.isDeleting = false;
+            },
+            error: (error) => {
+              this.error = 'Failed to delete category';
+              this.isDeleting = false;
+              console.error('Error deleting category:', error);
+            }
+          });
+      }
+    }
 }
