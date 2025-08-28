@@ -110,9 +110,19 @@ export class DashboardComponent implements OnInit, OnDestroy {
       // Prepare category data from top categories
       this.categoryChartData = this.dashboardData.topCategories?.map(item => ({
         category: item.name,
-        amount: item.amount,
+        amount: item.totalAmount || item.amount || 0,
         percentage: item.percentage
       })) || [];
+    }
+  }
+
+  private updateCategoryChartData(): void {
+    if (this.categoryStats?.topCategories) {
+      this.categoryChartData = this.categoryStats.topCategories.map(item => ({
+        category: item.name,
+        amount: item.totalAmount,
+        percentage: item.percentage
+      }));
     }
   }
 
@@ -145,7 +155,30 @@ export class DashboardComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (stats) => {
           this.categoryStats = stats;
-          this.isCategoryStatsLoading = false;
+          // Update the chart data when category stats are refreshed
+          this.updateCategoryChartData();
+          
+          // Also try to refresh the dashboard data to get updated topCategories
+          this.financialService.getFinancialDashboard()
+            .pipe(takeUntil(this.destroy$))
+            .subscribe({
+              next: (dashboardData) => {
+                this.dashboardData = dashboardData;
+                // Update category chart data from dashboard data if available
+                if (dashboardData.topCategories) {
+                  this.categoryChartData = dashboardData.topCategories.map(item => ({
+                    category: item.name || item.category || 'Unknown',
+                    amount: item.totalAmount || item.amount || 0,
+                    percentage: item.percentage || 0
+                  }));
+                }
+                this.isCategoryStatsLoading = false;
+              },
+              error: (error) => {
+                console.error('Failed to refresh dashboard data:', error);
+                this.isCategoryStatsLoading = false;
+              }
+            });
         },
         error: (error) => {
           this.error = 'Failed to refresh category stats';
