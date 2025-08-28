@@ -44,7 +44,7 @@ export class TransactionListComponent implements OnInit, OnDestroy {
   currentPage = 1;
   pageSize = 20;
   totalItems = 0;
-  totalPages = 0;
+  totalPages = 1;
   
   // Filtering
   searchTerm = '';
@@ -184,8 +184,8 @@ export class TransactionListComponent implements OnInit, OnDestroy {
             // Remove from local arrays
             this.transactions = this.transactions.filter(t => t._id !== transactionId);
             this.filteredTransactions = this.filteredTransactions.filter(t => t._id !== transactionId);
-            this.totalItems--;
-            this.totalPages = Math.ceil(this.totalItems / this.pageSize);
+            this.totalItems = Math.max(0, this.totalItems - 1);
+            this.totalPages = Math.max(1, Math.ceil(this.totalItems / this.pageSize));
             
             // If current page is now empty and not the first page, go to previous page
             if (this.transactions.length === 0 && this.currentPage > 1) {
