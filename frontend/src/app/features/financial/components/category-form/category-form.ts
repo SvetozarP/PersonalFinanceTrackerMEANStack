@@ -58,7 +58,7 @@ export class CategoryFormComponent implements OnInit, OnDestroy {
   ];
 
   iconOptions = [
-    '🏠', '🏢', '🏪', '🏥', '🏦', '🏨', '🏫', '🏬', '🏭', '🏯', '🏰',
+    '🏷️', '🏠', '🏢', '🏪', '🏥', '🏦', '🏨', '🏫', '🏬', '🏭', '🏯', '🏰',
     '💼', '📱', '💻', '🎮', '🎬', '🎵', '📚', '✈️', '🚗', '🚌', '🚲',
     '🍕', '🍔', '🍽️', '🍰', '🍦', '☕', '🍺', '🍷', '💊', '🩺', '💉',
     '👕', '👖', '👗', '👠', '👟', '👜', '💄', '💍', '💎', '🎁', '🎈'
@@ -66,6 +66,7 @@ export class CategoryFormComponent implements OnInit, OnDestroy {
 
   // Icon descriptions for tooltips
   iconDescriptions: { [key: string]: string } = {
+    '🏷️': 'Label/Tag',
     '🏠': 'Home',
     '🏢': 'Office Building',
     '🏪': 'Convenience Store',
