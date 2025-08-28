@@ -373,10 +373,10 @@ export class BudgetManagementComponent implements OnInit, OnDestroy {
 
   getStatusIcon(status: 'under' | 'at' | 'over'): string {
     switch (status) {
-      case 'under': return 'fas fa-check-circle';
-      case 'at': return 'fas fa-exclamation-circle';
-      case 'over': return 'fas fa-times-circle';
-      default: return 'fas fa-circle';
+      case 'under': return 'fa-check-circle';
+      case 'at': return 'fa-exclamation-circle';
+      case 'over': return 'fa-times-circle';
+      default: return 'fa-circle';
     }
   }
 

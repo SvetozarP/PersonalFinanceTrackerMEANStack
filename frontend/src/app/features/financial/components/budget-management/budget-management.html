@@ -211,14 +211,17 @@
             </div>
   
             <div class="budget-actions">
-              <button class="btn btn-sm btn-outline-primary" (click)="editBudget(budget)">
+              <button class="btn btn-sm btn-outline-primary" (click)="editBudget(budget)" title="Edit Budget">
                 <i class="fas fa-edit"></i>
+                Edit
               </button>
-              <button class="btn btn-sm btn-outline-warning" (click)="toggleBudgetStatus(budget)">
-                <i class="fas" [class.fa-toggle-on]="budget.isActive" [class.fa-toggle-off]="!budget.isActive"></i>
+              <button class="btn btn-sm btn-outline-warning" (click)="toggleBudgetStatus(budget)" title="Toggle Budget Status">
+                <i class="fas" [class.fa-check-circle]="budget.isActive" [class.fa-times-circle]="!budget.isActive"></i>
+                {{ budget.isActive ? 'Deactivate' : 'Activate' }}
               </button>
-              <button class="btn btn-sm btn-outline-danger" (click)="deleteBudget(budget._id)">
+              <button class="btn btn-sm btn-outline-danger" (click)="deleteBudget(budget._id)" title="Delete Budget">
                 <i class="fas fa-trash"></i>
+                Delete
               </button>
             </div>
           </div>
@@ -251,7 +254,7 @@
             </div>
   
             <div class="progress-status">
-              <i [class]="getStatusIcon(getBudgetProgress(budget.categoryId)?.status || 'under')"
+              <i class="fas" [class]="getStatusIcon(getBudgetProgress(budget.categoryId)?.status || 'under')"
                  [style.color]="getStatusColor(getBudgetProgress(budget.categoryId)?.status || 'under')">
               </i>
               <span class="status-text">
