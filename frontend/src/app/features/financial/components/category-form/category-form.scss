@@ -107,23 +107,33 @@
             }
           }
   
-          .form-row {
+                    .form-row {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
             gap: 24px;
             margin-bottom: 24px;
-  
+            align-items: start;
+
             &:last-child {
               margin-bottom: 0;
             }
-  
+
             @media (max-width: 768px) {
               grid-template-columns: 1fr;
               gap: 20px;
             }
+
+            // Ensure form groups don't overlap
+            .form-group {
+              min-width: 0; // Prevent grid items from overflowing
+              width: 100%;
+            }
           }
   
           .form-group {
+            position: relative; // Ensure proper stacking context
+            z-index: 1; // Prevent overlapping issues
+            
             label {
               display: block;
               margin-bottom: 8px;
@@ -132,7 +142,7 @@
               font-size: 14px;
             }
   
-            .form-control {
+                        .form-control {
               width: 100%;
               padding: 12px 16px;
               border: 2px solid #e9ecef;
@@ -140,23 +150,25 @@
               font-size: 14px;
               transition: all 0.3s ease;
               background-color: white;
-  
+              box-sizing: border-box; // Ensure padding doesn't affect width
+              position: relative; // Ensure proper stacking context
+
               &:focus {
                 outline: none;
                 border-color: #667eea;
                 box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
               }
-  
+
               &:disabled {
                 background-color: #f8f9fa;
                 color: #6c757d;
                 cursor: not-allowed;
               }
-  
+
               &.is-invalid {
                 border-color: #dc3545;
                 box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.1);
-  
+
                 &:focus {
                   border-color: #dc3545;
                   box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.1);
@@ -167,6 +179,8 @@
             textarea.form-control {
               resize: vertical;
               min-height: 80px;
+              overflow: auto; // Ensure proper scrolling
+              word-wrap: break-word; // Prevent text overflow
             }
   
             .invalid-feedback {
@@ -192,7 +206,7 @@
             gap: 16px;
             margin-bottom: 16px;
   
-            .color-preview {
+                        .color-preview {
               width: 60px;
               height: 60px;
               border-radius: 12px;
@@ -201,15 +215,16 @@
               justify-content: center;
               border: 3px solid #e9ecef;
               transition: all 0.3s ease;
-  
+
               &:hover {
                 transform: scale(1.05);
                 box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
               }
-  
+
               .preview-icon {
                 font-size: 24px;
                 filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
+                font-family: 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', 'Android Emoji', 'EmojiSymbols', 'EmojiOne Mozilla', 'Twemoji Mozilla', 'Segoe UI Symbol', Arial, sans-serif;
               }
             }
   
@@ -304,6 +319,7 @@
               .preview-icon {
                 font-size: 24px;
                 filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
+                font-family: 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', 'Android Emoji', 'EmojiSymbols', 'EmojiOne Mozilla', 'Twemoji Mozilla', 'Segoe UI Symbol', Arial, sans-serif;
               }
             }
   
@@ -334,6 +350,28 @@
                   font-size: 18px;
                   transition: all 0.3s ease;
                   position: relative;
+                  font-family: 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', 'Android Emoji', 'EmojiSymbols', 'EmojiOne Mozilla', 'Twemoji Mozilla', 'Segoe UI Symbol', Arial, sans-serif;
+
+                  // Custom tooltip styling
+                  &:hover::after {
+                    content: attr(title);
+                    position: absolute;
+                    bottom: 100%;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    background: rgba(0, 0, 0, 0.9);
+                    color: white;
+                    padding: 6px 10px;
+                    border-radius: 6px;
+                    font-size: 12px;
+                    white-space: nowrap;
+                    z-index: 1000;
+                    margin-bottom: 8px;
+                    pointer-events: none;
+                    opacity: 0;
+                    animation: tooltipFadeIn 0.2s ease-in-out forwards;
+                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+                  }
   
                   &:hover {
                     border-color: #667eea;
@@ -432,6 +470,7 @@
                 .preview-icon {
                   font-size: 32px;
                   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+                  font-family: 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', 'Android Emoji', 'EmojiSymbols', 'EmojiOne Mozilla', 'Twemoji Mozilla', 'Segoe UI Symbol', Arial, sans-serif;
                 }
   
                 .preview-details {
@@ -609,6 +648,17 @@
   @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
+  }
+
+  @keyframes tooltipFadeIn {
+    0% { 
+      opacity: 0; 
+      transform: translateX(-50%) translateY(5px);
+    }
+    100% { 
+      opacity: 1; 
+      transform: translateX(-50%) translateY(0);
+    }
   }
   
   // Utility Classes

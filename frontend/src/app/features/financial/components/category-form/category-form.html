@@ -46,13 +46,13 @@
               <input
                 type="text"
                 id="name"
-                [formControlName]="formFields.name"
+                formControlName="name"
                 class="form-control"
-                [class.is-invalid]="isFieldInvalid(formFields.name)"
+                [class.is-invalid]="isFieldInvalid('name')"
                 placeholder="Enter category name"
               />
-              <div *ngIf="isFieldInvalid(formFields.name)" class="invalid-feedback">
-                {{ getFieldError(formFields.name) }}
+              <div *ngIf="isFieldInvalid('name')" class="invalid-feedback">
+                {{ getFieldError('name') }}
               </div>
             </div>
 
@@ -60,7 +60,7 @@
               <label for="description">Description</label>
               <textarea
                 id="description"
-                [formControlName]="formFields.description"
+                formControlName="description"
                 class="form-control"
                 rows="3"
                 placeholder="Optional description for this category"
@@ -82,14 +82,14 @@
               <label for="color">Color *</label>
               <div class="color-picker">
                 <div class="color-preview" [ngStyle]="getPreviewStyle()">
-                  <span class="preview-icon">{{ getFieldControl(formFields.icon)?.value || '🏷️' }}</span>
+                  <span class="preview-icon" [title]="getIconDescription(getFieldControl('icon')?.value || '🏷️')">{{ getFieldControl('icon')?.value || '🏷️' }}</span>
                 </div>
                 <input
                   type="color"
                   id="color"
-                  [formControlName]="formFields.color"
+                  formControlName="color"
                   class="color-input"
-                  [class.is-invalid]="isFieldInvalid(formFields.color)"
+                  [class.is-invalid]="isFieldInvalid('color')"
                 />
               </div>
               <div class="color-options">
@@ -100,14 +100,14 @@
                     type="button"
                     class="color-option"
                     [style.background-color]="color"
-                    [class.selected]="getFieldControl(formFields.color)?.value === color"
+                    [class.selected]="getFieldControl('color')?.value === color"
                     (click)="onColorSelect(color)"
                     [attr.aria-label]="'Select color ' + color"
                   ></button>
                 </div>
               </div>
-              <div *ngIf="isFieldInvalid(formFields.color)" class="invalid-feedback">
-                {{ getFieldError(formFields.color) }}
+              <div *ngIf="isFieldInvalid('color')" class="invalid-feedback">
+                {{ getFieldError('color') }}
               </div>
             </div>
 
@@ -115,7 +115,7 @@
               <label for="icon">Icon *</label>
               <div class="icon-picker">
                 <div class="icon-preview" [ngStyle]="getPreviewStyle()">
-                  <span class="preview-icon">{{ getFieldControl(formFields.icon)?.value || '🏷️' }}</span>
+                  <span class="preview-icon" [title]="getIconDescription(getFieldControl('icon')?.value || '🏷️')">{{ getFieldControl('icon')?.value || '🏷️' }}</span>
                 </div>
                 <div class="icon-options">
                   <div class="icon-option-label">Quick Select:</div>
@@ -124,17 +124,18 @@
                       *ngFor="let icon of iconOptions"
                       type="button"
                       class="icon-option"
-                      [class.selected]="getFieldControl(formFields.icon)?.value === icon"
+                      [class.selected]="getFieldControl('icon')?.value === icon"
                       (click)="onIconSelect(icon)"
                       [attr.aria-label]="'Select icon ' + icon"
+                      [title]="getIconDescription(icon)"
                     >
                       {{ icon }}
                     </button>
                   </div>
                 </div>
               </div>
-              <div *ngIf="isFieldInvalid(formFields.icon)" class="invalid-feedback">
-                {{ getFieldError(formFields.icon) }}
+              <div *ngIf="isFieldInvalid('icon')" class="invalid-feedback">
+                {{ getFieldError('icon') }}
               </div>
             </div>
           </div>
@@ -160,10 +161,9 @@
                 
                 <select
                   id="parentId"
-                  [formControlName]="formFields.parentId"
+                  formControlName="parentId"
                   class="form-control"
-                  (change)="onParentCategoryChange($any($event.target).value)"
-                  [disabled]="isParentCategoriesLoading">
+                  (change)="onParentCategoryChange($any($event.target).value)">
                   <option value="">No Parent (Top Level)</option>
                   <option *ngFor="let category of getParentCategories()" [value]="category._id">
                     {{ getCategoryPath(category._id) }}
@@ -190,7 +190,7 @@
               <label class="checkbox-label">
                 <input
                   type="checkbox"
-                  [formControlName]="formFields.isActive"
+                  formControlName="isActive"
                   class="form-checkbox"
                 />
                 <span class="checkmark"></span>
@@ -213,16 +213,16 @@
           <div class="preview-container">
             <div class="category-preview" [ngStyle]="getPreviewStyle()">
               <div class="preview-content">
-                <span class="preview-icon">{{ getFieldControl(formFields.icon)?.value || '🏷️' }}</span>
+                <span class="preview-icon" [title]="getIconDescription(getFieldControl('icon')?.value || '🏷️')">{{ getFieldControl('icon')?.value || '🏷️' }}</span>
                 <div class="preview-details">
-                  <div class="preview-name">{{ getFieldControl(formFields.name)?.value || 'Category Name' }}</div>
-                  <div class="preview-description" *ngIf="getFieldControl(formFields.description)?.value">
-                    {{ getFieldControl(formFields.description)?.value }}
+                  <div class="preview-name">{{ getFieldControl('name')?.value || 'Category Name' }}</div>
+                  <div class="preview-description" *ngIf="getFieldControl('description')?.value">
+                    {{ getFieldControl('description')?.value }}
                   </div>
                 </div>
               </div>
               <div class="preview-badge">
-                {{ getFieldControl(formFields.parentId)?.value ? 'Subcategory' : 'Top Level' }}
+                {{ getFieldControl('parentId')?.value ? 'Subcategory' : 'Top Level' }}
               </div>
             </div>
           </div>

@@ -60,19 +60,59 @@ export class CategoryFormComponent implements OnInit, OnDestroy {
   iconOptions = [
     '🏠', '🏢', '🏪', '🏥', '🏦', '🏨', '🏫', '🏬', '🏭', '🏯', '🏰',
     '💼', '📱', '💻', '🎮', '🎬', '🎵', '📚', '✈️', '🚗', '🚌', '🚲',
-    '��', '��', '🍽️', '��', '��', '☕', '🍺', '🍷', '💊', '🩺', '💉',
+    '🍕', '🍔', '🍽️', '🍰', '🍦', '☕', '🍺', '🍷', '💊', '🩺', '💉',
     '👕', '👖', '👗', '👠', '👟', '👜', '💄', '💍', '💎', '🎁', '🎈'
   ];
 
-  // Form field references for template
-  formFields = {
-    name: 'name',
-    description: 'description',
-    color: 'color',
-    icon: 'icon',
-    parentId: 'parentId',
-    isActive: 'isActive'
+  // Icon descriptions for tooltips
+  iconDescriptions: { [key: string]: string } = {
+    '🏠': 'Home',
+    '🏢': 'Office Building',
+    '🏪': 'Convenience Store',
+    '🏥': 'Hospital',
+    '🏦': 'Bank',
+    '🏨': 'Hotel',
+    '🏫': 'School',
+    '🏬': 'Department Store',
+    '🏭': 'Factory',
+    '🏯': 'Japanese Castle',
+    '🏰': 'Castle',
+    '💼': 'Briefcase',
+    '📱': 'Mobile Phone',
+    '💻': 'Laptop',
+    '🎮': 'Game Controller',
+    '🎬': 'Film',
+    '🎵': 'Music Note',
+    '📚': 'Books',
+    '✈️': 'Airplane',
+    '🚗': 'Car',
+    '🚌': 'Bus',
+    '🚲': 'Bicycle',
+    '🍕': 'Pizza',
+    '🍔': 'Hamburger',
+    '🍽️': 'Fork and Knife',
+    '🍰': 'Cake',
+    '🍦': 'Ice Cream',
+    '☕': 'Coffee',
+    '🍺': 'Beer',
+    '🍷': 'Wine Glass',
+    '💊': 'Pill',
+    '🩺': 'Stethoscope',
+    '💉': 'Syringe',
+    '👕': 'T-Shirt',
+    '👖': 'Jeans',
+    '👗': 'Dress',
+    '👠': 'High-Heeled Shoe',
+    '👟': 'Running Shoe',
+    '👜': 'Handbag',
+    '💄': 'Lipstick',
+    '💍': 'Ring',
+    '💎': 'Diamond',
+    '🎁': 'Gift',
+    '🎈': 'Balloon'
   };
+
+
 
   ngOnInit(): void {
     this.loadParentCategories();
@@ -127,6 +167,8 @@ export class CategoryFormComponent implements OnInit, OnDestroy {
 
   private loadParentCategories(): void {
     this.isParentCategoriesLoading = true;
+    // Disable the parentId control while loading
+    this.categoryForm.get('parentId')?.disable();
 
     this.categoryService.getUserCategories()
       .pipe(takeUntil(this.destroy$))
@@ -139,10 +181,14 @@ export class CategoryFormComponent implements OnInit, OnDestroy {
             this.parentCategories = categories;
           }
           this.isParentCategoriesLoading = false;
+          // Re-enable the parentId control after loading
+          this.categoryForm.get('parentId')?.enable();
         },
         error: (error) => {
           console.error('Error loading parent categories:', error);
           this.isParentCategoriesLoading = false;
+          // Re-enable the parentId control even on error
+          this.categoryForm.get('parentId')?.enable();
         }
       });
   }
@@ -152,7 +198,7 @@ export class CategoryFormComponent implements OnInit, OnDestroy {
       name: category.name,
       description: category.description || '',
       color: category.color || '#667eea',
-      icon: category.icon || '��️',
+      icon: category.icon || '🏷️',
       parentId: category.parentId || '',
       isActive: category.isActive !== undefined ? category.isActive : true
     });
@@ -242,6 +288,8 @@ export class CategoryFormComponent implements OnInit, OnDestroy {
         isActive: true
       });
     }
+    // Ensure all controls are enabled after reset
+    this.categoryForm.enable();
   }
 
   private markFormGroupTouched(): void {
@@ -289,11 +337,15 @@ export class CategoryFormComponent implements OnInit, OnDestroy {
   }
 
   getPreviewStyle(): any {
-    const color = this.getFieldControl(this.formFields.color)?.value || '#667eea';
+    const color = this.getFieldControl('color')?.value || '#667eea';
     return {
       'background-color': color,
       'color': this.getContrastColor(color)
     };
+  }
+
+  getIconDescription(icon: string): string {
+    return this.iconDescriptions[icon] || 'Unknown Icon';
   }
 
   getContrastColor(hexColor: string): string {
