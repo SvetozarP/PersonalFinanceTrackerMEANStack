@@ -60,10 +60,57 @@ export class TransactionService {
   );
 
   // Cache
-  private transactionsCache: Transaction[] = [];
-  private statsCache: TransactionStats | null = null;
-  private recurringCache: Transaction[] = [];
+  private _transactionsCache: Transaction[] = [];
+  private _statsCache: TransactionStats | null = null;
+  private _recurringCache: Transaction[] = [];
   private cacheExpiry = 5 * 60 * 1000; // 5 minutes
+
+  // Getters with safety checks
+  private get transactionsCache(): Transaction[] {
+    if (!this._transactionsCache) {
+      this._transactionsCache = [];
+    }
+    return this._transactionsCache;
+  }
+
+  private get statsCache(): TransactionStats | null {
+    return this._statsCache;
+  }
+
+  private get recurringCache(): Transaction[] {
+    if (!this._recurringCache) {
+      this._recurringCache = [];
+    }
+    return this._recurringCache;
+  }
+
+  // Setters
+  private set transactionsCache(value: Transaction[]) {
+    this._transactionsCache = value;
+  }
+
+  private set statsCache(value: TransactionStats | null) {
+    this._statsCache = value;
+  }
+
+  private set recurringCache(value: Transaction[]) {
+    this._recurringCache = value;
+  }
+
+  /**
+   * Ensure cache is initialized
+   */
+  private ensureCacheInitialized(): void {
+    if (!this._transactionsCache) {
+      this._transactionsCache = [];
+    }
+    if (!this._statsCache) {
+      this._statsCache = null;
+    }
+    if (!this._recurringCache) {
+      this._recurringCache = [];
+    }
+  }
 
   /**
    * Get user transactions with filtering and pagination
@@ -82,8 +129,11 @@ export class TransactionService {
     maxAmount?: number;
     tags?: string[];
   } = {}): Observable<PaginatedResponse<Transaction>> {
+    // Ensure cache is initialized
+    this.ensureCacheInitialized();
+    
     // Check cache first for basic queries
-    if (this.transactionsCache.length > 0 && this.isCacheValid() && this.isBasicQuery(options)) {
+    if (this.transactionsCache && this.transactionsCache.length > 0 && this.isCacheValid() && this.isBasicQuery(options)) {
       this.updateTransactionState({
         transactions: this.transactionsCache,
         isLoading: false,
@@ -91,23 +141,23 @@ export class TransactionService {
         lastUpdated: new Date()
       });
       return of({
-        data: this.transactionsCache,
+        data: this.transactionsCache || [],
         pagination: {
           page: 1,
-          limit: this.transactionsCache.length,
-          total: this.transactionsCache.length,
+          limit: (this.transactionsCache || []).length,
+          total: (this.transactionsCache || []).length,
           totalPages: 1
         }
       });
     }
 
     // Set loading state
-    this.updateTransactionState({
-      transactions: this.transactionsCache,
-      isLoading: true,
-      error: null,
-      lastUpdated: this.transactionStateSubject.value.lastUpdated
-    });
+          this.updateTransactionState({
+        transactions: this.transactionsCache || [],
+        isLoading: true,
+        error: null,
+        lastUpdated: this.transactionStateSubject.value.lastUpdated
+      });
 
     // Build query parameters
     let params = new HttpParams();
@@ -148,12 +198,12 @@ export class TransactionService {
         }),
         catchError(error => {
           const errorMessage = this.handleError(error);
-          this.updateTransactionState({
-            transactions: this.transactionsCache,
-            isLoading: false,
-            error: errorMessage,
-            lastUpdated: this.transactionStateSubject.value.lastUpdated
-          });
+                  this.updateTransactionState({
+          transactions: this.transactionsCache || [],
+          isLoading: false,
+          error: errorMessage,
+          lastUpdated: this.transactionStateSubject.value.lastUpdated
+        });
           return throwError(() => new Error(errorMessage));
         }),
         shareReplay(1)
@@ -169,6 +219,9 @@ export class TransactionService {
     categoryId?: string;
     type?: TransactionType;
   } = {}): Observable<TransactionStats> {
+    // Ensure cache is initialized
+    this.ensureCacheInitialized();
+    
     // Check cache first
     if (this.statsCache && this.isCacheValid()) {
       this.updateTransactionState({
@@ -202,8 +255,11 @@ export class TransactionService {
    * Get recurring transactions
    */
   getRecurringTransactions(): Observable<Transaction[]> {
+    // Ensure cache is initialized
+    this.ensureCacheInitialized();
+    
     // Check cache first
-    if (this.recurringCache.length > 0 && this.isCacheValid()) {
+    if (this.recurringCache && this.recurringCache.length > 0 && this.isCacheValid()) {
       this.updateTransactionState({
         recurringTransactions: this.recurringCache,
         lastUpdated: new Date()
@@ -244,6 +300,9 @@ export class TransactionService {
       .pipe(
         map(response => response.data),
         tap(transaction => {
+          // Ensure cache is initialized
+          this.ensureCacheInitialized();
+          
           // Add to cache
           this.transactionsCache = [transaction, ...this.transactionsCache];
           this.updateTransactionState({
@@ -265,6 +324,9 @@ export class TransactionService {
       .pipe(
         map(response => response.data),
         tap(updatedTransaction => {
+          // Ensure cache is initialized
+          this.ensureCacheInitialized();
+          
           // Update cache
           this.transactionsCache = this.transactionsCache.map(t => 
             t._id === id ? updatedTransaction : t
@@ -288,6 +350,9 @@ export class TransactionService {
       .pipe(
         map(response => response.data),
         tap(() => {
+          // Ensure cache is initialized
+          this.ensureCacheInitialized();
+          
           // Remove from cache
           this.transactionsCache = this.transactionsCache.filter(t => t._id !== id);
           this.updateTransactionState({
@@ -309,6 +374,9 @@ export class TransactionService {
       .pipe(
         map(response => response.data),
         tap(newTransactions => {
+          // Ensure cache is initialized
+          this.ensureCacheInitialized();
+          
           // Add to cache
           this.transactionsCache = [...newTransactions, ...this.transactionsCache];
           this.updateTransactionState({
@@ -381,9 +449,9 @@ export class TransactionService {
    * Clear all caches
    */
   clearCache(): void {
-    this.transactionsCache = [];
-    this.statsCache = null;
-    this.recurringCache = [];
+    this._transactionsCache = [];
+    this._statsCache = null;
+    this._recurringCache = [];
     this.updateTransactionState({
       transactions: [],
       stats: null,
@@ -392,6 +460,13 @@ export class TransactionService {
       error: null,
       lastUpdated: null
     });
+  }
+
+  /**
+   * Force reinitialize cache
+   */
+  reinitializeCache(): void {
+    this.ensureCacheInitialized();
   }
 
   /**
@@ -406,7 +481,20 @@ export class TransactionService {
    */
   private updateTransactionState(partialState: Partial<TransactionState>): void {
     const currentState = this.transactionStateSubject.value;
-    this.transactionStateSubject.next({ ...currentState, ...partialState });
+    if (!currentState) {
+      // Initialize with default state if undefined
+      const defaultState: TransactionState = {
+        transactions: [],
+        stats: null,
+        recurringTransactions: [],
+        isLoading: false,
+        error: null,
+        lastUpdated: null
+      };
+      this.transactionStateSubject.next({ ...defaultState, ...partialState });
+    } else {
+      this.transactionStateSubject.next({ ...currentState, ...partialState });
+    }
   }
 
   private isCacheValid(): boolean {

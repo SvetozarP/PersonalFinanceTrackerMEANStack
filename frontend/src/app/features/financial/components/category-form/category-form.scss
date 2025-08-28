@@ -1,724 +1,473 @@
+@use '../../../../../styles/shared.scss' as *;
+
 .category-form-container {
+  padding: 24px;
+  background-color: $light-color;
+  min-height: 100vh;
+
+  // Header Section
+  .header-section {
+    @include flex-between;
+    margin-bottom: 32px;
     padding: 24px;
-    background-color: #f8f9fa;
-    min-height: 100vh;
-  
-    // Header Section
-    .header-section {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 32px;
-      padding: 24px;
-      background: white;
-      border-radius: 12px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  
-      .title-section {
-        h1 {
-          margin: 0 0 8px 0;
-          font-size: 28px;
-          font-weight: 700;
-          color: #2c3e50;
-        }
-  
-        .subtitle {
-          margin: 0;
-          color: #6c757d;
-          font-size: 16px;
-        }
+    @include card-style;
+
+    .title-section {
+      h1 {
+        margin: 0 0 8px 0;
+        font-size: 28px;
+        font-weight: 700;
+        color: $dark-color;
       }
-  
-      .actions-section {
-        .btn-secondary {
-          background: #6c757d;
-          border: none;
-          padding: 12px 24px;
-          border-radius: 8px;
-          color: white;
-          font-weight: 600;
-          transition: all 0.3s ease;
-  
-          &:hover {
-            background: #5a6268;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3);
-          }
-  
-          i {
-            margin-right: 8px;
-          }
-        }
+
+      .subtitle {
+        margin: 0;
+        color: $secondary-color;
+        font-size: 16px;
       }
     }
-  
-    // Alert Styles
-    .alert {
-      padding: 16px 20px;
-      border-radius: 8px;
-      margin-bottom: 24px;
-      display: flex;
-      align-items: center;
-      font-weight: 500;
-  
-      &.alert-danger {
-        background-color: #f8d7da;
-        color: #721c24;
-        border: 1px solid #f5c6cb;
-  
+
+    .actions-section .btn-secondary {
+      @extend .btn-secondary;
+    }
+  }
+
+  // Category Form
+  .category-form {
+    @include card-style;
+
+    .form-sections .form-section {
+      margin-bottom: 40px;
+      padding-bottom: 32px;
+      border-bottom: 1px solid #e9ecef;
+
+      &:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+        padding-bottom: 0;
+      }
+
+      .section-title {
+        @include flex-center;
+        margin: 0 0 24px 0;
+        font-size: 20px;
+        font-weight: 600;
+        color: $dark-color;
+        justify-content: flex-start;
+
         i {
           margin-right: 12px;
-          color: #dc3545;
+          color: $primary-color;
+          font-size: 18px;
+        }
+      }
+
+      .form-row {
+        @include responsive-grid(300px);
+      }
+
+      // Color Picker
+      .color-picker {
+        @include flex-center;
+        gap: 16px;
+        margin-bottom: 16px;
+        justify-content: flex-start;
+
+        .color-preview {
+          width: 60px;
+          height: 60px;
+          border-radius: $border-radius-lg;
+          @include flex-center;
+          border: 3px solid #e9ecef;
+          transition: $transition;
+
+          &:hover {
+            transform: scale(1.05);
+            box-shadow: $box-shadow-lg;
+          }
+
+          .preview-icon {
+            font-size: 24px;
+            filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
+            font-family: 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', 'Android Emoji', 'EmojiSymbols', 'EmojiOne Mozilla', 'Twemoji Mozilla', 'Segoe UI Symbol', Arial, sans-serif;
+          }
+        }
+
+        .color-input {
+          width: 60px;
+          height: 60px;
+          border: none;
+          border-radius: $border-radius;
+          cursor: pointer;
+          padding: 0;
+          background: none;
+
+          &::-webkit-color-swatch-wrapper {
+            padding: 0;
+            border-radius: $border-radius;
+          }
+
+          &::-webkit-color-swatch {
+            border: none;
+            border-radius: $border-radius;
+          }
+        }
+      }
+
+      .color-options {
+        .color-option-label {
+          font-weight: 600;
+          color: #495057;
+          margin-bottom: 12px;
+          font-size: 14px;
+        }
+
+        .color-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(32px, 1fr));
+          gap: 8px;
+          max-width: 320px;
+
+          .color-option {
+            width: 32px;
+            height: 32px;
+            border: 2px solid #e9ecef;
+            border-radius: $border-radius-sm;
+            cursor: pointer;
+            transition: $transition;
+            position: relative;
+
+            &:hover {
+              transform: scale(1.1);
+              box-shadow: $box-shadow;
+            }
+
+            &.selected {
+              border-color: $dark-color;
+              transform: scale(1.1);
+              box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.3);
+
+              &::after {
+                content: '✓';
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                color: white;
+                font-weight: bold;
+                font-size: 14px;
+                text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+              }
+            }
+          }
+        }
+      }
+
+      // Icon Picker
+      .icon-picker {
+        .icon-preview {
+          width: 60px;
+          height: 60px;
+          border-radius: $border-radius-lg;
+          @include flex-center;
+          border: 3px solid #e9ecef;
+          margin-bottom: 16px;
+          transition: $transition;
+
+          &:hover {
+            transform: scale(1.05);
+            box-shadow: $box-shadow-lg;
+          }
+
+          .preview-icon {
+            font-size: 24px;
+            filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
+            font-family: 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', 'Android Emoji', 'EmojiSymbols', 'EmojiOne Mozilla', 'Twemoji Mozilla', 'Segoe UI Symbol', Arial, sans-serif;
+          }
+        }
+
+        .icon-options {
+          .icon-option-label {
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 12px;
+            font-size: 14px;
+          }
+
+          .icon-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
+            gap: 8px;
+            max-width: 400px;
+
+            .icon-option {
+              width: 40px;
+              height: 40px;
+              border: 2px solid #e9ecef;
+              border-radius: $border-radius;
+              background: white;
+              cursor: pointer;
+              @include flex-center;
+              font-size: 18px;
+              transition: $transition;
+              position: relative;
+              font-family: 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', 'Android Emoji', 'EmojiSymbols', 'EmojiOne Mozilla', 'Twemoji Mozilla', 'Segoe UI Symbol', Arial, sans-serif;
+
+              // Custom tooltip styling
+              &:hover::after {
+                content: attr(title);
+                position: absolute;
+                bottom: 100%;
+                left: 50%;
+                transform: translateX(-50%);
+                background: rgba(0, 0, 0, 0.9);
+                color: white;
+                padding: 6px 10px;
+                border-radius: $border-radius-sm;
+                font-size: 12px;
+                white-space: nowrap;
+                z-index: 1000;
+                margin-bottom: 8px;
+                pointer-events: none;
+                opacity: 0;
+                animation: tooltipFadeIn 0.2s ease-in-out forwards;
+                box-shadow: $box-shadow;
+              }
+
+              &:hover {
+                border-color: $primary-color;
+                background-color: $light-color;
+                transform: scale(1.1);
+              }
+
+              &.selected {
+                border-color: $primary-color;
+                background-color: $primary-color;
+                color: white;
+                transform: scale(1.1);
+                box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.3);
+              }
+            }
+          }
+        }
+      }
+
+      // Checkbox Styling
+      .checkbox-label {
+        @include flex-center;
+        cursor: pointer;
+        font-weight: 500;
+        color: #495057;
+        user-select: none;
+        justify-content: flex-start;
+
+        .form-checkbox {
+          position: absolute;
+          opacity: 0;
+          cursor: pointer;
+          height: 0;
+          width: 0;
+        }
+
+        .checkmark {
+          height: 20px;
+          width: 20px;
+          background-color: white;
+          border: 2px solid #e9ecef;
+          border-radius: $border-radius-sm;
+          margin-right: 12px;
+          position: relative;
+          transition: $transition;
+
+          &:after {
+            content: '';
+            position: absolute;
+            display: none;
+            left: 6px;
+            top: 2px;
+            width: 4px;
+            height: 8px;
+            border: solid white;
+            border-width: 0 2px 2px 0;
+            transform: rotate(45deg);
+          }
+        }
+
+        .form-checkbox:checked ~ .checkmark {
+          background-color: $primary-color;
+          border-color: $primary-color;
+
+          &:after { display: block; }
+        }
+
+        .form-checkbox:focus ~ .checkmark {
+          box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+      }
+
+      // Preview Section
+      .preview-container .category-preview {
+        border-radius: $border-radius-lg;
+        padding: 20px;
+        @include flex-between;
+        box-shadow: $box-shadow;
+        transition: $transition;
+
+        &:hover {
+          transform: translateY(-2px);
+          box-shadow: $box-shadow-xl;
+        }
+
+        .preview-content {
+          @include flex-center;
+          gap: 16px;
+          justify-content: flex-start;
+
+          .preview-icon {
+            font-size: 32px;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+            font-family: 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', 'Android Emoji', 'EmojiSymbols', 'EmojiOne Mozilla', 'Twemoji Mozilla', 'Segoe UI Symbol', Arial, sans-serif;
+          }
+
+          .preview-details {
+            .preview-name {
+              font-size: 18px;
+              font-weight: 600;
+              margin-bottom: 4px;
+              filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
+            }
+
+            .preview-description {
+              font-size: 14px;
+              opacity: 0.9;
+              filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
+            }
+          }
+        }
+
+        .preview-badge {
+          padding: 6px 12px;
+          border-radius: 20px;
+          font-size: 12px;
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          background: rgba(255, 255, 255, 0.2);
+          color: inherit;
+          backdrop-filter: blur(10px);
         }
       }
     }
-  
-    // Category Form
-    .category-form {
-      background: white;
-      border-radius: 12px;
-      padding: 32px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  
-      .form-sections {
-        .form-section {
-          margin-bottom: 40px;
-          padding-bottom: 32px;
-          border-bottom: 1px solid #e9ecef;
-  
-          &:last-child {
-            border-bottom: none;
-            margin-bottom: 0;
-            padding-bottom: 0;
-          }
-  
-          .section-title {
-            display: flex;
-            align-items: center;
-            margin: 0 0 24px 0;
-            font-size: 20px;
-            font-weight: 600;
-            color: #2c3e50;
-  
-            i {
-              margin-right: 12px;
-              color: #667eea;
-              font-size: 18px;
-            }
-          }
-  
-                    .form-row {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 24px;
-            margin-bottom: 24px;
-            align-items: start;
 
-            &:last-child {
-              margin-bottom: 0;
-            }
+    // Form Actions
+    .form-actions {
+      @include flex-between;
+      padding-top: 32px;
+      border-top: 1px solid #e9ecef;
+      margin-top: 32px;
+      flex-wrap: wrap;
+      gap: 20px;
 
-            @media (max-width: 768px) {
-              grid-template-columns: 1fr;
-              gap: 20px;
-            }
+      @media (max-width: 768px) {
+        flex-direction: column;
+        gap: 16px;
+      }
 
-            // Ensure form groups don't overlap
-            .form-group {
-              min-width: 0; // Prevent grid items from overflowing
-              width: 100%;
-            }
-          }
-  
-          .form-group {
-            position: relative; // Ensure proper stacking context
-            z-index: 1; // Prevent overlapping issues
-            
-            label {
-              display: block;
-              margin-bottom: 8px;
-              font-weight: 600;
-              color: #495057;
-              font-size: 14px;
-            }
-  
-                        .form-control {
-              width: 100%;
-              padding: 12px 16px;
-              border: 2px solid #e9ecef;
-              border-radius: 8px;
-              font-size: 14px;
-              transition: all 0.3s ease;
-              background-color: white;
-              box-sizing: border-box; // Ensure padding doesn't affect width
-              position: relative; // Ensure proper stacking context
+      .left-actions,
+      .right-actions {
+        @include flex-center;
+        gap: 16px;
+        justify-content: flex-start;
 
-              &:focus {
-                outline: none;
-                border-color: #667eea;
-                box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-              }
-
-              &:disabled {
-                background-color: #f8f9fa;
-                color: #6c757d;
-                cursor: not-allowed;
-              }
-
-              &.is-invalid {
-                border-color: #dc3545;
-                box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.1);
-
-                &:focus {
-                  border-color: #dc3545;
-                  box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.1);
-                }
-              }
-            }
-  
-            textarea.form-control {
-              resize: vertical;
-              min-height: 80px;
-              overflow: auto; // Ensure proper scrolling
-              word-wrap: break-word; // Prevent text overflow
-            }
-  
-            .invalid-feedback {
-              display: block;
-              margin-top: 6px;
-              color: #dc3545;
-              font-size: 12px;
-              font-weight: 500;
-            }
-  
-            .form-text {
-              margin-top: 6px;
-              color: #6c757d;
-              font-size: 12px;
-              line-height: 1.4;
-            }
-          }
-  
-          // Color Picker
-          .color-picker {
-            display: flex;
-            align-items: center;
-            gap: 16px;
-            margin-bottom: 16px;
-  
-                        .color-preview {
-              width: 60px;
-              height: 60px;
-              border-radius: 12px;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              border: 3px solid #e9ecef;
-              transition: all 0.3s ease;
-
-              &:hover {
-                transform: scale(1.05);
-                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-              }
-
-              .preview-icon {
-                font-size: 24px;
-                filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
-                font-family: 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', 'Android Emoji', 'EmojiSymbols', 'EmojiOne Mozilla', 'Twemoji Mozilla', 'Segoe UI Symbol', Arial, sans-serif;
-              }
-            }
-  
-            .color-input {
-              width: 60px;
-              height: 60px;
-              border: none;
-              border-radius: 8px;
-              cursor: pointer;
-              padding: 0;
-              background: none;
-  
-              &::-webkit-color-swatch-wrapper {
-                padding: 0;
-                border-radius: 8px;
-              }
-  
-              &::-webkit-color-swatch {
-                border: none;
-                border-radius: 8px;
-              }
-            }
-          }
-  
-          .color-options {
-            .color-option-label {
-              font-weight: 600;
-              color: #495057;
-              margin-bottom: 12px;
-              font-size: 14px;
-            }
-  
-            .color-grid {
-              display: grid;
-              grid-template-columns: repeat(auto-fill, minmax(32px, 1fr));
-              gap: 8px;
-              max-width: 320px;
-  
-              .color-option {
-                width: 32px;
-                height: 32px;
-                border: 2px solid #e9ecef;
-                border-radius: 6px;
-                cursor: pointer;
-                transition: all 0.3s ease;
-                position: relative;
-  
-                &:hover {
-                  transform: scale(1.1);
-                  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-                }
-  
-                &.selected {
-                  border-color: #2c3e50;
-                  transform: scale(1.1);
-                  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.3);
-  
-                  &::after {
-                    content: '✓';
-                    position: absolute;
-                    top: 50%;
-                    left: 50%;
-                    transform: translate(-50%, -50%);
-                    color: white;
-                    font-weight: bold;
-                    font-size: 14px;
-                    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
-                  }
-                }
-              }
-            }
-          }
-  
-          // Icon Picker
-          .icon-picker {
-            .icon-preview {
-              width: 60px;
-              height: 60px;
-              border-radius: 12px;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              border: 3px solid #e9ecef;
-              margin-bottom: 16px;
-              transition: all 0.3s ease;
-  
-              &:hover {
-                transform: scale(1.05);
-                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-              }
-  
-              .preview-icon {
-                font-size: 24px;
-                filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
-                font-family: 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', 'Android Emoji', 'EmojiSymbols', 'EmojiOne Mozilla', 'Twemoji Mozilla', 'Segoe UI Symbol', Arial, sans-serif;
-              }
-            }
-  
-            .icon-options {
-              .icon-option-label {
-                font-weight: 600;
-                color: #495057;
-                margin-bottom: 12px;
-                font-size: 14px;
-              }
-  
-              .icon-grid {
-                display: grid;
-                grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
-                gap: 8px;
-                max-width: 400px;
-  
-                .icon-option {
-                  width: 40px;
-                  height: 40px;
-                  border: 2px solid #e9ecef;
-                  border-radius: 8px;
-                  background: white;
-                  cursor: pointer;
-                  display: flex;
-                  align-items: center;
-                  justify-content: center;
-                  font-size: 18px;
-                  transition: all 0.3s ease;
-                  position: relative;
-                  font-family: 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', 'Android Emoji', 'EmojiSymbols', 'EmojiOne Mozilla', 'Twemoji Mozilla', 'Segoe UI Symbol', Arial, sans-serif;
-
-                  // Custom tooltip styling
-                  &:hover::after {
-                    content: attr(title);
-                    position: absolute;
-                    bottom: 100%;
-                    left: 50%;
-                    transform: translateX(-50%);
-                    background: rgba(0, 0, 0, 0.9);
-                    color: white;
-                    padding: 6px 10px;
-                    border-radius: 6px;
-                    font-size: 12px;
-                    white-space: nowrap;
-                    z-index: 1000;
-                    margin-bottom: 8px;
-                    pointer-events: none;
-                    opacity: 0;
-                    animation: tooltipFadeIn 0.2s ease-in-out forwards;
-                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-                  }
-  
-                  &:hover {
-                    border-color: #667eea;
-                    background-color: #f8f9fa;
-                    transform: scale(1.1);
-                  }
-  
-                  &.selected {
-                    border-color: #667eea;
-                    background-color: #667eea;
-                    color: white;
-                    transform: scale(1.1);
-                    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.3);
-                  }
-                }
-              }
-            }
-          }
-  
-          // Checkbox Styling
-          .checkbox-label {
-            display: flex;
-            align-items: center;
-            cursor: pointer;
-            font-weight: 500;
-            color: #495057;
-            user-select: none;
-  
-            .form-checkbox {
-              position: absolute;
-              opacity: 0;
-              cursor: pointer;
-              height: 0;
-              width: 0;
-            }
-  
-            .checkmark {
-              height: 20px;
-              width: 20px;
-              background-color: white;
-              border: 2px solid #e9ecef;
-              border-radius: 4px;
-              margin-right: 12px;
-              position: relative;
-              transition: all 0.3s ease;
-  
-              &:after {
-                content: '';
-                position: absolute;
-                display: none;
-                left: 6px;
-                top: 2px;
-                width: 4px;
-                height: 8px;
-                border: solid white;
-                border-width: 0 2px 2px 0;
-                transform: rotate(45deg);
-              }
-            }
-  
-            .form-checkbox:checked ~ .checkmark {
-              background-color: #667eea;
-              border-color: #667eea;
-  
-              &:after {
-                display: block;
-              }
-            }
-  
-            .form-checkbox:focus ~ .checkmark {
-              box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-            }
-          }
-  
-          // Preview Section
-          .preview-container {
-            .category-preview {
-              border-radius: 12px;
-              padding: 20px;
-              display: flex;
-              align-items: center;
-              justify-content: space-between;
-              box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-              transition: all 0.3s ease;
-  
-              &:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-              }
-  
-              .preview-content {
-                display: flex;
-                align-items: center;
-                gap: 16px;
-  
-                .preview-icon {
-                  font-size: 32px;
-                  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
-                  font-family: 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', 'Android Emoji', 'EmojiSymbols', 'EmojiOne Mozilla', 'Twemoji Mozilla', 'Segoe UI Symbol', Arial, sans-serif;
-                }
-  
-                .preview-details {
-                  .preview-name {
-                    font-size: 18px;
-                    font-weight: 600;
-                    margin-bottom: 4px;
-                    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
-                  }
-  
-                  .preview-description {
-                    font-size: 14px;
-                    opacity: 0.9;
-                    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
-                  }
-                }
-              }
-  
-              .preview-badge {
-                padding: 6px 12px;
-                border-radius: 20px;
-                font-size: 12px;
-                font-weight: 600;
-                text-transform: uppercase;
-                letter-spacing: 0.5px;
-                background: rgba(255, 255, 255, 0.2);
-                color: inherit;
-                backdrop-filter: blur(10px);
-              }
-            }
-          }
+        @media (max-width: 768px) {
+          justify-content: center;
+          width: 100%;
         }
       }
-  
-      // Form Actions
-      .form-actions {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding-top: 32px;
-        border-top: 1px solid #e9ecef;
-        margin-top: 32px;
-        flex-wrap: wrap;
-        gap: 20px;
-  
-        @media (max-width: 768px) {
-          flex-direction: column;
-          gap: 16px;
-        }
-  
-        .left-actions,
-        .right-actions {
-          display: flex;
-          gap: 16px;
-  
-          @media (max-width: 768px) {
-            justify-content: center;
-            width: 100%;
-          }
-        }
-  
-        .btn {
-          padding: 12px 24px;
-          border-radius: 8px;
-          font-weight: 600;
-          font-size: 14px;
-          transition: all 0.3s ease;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          text-decoration: none;
-          border: none;
-          cursor: pointer;
-          min-width: 140px;
-  
-          &:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none !important;
-          }
-  
-          i {
-            margin-right: 8px;
-  
-            &.fa-spinner {
-              animation: spin 1s linear infinite;
-            }
-          }
-  
-          &:hover:not(:disabled) {
-            transform: translateY(-2px);
-          }
-        }
-  
-        .btn-outline-secondary {
-          background: transparent;
-          color: #6c757d;
-          border: 2px solid #6c757d;
-  
-          &:hover:not(:disabled) {
-            background: #6c757d;
-            color: white;
-            box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3);
-          }
-        }
-  
-        .btn-secondary {
-          background: #6c757d;
-          color: white;
-  
-          &:hover:not(:disabled) {
-            background: #5a6268;
-            box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3);
-          }
-        }
-  
-        .btn-primary {
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-          color: white;
-  
-          &:hover:not(:disabled) {
-            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
-          }
-        }
+
+      .btn-primary {
+        @extend .btn-primary;
+      }
+
+      .btn-outline-secondary {
+        @extend .btn-outline-secondary;
+      }
+
+      .btn-secondary {
+        @extend .btn-secondary;
       }
     }
   }
-  
+
   // Responsive Design
   @media (max-width: 1024px) {
-    .category-form-container {
-      padding: 16px;
-  
-      .category-form {
-        padding: 24px;
-  
-        .form-sections .form-section .form-row {
-          grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-          gap: 20px;
-        }
-      }
-    }
-  }
-  
-  @media (max-width: 768px) {
-    .category-form-container {
-      .header-section {
-        flex-direction: column;
+    padding: 16px;
+
+    .category-form {
+      padding: 24px;
+
+      .form-sections .form-section .form-row {
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
         gap: 20px;
-        text-align: center;
-      }
-  
-      .category-form {
-        padding: 20px;
-  
-        .form-sections .form-section {
-          margin-bottom: 32px;
-          padding-bottom: 24px;
-  
-          .form-row {
-            grid-template-columns: 1fr;
-            gap: 16px;
-          }
-  
-          .color-options .color-grid,
-          .icon-options .icon-grid {
-            max-width: 100%;
-          }
-        }
       }
     }
-  }
-  
-  // Animations
-  @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
   }
 
-  @keyframes tooltipFadeIn {
-    0% { 
-      opacity: 0; 
-      transform: translateX(-50%) translateY(5px);
+  @media (max-width: 768px) {
+    .header-section {
+      flex-direction: column;
+      gap: 20px;
+      text-align: center;
     }
-    100% { 
-      opacity: 1; 
-      transform: translateX(-50%) translateY(0);
-    }
-  }
-  
-  // Utility Classes
-  .btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    text-decoration: none;
-    cursor: pointer;
-    font-family: inherit;
-    border: 1px solid transparent;
-    transition: all 0.3s ease;
-  
-    &:disabled {
-      cursor: not-allowed;
-      opacity: 0.6;
-    }
-  }
-  
-  .form-control {
-    font-family: inherit;
-    font-size: 14px;
-    line-height: 1.5;
-  }
-  
-  // Focus styles for accessibility
-  .form-control:focus,
-  .color-input:focus,
-  .icon-option:focus,
-  .color-option:focus,
-  .checkbox-label:focus .checkmark {
-    outline: 2px solid #667eea;
-    outline-offset: 2px;
-  }
-  
-  // Hover effects for interactive elements
-  .form-control:hover:not(:disabled) {
-    border-color: #adb5bd;
-  }
-  
-  .color-option:hover,
-  .icon-option:hover {
-    transform: scale(1.1);
-  }
-  
-  // Custom scrollbar for textareas
-  textarea.form-control::-webkit-scrollbar {
-    width: 8px;
-  }
-  
-  textarea.form-control::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 4px;
-  }
-  
-  textarea.form-control::-webkit-scrollbar-thumb {
-    background: #c1c1c1;
-    border-radius: 4px;
-  
-    &:hover {
-      background: #a8a8a8;
+
+    .category-form {
+      padding: 20px;
+
+      .form-sections .form-section {
+        margin-bottom: 32px;
+        padding-bottom: 24px;
+
+        .form-row {
+          grid-template-columns: 1fr;
+          gap: 16px;
+        }
+
+        .color-options .color-grid,
+        .icon-options .icon-grid {
+          max-width: 100%;
+        }
+      }
     }
   }
+}
+
+// Custom tooltip animation
+@keyframes tooltipFadeIn {
+  0% { 
+    opacity: 0; 
+    transform: translateX(-50%) translateY(5px);
+  }
+  100% { 
+    opacity: 1; 
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+// Custom scrollbar for textareas
+textarea.form-control::-webkit-scrollbar {
+  width: 8px;
+}
+
+textarea.form-control::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: $border-radius-sm;
+}
+
+textarea.form-control::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: $border-radius-sm;
+
+  &:hover {
+    background: #a8a8a8;
+  }
+}

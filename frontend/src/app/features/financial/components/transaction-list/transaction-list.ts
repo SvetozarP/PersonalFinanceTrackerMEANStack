@@ -120,10 +120,19 @@ export class TransactionListComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {
-          this.transactions = response.data;
-          this.filteredTransactions = response.data;
-          this.totalItems = response.pagination.total;
-          this.totalPages = response.pagination.totalPages;
+          this.transactions = response.data || [];
+          this.filteredTransactions = response.data || [];
+          
+          // Safely access pagination properties with fallbacks
+          if (response.pagination) {
+            this.totalItems = response.pagination.total || 0;
+            this.totalPages = response.pagination.totalPages || 1;
+          } else {
+            // Fallback if pagination is missing
+            this.totalItems = response.data?.length || 0;
+            this.totalPages = 1;
+          }
+          
           this.isTransactionsLoading = false;
         },
         error: (error) => {
