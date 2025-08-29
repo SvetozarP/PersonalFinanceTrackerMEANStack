@@ -173,8 +173,7 @@ export class TransactionService {
         query.categoryId = new mongoose.Types.ObjectId(categoryId);
       if (subcategoryId)
         query.subcategoryId = new mongoose.Types.ObjectId(subcategoryId);
-      if (accountId)
-        query.accountId = new mongoose.Types.ObjectId(accountId);
+      if (accountId) query.accountId = new mongoose.Types.ObjectId(accountId);
       if (paymentMethod) query.paymentMethod = paymentMethod;
       if (isRecurring !== undefined) query.isRecurring = isRecurring;
       if (source) query.source = source;
@@ -291,7 +290,7 @@ export class TransactionService {
         updateData.recurrencePattern !== undefined
       ) {
         if (updatedTransaction) {
-          await this.updateRecurringSeries(updatedTransaction);
+          this.updateRecurringSeries(updatedTransaction);
         }
       }
 
@@ -664,9 +663,7 @@ export class TransactionService {
   /**
    * Update recurring transaction series
    */
-  private async updateRecurringSeries(
-    transaction: ITransaction
-  ): Promise<void> {
+  private updateRecurringSeries(transaction: ITransaction): void {
     try {
       // This would involve updating all related recurring transactions
       // Implementation depends on your specific requirements

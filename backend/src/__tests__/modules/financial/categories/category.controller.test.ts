@@ -8,7 +8,9 @@ import mongoose from 'mongoose';
 // Mock dependencies
 jest.mock('../../../../modules/financial/categories/service/category.service');
 jest.mock('../../../../shared/services/logger.service');
-jest.mock('../../../../modules/financial/categories/validators/category.validation');
+jest.mock(
+  '../../../../modules/financial/categories/validators/category.validation'
+);
 
 interface AuthenticatedRequest extends Request {
   user?: {
@@ -70,7 +72,9 @@ describe('CategoryController', () => {
         value: validCategoryData,
       });
 
-      (CategoryService.prototype.createCategory as jest.Mock).mockResolvedValue(mockCategory);
+      (CategoryService.prototype.createCategory as jest.Mock).mockResolvedValue(
+        mockCategory
+      );
 
       mockRequest.body = validCategoryData;
 
@@ -178,7 +182,10 @@ describe('CategoryController', () => {
         new Error('Parent category not found')
       );
 
-      mockRequest.body = { ...validCategoryData, parentId: '507f1f77bcf86cd799439011' };
+      mockRequest.body = {
+        ...validCategoryData,
+        parentId: '507f1f77bcf86cd799439011',
+      };
 
       await categoryController.createCategory(
         mockRequest as AuthenticatedRequest,
@@ -198,7 +205,9 @@ describe('CategoryController', () => {
         value: validCategoryData,
       });
 
-      (CategoryService.prototype.createCategory as jest.Mock).mockRejectedValue('Unknown error');
+      (CategoryService.prototype.createCategory as jest.Mock).mockRejectedValue(
+        'Unknown error'
+      );
 
       mockRequest.body = validCategoryData;
 
@@ -229,7 +238,9 @@ describe('CategoryController', () => {
         value: { id: categoryId },
       });
 
-      (CategoryService.prototype.getCategoryById as jest.Mock).mockResolvedValue(mockCategory);
+      (
+        CategoryService.prototype.getCategoryById as jest.Mock
+      ).mockResolvedValue(mockCategory);
 
       mockRequest.params = { id: categoryId };
 
@@ -301,9 +312,9 @@ describe('CategoryController', () => {
         value: { id: categoryId },
       });
 
-      (CategoryService.prototype.getCategoryById as jest.Mock).mockRejectedValue(
-        new Error('Category not found')
-      );
+      (
+        CategoryService.prototype.getCategoryById as jest.Mock
+      ).mockRejectedValue(new Error('Category not found'));
 
       mockRequest.params = { id: categoryId };
 
@@ -325,9 +336,9 @@ describe('CategoryController', () => {
         value: { id: categoryId },
       });
 
-      (CategoryService.prototype.getCategoryById as jest.Mock).mockRejectedValue(
-        new Error('Access denied')
-      );
+      (
+        CategoryService.prototype.getCategoryById as jest.Mock
+      ).mockRejectedValue(new Error('Access denied'));
 
       mockRequest.params = { id: categoryId };
 
@@ -363,7 +374,9 @@ describe('CategoryController', () => {
         value: { page: 1, limit: 20 },
       });
 
-      (CategoryService.prototype.getUserCategories as jest.Mock).mockResolvedValue(mockResult);
+      (
+        CategoryService.prototype.getUserCategories as jest.Mock
+      ).mockResolvedValue(mockResult);
 
       mockRequest.query = { page: '1', limit: '20' };
 
@@ -401,9 +414,9 @@ describe('CategoryController', () => {
     });
 
     it('should handle service errors', async () => {
-      (CategoryService.prototype.getUserCategories as jest.Mock).mockRejectedValue(
-        new Error('Service error')
-      );
+      (
+        CategoryService.prototype.getUserCategories as jest.Mock
+      ).mockRejectedValue(new Error('Service error'));
 
       await categoryController.getUserCategories(
         mockRequest as AuthenticatedRequest,
@@ -433,7 +446,9 @@ describe('CategoryController', () => {
         },
       ];
 
-      (CategoryService.prototype.getCategoryTree as jest.Mock).mockResolvedValue(mockTree);
+      (
+        CategoryService.prototype.getCategoryTree as jest.Mock
+      ).mockResolvedValue(mockTree);
 
       await categoryController.getCategoryTree(
         mockRequest as AuthenticatedRequest,
@@ -463,9 +478,9 @@ describe('CategoryController', () => {
     });
 
     it('should handle service errors', async () => {
-      (CategoryService.prototype.getCategoryTree as jest.Mock).mockRejectedValue(
-        new Error('Service error')
-      );
+      (
+        CategoryService.prototype.getCategoryTree as jest.Mock
+      ).mockRejectedValue(new Error('Service error'));
 
       await categoryController.getCategoryTree(
         mockRequest as AuthenticatedRequest,
@@ -504,7 +519,9 @@ describe('CategoryController', () => {
         value: updateData,
       });
 
-      (CategoryService.prototype.updateCategory as jest.Mock).mockResolvedValue(mockUpdatedCategory);
+      (CategoryService.prototype.updateCategory as jest.Mock).mockResolvedValue(
+        mockUpdatedCategory
+      );
 
       mockRequest.params = { id: categoryId };
       mockRequest.body = updateData;
@@ -574,7 +591,7 @@ describe('CategoryController', () => {
 
     it('should return 400 when body validation fails', async () => {
       const testId = '507f1f77bcf86cd799439011';
-      
+
       (categoryValidation.id.validate as jest.Mock).mockReturnValue({
         error: null,
         value: { id: testId },
@@ -655,7 +672,9 @@ describe('CategoryController', () => {
         value: { id: categoryId },
       });
 
-      (CategoryService.prototype.deleteCategory as jest.Mock).mockResolvedValue(undefined);
+      (CategoryService.prototype.deleteCategory as jest.Mock).mockResolvedValue(
+        undefined
+      );
 
       mockRequest.params = { id: categoryId };
 
@@ -763,7 +782,9 @@ describe('CategoryController', () => {
         .mockReturnValueOnce({ error: null, value: categoriesData[0] })
         .mockReturnValueOnce({ error: null, value: categoriesData[1] });
 
-      (CategoryService.prototype.bulkCreateCategories as jest.Mock).mockResolvedValue(mockCreatedCategories);
+      (
+        CategoryService.prototype.bulkCreateCategories as jest.Mock
+      ).mockResolvedValue(mockCreatedCategories);
 
       mockRequest.body = { categories: categoriesData };
 
@@ -845,7 +866,9 @@ describe('CategoryController', () => {
         },
       };
 
-      (CategoryService.prototype.getCategoryStats as jest.Mock).mockResolvedValue(mockStats);
+      (
+        CategoryService.prototype.getCategoryStats as jest.Mock
+      ).mockResolvedValue(mockStats);
 
       await categoryController.getCategoryStats(
         mockRequest as AuthenticatedRequest,
@@ -875,9 +898,9 @@ describe('CategoryController', () => {
     });
 
     it('should handle service errors', async () => {
-      (CategoryService.prototype.getCategoryStats as jest.Mock).mockRejectedValue(
-        new Error('Service error')
-      );
+      (
+        CategoryService.prototype.getCategoryStats as jest.Mock
+      ).mockRejectedValue(new Error('Service error'));
 
       await categoryController.getCategoryStats(
         mockRequest as AuthenticatedRequest,

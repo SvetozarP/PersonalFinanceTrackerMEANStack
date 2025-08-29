@@ -24,4 +24,3 @@ describe('Financial Routes - Basic Test', () => {
     expect(obj.value).toBe(42);
   });
 });
-

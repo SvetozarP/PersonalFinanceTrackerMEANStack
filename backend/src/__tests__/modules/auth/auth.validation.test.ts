@@ -152,7 +152,9 @@ describe('Auth Validation Schemas', () => {
 
       const { error } = registerSchema.validate(invalidData);
       expect(error).toBeDefined();
-      expect(error?.details[0].message).toContain('First name must be at least 2 characters');
+      expect(error?.details[0].message).toContain(
+        'First name must be at least 2 characters'
+      );
     });
 
     it('should reject long names', () => {
@@ -165,7 +167,9 @@ describe('Auth Validation Schemas', () => {
 
       const { error } = registerSchema.validate(invalidData);
       expect(error).toBeDefined();
-      expect(error?.details[0].message).toContain('First name cannot exceed 50 characters');
+      expect(error?.details[0].message).toContain(
+        'First name cannot exceed 50 characters'
+      );
     });
   });
 

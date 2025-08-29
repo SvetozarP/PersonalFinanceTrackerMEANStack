@@ -56,12 +56,12 @@ describe('Logger Service', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     jest.resetModules();
-    
+
     // Reset environment variables
     delete process.env.LOG_LEVEL;
     delete process.env.LOG_FILE_PATH;
     delete process.env.NODE_ENV;
-    
+
     // Get fresh instance
     loggerService = LoggerService.getInstance();
     mockLogger = (loggerService as any).logger;
@@ -109,54 +109,54 @@ describe('Logger Service', () => {
     it('should log info message', () => {
       const message = 'Test info message';
       const meta = { userId: '123' };
-      
+
       loggerService.info(message, meta);
-      
+
       expect(mockLogger.info).toHaveBeenCalledWith(message, meta);
     });
 
     it('should log error message', () => {
       const message = 'Test error message';
       const meta = { error: 'Something went wrong' };
-      
+
       loggerService.error(message, meta);
-      
+
       expect(mockLogger.error).toHaveBeenCalledWith(message, meta);
     });
 
     it('should log warn message', () => {
       const message = 'Test warning message';
       const meta = { warning: 'Something to watch' };
-      
+
       loggerService.warn(message, meta);
-      
+
       expect(mockLogger.warn).toHaveBeenCalledWith(message, meta);
     });
 
     it('should log debug message', () => {
       const message = 'Test debug message';
       const meta = { debug: 'Debug info' };
-      
+
       loggerService.debug(message, meta);
-      
+
       expect(mockLogger.debug).toHaveBeenCalledWith(message, meta);
     });
 
     it('should log verbose message', () => {
       const message = 'Test verbose message';
       const meta = { verbose: 'Verbose info' };
-      
+
       loggerService.verbose(message, meta);
-      
+
       expect(mockLogger.verbose).toHaveBeenCalledWith(message, meta);
     });
 
     it('should log silly message', () => {
       const message = 'Test silly message';
       const meta = { silly: 'Silly info' };
-      
+
       loggerService.silly(message, meta);
-      
+
       expect(mockLogger.silly).toHaveBeenCalledWith(message, meta);
     });
 
@@ -164,17 +164,17 @@ describe('Logger Service', () => {
       const level = 'custom';
       const message = 'Test custom level message';
       const meta = { custom: 'Custom info' };
-      
+
       loggerService.log(level, message, meta);
-      
+
       expect(mockLogger.log).toHaveBeenCalledWith(level, message, meta);
     });
 
     it('should log without meta data', () => {
       const message = 'Test message without meta';
-      
+
       loggerService.info(message);
-      
+
       expect(mockLogger.info).toHaveBeenCalledWith(message, undefined);
     });
   });
@@ -190,27 +190,27 @@ describe('Logger Service', () => {
     it('should handle empty message', () => {
       const message = '';
       const meta = { empty: true };
-      
+
       loggerService.info(message, meta);
-      
+
       expect(mockLogger.info).toHaveBeenCalledWith(message, meta);
     });
 
     it('should handle null meta data', () => {
       const message = 'Test message with null meta';
       const meta = null;
-      
+
       loggerService.info(message, meta);
-      
+
       expect(mockLogger.info).toHaveBeenCalledWith(message, meta);
     });
 
     it('should handle undefined meta data', () => {
       const message = 'Test message with undefined meta';
       const meta = undefined;
-      
+
       loggerService.info(message, meta);
-      
+
       expect(mockLogger.info).toHaveBeenCalledWith(message, meta);
     });
 
@@ -221,11 +221,11 @@ describe('Logger Service', () => {
         transaction: { amount: 100, currency: 'USD' },
         timestamp: new Date(),
         array: [1, 2, 3],
-        nested: { deep: { value: 'test' } }
+        nested: { deep: { value: 'test' } },
       };
-      
+
       loggerService.info(message, meta);
-      
+
       expect(mockLogger.info).toHaveBeenCalledWith(message, meta);
     });
 
@@ -233,9 +233,9 @@ describe('Logger Service', () => {
       const message = 'Test message with circular reference';
       const meta: any = { name: 'test' };
       meta.self = meta;
-      
+
       loggerService.info(message, meta);
-      
+
       expect(mockLogger.info).toHaveBeenCalledWith(message, meta);
     });
   });

@@ -1,7 +1,13 @@
 import mongoose from 'mongoose';
 import { TransactionRepository } from '../../../../modules/financial/transactions/repositories/transaction.repository';
 import { Transaction } from '../../../../modules/financial/transactions/models/transaction.model';
-import { ITransaction, TransactionType, TransactionStatus, PaymentMethod, RecurrencePattern } from '../../../../modules/financial/transactions/interfaces/transaction.interface';
+import {
+  ITransaction,
+  TransactionType,
+  TransactionStatus,
+  PaymentMethod,
+  RecurrencePattern,
+} from '../../../../modules/financial/transactions/interfaces/transaction.interface';
 
 // Mock the logger service
 jest.mock('../../../../shared/services/logger.service', () => ({
@@ -18,7 +24,9 @@ describe('Transaction Repository', () => {
   let testCategoryId: mongoose.Types.ObjectId;
 
   // Helper function to create valid transaction data
-  const createValidTransactionData = (overrides: Partial<ITransaction> = {}) => ({
+  const createValidTransactionData = (
+    overrides: Partial<ITransaction> = {}
+  ) => ({
     amount: 100,
     type: TransactionType.EXPENSE,
     status: TransactionStatus.COMPLETED,
@@ -49,10 +57,10 @@ describe('Transaction Repository', () => {
   beforeEach(async () => {
     // Clear all mocks
     jest.clearAllMocks();
-    
+
     // Create the actual repository instance
     transactionRepository = new TransactionRepository();
-    
+
     // Clear any existing test data
     await Transaction.deleteMany({});
   });
@@ -65,45 +73,61 @@ describe('Transaction Repository', () => {
   describe('findByUserId', () => {
     it('should find transactions by user ID with pagination', async () => {
       // Create test transactions
-      const transaction1 = await Transaction.create(createValidTransactionData({
-        description: 'Test Transaction 1',
-        amount: 100,
-      }));
+      const transaction1 = await Transaction.create(
+        createValidTransactionData({
+          description: 'Test Transaction 1',
+          amount: 100,
+        })
+      );
 
-      const transaction2 = await Transaction.create(createValidTransactionData({
-        description: 'Test Transaction 2',
-        amount: 200,
-        type: TransactionType.INCOME,
-      }));
+      const transaction2 = await Transaction.create(
+        createValidTransactionData({
+          description: 'Test Transaction 2',
+          amount: 200,
+          type: TransactionType.INCOME,
+        })
+      );
 
-      const result = await transactionRepository.findByUserId(testUserId.toString(), {
-        page: 1,
-        limit: 10,
-        populate: [],
-      });
+      const result = await transactionRepository.findByUserId(
+        testUserId.toString(),
+        {
+          page: 1,
+          limit: 10,
+          populate: [],
+        }
+      );
 
       expect(result.transactions).toHaveLength(2);
       expect(result.total).toBe(2);
       expect(result.page).toBe(1);
       expect(result.totalPages).toBe(1);
-      expect(result.transactions).toContainEqual(expect.objectContaining({ description: 'Test Transaction 1' }));
-      expect(result.transactions).toContainEqual(expect.objectContaining({ description: 'Test Transaction 2' }));
+      expect(result.transactions).toContainEqual(
+        expect.objectContaining({ description: 'Test Transaction 1' })
+      );
+      expect(result.transactions).toContainEqual(
+        expect.objectContaining({ description: 'Test Transaction 2' })
+      );
     });
 
     it('should handle pagination correctly', async () => {
       // Create 15 transactions
       for (let i = 0; i < 15; i++) {
-        await Transaction.create(createValidTransactionData({
-          description: `Transaction ${i + 1}`,
-          amount: 100 + i,
-        }));
+        await Transaction.create(
+          createValidTransactionData({
+            description: `Transaction ${i + 1}`,
+            amount: 100 + i,
+          })
+        );
       }
 
-      const result = await transactionRepository.findByUserId(testUserId.toString(), {
-        page: 2,
-        limit: 10,
-        populate: [],
-      });
+      const result = await transactionRepository.findByUserId(
+        testUserId.toString(),
+        {
+          page: 2,
+          limit: 10,
+          populate: [],
+        }
+      );
 
       expect(result.transactions).toHaveLength(5);
       expect(result.total).toBe(15);
@@ -112,65 +136,89 @@ describe('Transaction Repository', () => {
     });
 
     it('should handle custom sorting', async () => {
-      const transaction1 = await Transaction.create(createValidTransactionData({
-        amount: 100,
-        date: new Date('2023-01-01'),
-      }));
-      const transaction2 = await Transaction.create(createValidTransactionData({
-        amount: 200,
-        date: new Date('2023-01-02'),
-      }));
+      const transaction1 = await Transaction.create(
+        createValidTransactionData({
+          amount: 100,
+          date: new Date('2023-01-01'),
+        })
+      );
+      const transaction2 = await Transaction.create(
+        createValidTransactionData({
+          amount: 200,
+          date: new Date('2023-01-02'),
+        })
+      );
 
-      const result = await transactionRepository.findByUserId(testUserId.toString(), {
-        page: 1,
-        limit: 10,
-        sort: { amount: 1 }, // Sort by amount ascending
-        populate: [],
-      });
+      const result = await transactionRepository.findByUserId(
+        testUserId.toString(),
+        {
+          page: 1,
+          limit: 10,
+          sort: { amount: 1 }, // Sort by amount ascending
+          populate: [],
+        }
+      );
 
       expect(result.transactions[0].amount).toBe(100);
       expect(result.transactions[1].amount).toBe(200);
     });
 
     it('should handle custom filtering', async () => {
-      const transaction1 = await Transaction.create(createValidTransactionData({
-        type: TransactionType.EXPENSE,
-        amount: 100,
-      }));
-      const transaction2 = await Transaction.create(createValidTransactionData({
-        type: TransactionType.INCOME,
-        amount: 200,
-      }));
+      const transaction1 = await Transaction.create(
+        createValidTransactionData({
+          type: TransactionType.EXPENSE,
+          amount: 100,
+        })
+      );
+      const transaction2 = await Transaction.create(
+        createValidTransactionData({
+          type: TransactionType.INCOME,
+          amount: 200,
+        })
+      );
 
-      const result = await transactionRepository.findByUserId(testUserId.toString(), {
-        page: 1,
-        limit: 10,
-        filter: { type: TransactionType.EXPENSE },
-        populate: [],
-      });
+      const result = await transactionRepository.findByUserId(
+        testUserId.toString(),
+        {
+          page: 1,
+          limit: 10,
+          filter: { type: TransactionType.EXPENSE },
+          populate: [],
+        }
+      );
 
       expect(result.transactions).toHaveLength(1);
       expect(result.transactions[0].type).toBe(TransactionType.EXPENSE);
     });
 
     it('should handle custom populate options', async () => {
-      const transaction = await Transaction.create(createValidTransactionData());
+      const transaction = await Transaction.create(
+        createValidTransactionData()
+      );
 
-      const result = await transactionRepository.findByUserId(testUserId.toString(), {
-        page: 1,
-        limit: 10,
-        populate: ['categoryId', 'subcategoryId'],
-      });
+      const result = await transactionRepository.findByUserId(
+        testUserId.toString(),
+        {
+          page: 1,
+          limit: 10,
+          populate: ['categoryId', 'subcategoryId'],
+        }
+      );
 
       expect(result.transactions).toHaveLength(1);
     });
 
     it('should handle default values when options not provided', async () => {
-      const transaction = await Transaction.create(createValidTransactionData());
+      const transaction = await Transaction.create(
+        createValidTransactionData()
+      );
 
-      const result = await transactionRepository.findByUserId(testUserId.toString(), {
-        populate: [],
-      });
+      const result = await transactionRepository.findByUserId(
+        testUserId.toString(),
+        {
+          populate: [],
+        }
+      );
 
       expect(result.page).toBe(1);
       expect(result.totalPages).toBe(1);
@@ -179,7 +227,7 @@ describe('Transaction Repository', () => {
     it('should handle database errors gracefully', async () => {
       // Mock the model to throw an error
       const mockError = new Error('Database connection failed');
-      
+
       // Create a mock that throws an error when populate is called
       const originalFind = transactionRepository['model'].find;
       transactionRepository['model'].find = jest.fn().mockReturnValue({
@@ -189,7 +237,9 @@ describe('Transaction Repository', () => {
       } as any);
 
       await expect(
-        transactionRepository.findByUserId(testUserId.toString(), { populate: [] })
+        transactionRepository.findByUserId(testUserId.toString(), {
+          populate: [],
+        })
       ).rejects.toThrow('Database connection failed');
 
       // Restore the original method
@@ -199,37 +249,49 @@ describe('Transaction Repository', () => {
     it('should handle count errors gracefully', async () => {
       // Mock the countDocuments to throw an error
       const mockError = new Error('Count failed');
-      jest.spyOn(transactionRepository['model'], 'countDocuments').mockRejectedValueOnce(mockError);
+      jest
+        .spyOn(transactionRepository['model'], 'countDocuments')
+        .mockRejectedValueOnce(mockError);
 
       await expect(
-        transactionRepository.findByUserId(testUserId.toString(), { populate: [] })
+        transactionRepository.findByUserId(testUserId.toString(), {
+          populate: [],
+        })
       ).rejects.toThrow('Count failed');
     });
 
     it('should handle edge case pagination values', async () => {
       // Create 5 transactions
       for (let i = 0; i < 5; i++) {
-        await Transaction.create(createValidTransactionData({
-          description: `Transaction ${i + 1}`,
-        }));
+        await Transaction.create(
+          createValidTransactionData({
+            description: `Transaction ${i + 1}`,
+          })
+        );
       }
 
       // Test with page 1, limit 3
-      const result1 = await transactionRepository.findByUserId(testUserId.toString(), {
-        page: 1,
-        limit: 3,
-        populate: [],
-      });
+      const result1 = await transactionRepository.findByUserId(
+        testUserId.toString(),
+        {
+          page: 1,
+          limit: 3,
+          populate: [],
+        }
+      );
 
       expect(result1.transactions).toHaveLength(3);
       expect(result1.totalPages).toBe(2);
 
       // Test with page 2, limit 3
-      const result2 = await transactionRepository.findByUserId(testUserId.toString(), {
-        page: 2,
-        limit: 3,
-        populate: [],
-      });
+      const result2 = await transactionRepository.findByUserId(
+        testUserId.toString(),
+        {
+          page: 2,
+          limit: 3,
+          populate: [],
+        }
+      );
 
       expect(result2.transactions).toHaveLength(2);
       expect(result2.totalPages).toBe(2);
@@ -238,7 +300,9 @@ describe('Transaction Repository', () => {
 
   describe('findByAccountId', () => {
     it('should find transactions by account ID successfully', async () => {
-      const transaction = await Transaction.create(createValidTransactionData());
+      const transaction = await Transaction.create(
+        createValidTransactionData()
+      );
 
       const result = await transactionRepository.findByAccountId(
         testAccountId.toString(),
@@ -256,7 +320,9 @@ describe('Transaction Repository', () => {
     });
 
     it('should handle default options for findByAccountId', async () => {
-      const transaction = await Transaction.create(createValidTransactionData());
+      const transaction = await Transaction.create(
+        createValidTransactionData()
+      );
 
       const result = await transactionRepository.findByAccountId(
         testAccountId.toString(),
@@ -270,7 +336,7 @@ describe('Transaction Repository', () => {
 
     it('should handle database errors in findByAccountId', async () => {
       const mockError = new Error('Database error');
-      
+
       // Create a mock that throws an error when populate is called
       const originalFind = transactionRepository['model'].find;
       transactionRepository['model'].find = jest.fn().mockReturnValue({
@@ -280,7 +346,10 @@ describe('Transaction Repository', () => {
       } as any);
 
       await expect(
-        transactionRepository.findByAccountId(testAccountId.toString(), testUserId.toString())
+        transactionRepository.findByAccountId(
+          testAccountId.toString(),
+          testUserId.toString()
+        )
       ).rejects.toThrow('Database error');
 
       // Restore the original method
@@ -292,10 +361,12 @@ describe('Transaction Repository', () => {
     it('should find transactions by date range successfully', async () => {
       const startDate = new Date('2023-01-01');
       const endDate = new Date('2023-01-31');
-      
-      const transaction = await Transaction.create(createValidTransactionData({
-        date: new Date('2023-01-15'),
-      }));
+
+      const transaction = await Transaction.create(
+        createValidTransactionData({
+          date: new Date('2023-01-15'),
+        })
+      );
 
       const result = await transactionRepository.findByDateRange(
         testUserId.toString(),
@@ -309,16 +380,18 @@ describe('Transaction Repository', () => {
     it('should handle all optional filters in findByDateRange', async () => {
       const startDate = new Date('2023-01-01');
       const endDate = new Date('2023-01-31');
-      
-      const transaction = await Transaction.create(createValidTransactionData({
-        date: new Date('2023-01-15'),
-        accountId: testAccountId,
-        categoryId: testCategoryId,
-        type: TransactionType.EXPENSE,
-        status: TransactionStatus.COMPLETED,
-        amount: 150,
-        tags: ['test'],
-      }));
+
+      const transaction = await Transaction.create(
+        createValidTransactionData({
+          date: new Date('2023-01-15'),
+          accountId: testAccountId,
+          categoryId: testCategoryId,
+          type: TransactionType.EXPENSE,
+          status: TransactionStatus.COMPLETED,
+          amount: 150,
+          tags: ['test'],
+        })
+      );
 
       const result = await transactionRepository.findByDateRange(
         testUserId.toString(),
@@ -342,20 +415,26 @@ describe('Transaction Repository', () => {
     it('should handle amount range filtering correctly', async () => {
       const startDate = new Date('2023-01-01');
       const endDate = new Date('2023-01-31');
-      
+
       // Create transactions with different amounts
-      await Transaction.create(createValidTransactionData({
-        date: new Date('2023-01-15'),
-        amount: 50,
-      }));
-      await Transaction.create(createValidTransactionData({
-        date: new Date('2023-01-16'),
-        amount: 150,
-      }));
-      await Transaction.create(createValidTransactionData({
-        date: new Date('2023-01-17'),
-        amount: 250,
-      }));
+      await Transaction.create(
+        createValidTransactionData({
+          date: new Date('2023-01-15'),
+          amount: 50,
+        })
+      );
+      await Transaction.create(
+        createValidTransactionData({
+          date: new Date('2023-01-16'),
+          amount: 150,
+        })
+      );
+      await Transaction.create(
+        createValidTransactionData({
+          date: new Date('2023-01-17'),
+          amount: 250,
+        })
+      );
 
       // Test with only min amount
       const result1 = await transactionRepository.findByDateRange(
@@ -388,15 +467,19 @@ describe('Transaction Repository', () => {
     it('should handle tags filtering correctly', async () => {
       const startDate = new Date('2023-01-01');
       const endDate = new Date('2023-01-31');
-      
-      await Transaction.create(createValidTransactionData({
-        date: new Date('2023-01-15'),
-        tags: ['food', 'groceries'],
-      }));
-      await Transaction.create(createValidTransactionData({
-        date: new Date('2023-01-16'),
-        tags: ['entertainment'],
-      }));
+
+      await Transaction.create(
+        createValidTransactionData({
+          date: new Date('2023-01-15'),
+          tags: ['food', 'groceries'],
+        })
+      );
+      await Transaction.create(
+        createValidTransactionData({
+          date: new Date('2023-01-16'),
+          tags: ['entertainment'],
+        })
+      );
 
       const result = await transactionRepository.findByDateRange(
         testUserId.toString(),
@@ -412,9 +495,9 @@ describe('Transaction Repository', () => {
     it('should handle database errors in findByDateRange', async () => {
       const startDate = new Date('2023-01-01');
       const endDate = new Date('2023-01-31');
-      
+
       const mockError = new Error('Database error');
-      
+
       // Create a mock that throws an error when populate is called
       const originalFind = transactionRepository['model'].find;
       transactionRepository['model'].find = jest.fn().mockReturnValue({
@@ -424,7 +507,11 @@ describe('Transaction Repository', () => {
       } as any);
 
       await expect(
-        transactionRepository.findByDateRange(testUserId.toString(), startDate, endDate)
+        transactionRepository.findByDateRange(
+          testUserId.toString(),
+          startDate,
+          endDate
+        )
       ).rejects.toThrow('Database error');
 
       // Restore the original method
@@ -434,14 +521,18 @@ describe('Transaction Repository', () => {
 
   describe('getTransactionStats', () => {
     it('should generate category statistics successfully', async () => {
-      await Transaction.create(createValidTransactionData({
-        type: TransactionType.EXPENSE,
-        amount: 100,
-      }));
-      await Transaction.create(createValidTransactionData({
-        type: TransactionType.INCOME,
-        amount: 200,
-      }));
+      await Transaction.create(
+        createValidTransactionData({
+          type: TransactionType.EXPENSE,
+          amount: 100,
+        })
+      );
+      await Transaction.create(
+        createValidTransactionData({
+          type: TransactionType.INCOME,
+          amount: 200,
+        })
+      );
 
       const result = await transactionRepository.getTransactionStats(
         testUserId.toString(),
@@ -453,12 +544,14 @@ describe('Transaction Repository', () => {
     });
 
     it('should handle all groupBy options correctly', async () => {
-      await Transaction.create(createValidTransactionData({
-        type: TransactionType.EXPENSE,
-        amount: 100,
-        paymentMethod: PaymentMethod.CASH,
-        date: new Date('2023-06-15'),
-      }));
+      await Transaction.create(
+        createValidTransactionData({
+          type: TransactionType.EXPENSE,
+          amount: 100,
+          paymentMethod: PaymentMethod.CASH,
+          date: new Date('2023-06-15'),
+        })
+      );
 
       // Test type grouping
       const typeResult = await transactionRepository.getTransactionStats(
@@ -499,11 +592,13 @@ describe('Transaction Repository', () => {
     it('should handle date range filtering in statistics', async () => {
       const startDate = new Date('2023-01-01');
       const endDate = new Date('2023-01-31');
-      
-      await Transaction.create(createValidTransactionData({
-        date: new Date('2023-01-15'),
-        amount: 100,
-      }));
+
+      await Transaction.create(
+        createValidTransactionData({
+          date: new Date('2023-01-15'),
+          amount: 100,
+        })
+      );
 
       const result = await transactionRepository.getTransactionStats(
         testUserId.toString(),
@@ -518,9 +613,11 @@ describe('Transaction Repository', () => {
     });
 
     it('should handle account filtering in statistics', async () => {
-      await Transaction.create(createValidTransactionData({
-        amount: 100,
-      }));
+      await Transaction.create(
+        createValidTransactionData({
+          amount: 100,
+        })
+      );
 
       const result = await transactionRepository.getTransactionStats(
         testUserId.toString(),
@@ -534,9 +631,11 @@ describe('Transaction Repository', () => {
     });
 
     it('should handle includeSubcategories option', async () => {
-      await Transaction.create(createValidTransactionData({
-        amount: 100,
-      }));
+      await Transaction.create(
+        createValidTransactionData({
+          amount: 100,
+        })
+      );
 
       const result = await transactionRepository.getTransactionStats(
         testUserId.toString(),
@@ -551,7 +650,9 @@ describe('Transaction Repository', () => {
 
     it('should handle database errors in getTransactionStats', async () => {
       const mockError = new Error('Aggregation failed');
-      jest.spyOn(transactionRepository['model'], 'aggregate').mockRejectedValueOnce(mockError);
+      jest
+        .spyOn(transactionRepository['model'], 'aggregate')
+        .mockRejectedValueOnce(mockError);
 
       await expect(
         transactionRepository.getTransactionStats(testUserId.toString())
@@ -563,17 +664,21 @@ describe('Transaction Repository', () => {
     it('should generate daily cash flow analysis', async () => {
       const startDate = new Date('2023-01-01');
       const endDate = new Date('2023-01-31');
-      
-      await Transaction.create(createValidTransactionData({
-        date: new Date('2023-01-15'),
-        type: TransactionType.INCOME,
-        amount: 200,
-      }));
-      await Transaction.create(createValidTransactionData({
-        date: new Date('2023-01-15'),
-        type: TransactionType.EXPENSE,
-        amount: 100,
-      }));
+
+      await Transaction.create(
+        createValidTransactionData({
+          date: new Date('2023-01-15'),
+          type: TransactionType.INCOME,
+          amount: 200,
+        })
+      );
+      await Transaction.create(
+        createValidTransactionData({
+          date: new Date('2023-01-15'),
+          type: TransactionType.EXPENSE,
+          amount: 100,
+        })
+      );
 
       const result = await transactionRepository.getCashFlowAnalysis(
         testUserId.toString(),
@@ -591,11 +696,13 @@ describe('Transaction Repository', () => {
     it('should handle weekly interval correctly', async () => {
       const startDate = new Date('2023-01-01');
       const endDate = new Date('2023-01-31');
-      
-      await Transaction.create(createValidTransactionData({
-        date: new Date('2023-01-15'),
-        amount: 100,
-      }));
+
+      await Transaction.create(
+        createValidTransactionData({
+          date: new Date('2023-01-15'),
+          amount: 100,
+        })
+      );
 
       const result = await transactionRepository.getCashFlowAnalysis(
         testUserId.toString(),
@@ -612,11 +719,13 @@ describe('Transaction Repository', () => {
     it('should handle monthly interval correctly', async () => {
       const startDate = new Date('2023-01-01');
       const endDate = new Date('2023-01-31');
-      
-      await Transaction.create(createValidTransactionData({
-        date: new Date('2023-01-15'),
-        amount: 100,
-      }));
+
+      await Transaction.create(
+        createValidTransactionData({
+          date: new Date('2023-01-15'),
+          amount: 100,
+        })
+      );
 
       const result = await transactionRepository.getCashFlowAnalysis(
         testUserId.toString(),
@@ -633,11 +742,13 @@ describe('Transaction Repository', () => {
     it('should handle default interval (monthly)', async () => {
       const startDate = new Date('2023-01-01');
       const endDate = new Date('2023-01-31');
-      
-      await Transaction.create(createValidTransactionData({
-        date: new Date('2023-01-15'),
-        amount: 100,
-      }));
+
+      await Transaction.create(
+        createValidTransactionData({
+          date: new Date('2023-01-15'),
+          amount: 100,
+        })
+      );
 
       const result = await transactionRepository.getCashFlowAnalysis(
         testUserId.toString(),
@@ -653,11 +764,13 @@ describe('Transaction Repository', () => {
     it('should handle account filtering in cash flow analysis', async () => {
       const startDate = new Date('2023-01-01');
       const endDate = new Date('2023-01-31');
-      
-      await Transaction.create(createValidTransactionData({
-        date: new Date('2023-01-15'),
-        amount: 100,
-      }));
+
+      await Transaction.create(
+        createValidTransactionData({
+          date: new Date('2023-01-15'),
+          amount: 100,
+        })
+      );
 
       const result = await transactionRepository.getCashFlowAnalysis(
         testUserId.toString(),
@@ -674,9 +787,11 @@ describe('Transaction Repository', () => {
     it('should handle database errors in getCashFlowAnalysis', async () => {
       const startDate = new Date('2023-01-01');
       const endDate = new Date('2023-01-31');
-      
+
       const mockError = new Error('Aggregation failed');
-      jest.spyOn(transactionRepository['model'], 'aggregate').mockRejectedValueOnce(mockError);
+      jest
+        .spyOn(transactionRepository['model'], 'aggregate')
+        .mockRejectedValueOnce(mockError);
 
       await expect(
         transactionRepository.getCashFlowAnalysis(testUserId.toString(), {
@@ -691,12 +806,14 @@ describe('Transaction Repository', () => {
     it('should generate spending insights successfully', async () => {
       const startDate = new Date('2023-01-01');
       const endDate = new Date('2023-01-31');
-      
-      await Transaction.create(createValidTransactionData({
-        date: new Date('2023-01-15'),
-        type: TransactionType.EXPENSE,
-        amount: 100,
-      }));
+
+      await Transaction.create(
+        createValidTransactionData({
+          date: new Date('2023-01-15'),
+          type: TransactionType.EXPENSE,
+          amount: 100,
+        })
+      );
 
       const result = await transactionRepository.getSpendingInsights(
         testUserId.toString(),
@@ -715,12 +832,14 @@ describe('Transaction Repository', () => {
     it('should handle account filtering in spending insights', async () => {
       const startDate = new Date('2023-01-01');
       const endDate = new Date('2023-01-31');
-      
-      await Transaction.create(createValidTransactionData({
-        date: new Date('2023-01-15'),
-        type: TransactionType.EXPENSE,
-        amount: 100,
-      }));
+
+      await Transaction.create(
+        createValidTransactionData({
+          date: new Date('2023-01-15'),
+          type: TransactionType.EXPENSE,
+          amount: 100,
+        })
+      );
 
       const result = await transactionRepository.getSpendingInsights(
         testUserId.toString(),
@@ -737,12 +856,14 @@ describe('Transaction Repository', () => {
     it('should handle custom top categories limit', async () => {
       const startDate = new Date('2023-01-01');
       const endDate = new Date('2023-01-31');
-      
-      await Transaction.create(createValidTransactionData({
-        date: new Date('2023-01-15'),
-        type: TransactionType.EXPENSE,
-        amount: 100,
-      }));
+
+      await Transaction.create(
+        createValidTransactionData({
+          date: new Date('2023-01-15'),
+          type: TransactionType.EXPENSE,
+          amount: 100,
+        })
+      );
 
       const result = await transactionRepository.getSpendingInsights(
         testUserId.toString(),
@@ -759,9 +880,11 @@ describe('Transaction Repository', () => {
     it('should handle database errors in getSpendingInsights', async () => {
       const startDate = new Date('2023-01-01');
       const endDate = new Date('2023-01-31');
-      
+
       const mockError = new Error('Aggregation failed');
-      jest.spyOn(transactionRepository['model'], 'aggregate').mockRejectedValueOnce(mockError);
+      jest
+        .spyOn(transactionRepository['model'], 'aggregate')
+        .mockRejectedValueOnce(mockError);
 
       await expect(
         transactionRepository.getSpendingInsights(testUserId.toString(), {
@@ -776,11 +899,13 @@ describe('Transaction Repository', () => {
     it('should generate transactions by tags analysis successfully', async () => {
       const startDate = new Date('2023-01-01');
       const endDate = new Date('2023-01-31');
-      
-      await Transaction.create(createValidTransactionData({
-        date: new Date('2023-01-15'),
-        tags: ['food', 'groceries'],
-      }));
+
+      await Transaction.create(
+        createValidTransactionData({
+          date: new Date('2023-01-15'),
+          tags: ['food', 'groceries'],
+        })
+      );
 
       const result = await transactionRepository.getTransactionsByTags(
         testUserId.toString(),
@@ -799,11 +924,13 @@ describe('Transaction Repository', () => {
     it('should handle different groupBy options for tags analysis', async () => {
       const startDate = new Date('2023-01-01');
       const endDate = new Date('2023-01-31');
-      
-      await Transaction.create(createValidTransactionData({
-        date: new Date('2023-01-15'),
-        tags: ['food'],
-      }));
+
+      await Transaction.create(
+        createValidTransactionData({
+          date: new Date('2023-01-15'),
+          tags: ['food'],
+        })
+      );
 
       // Test tag grouping
       const tagResult = await transactionRepository.getTransactionsByTags(
@@ -844,11 +971,13 @@ describe('Transaction Repository', () => {
     it('should handle date range filtering in tags analysis', async () => {
       const startDate = new Date('2023-01-01');
       const endDate = new Date('2023-01-31');
-      
-      await Transaction.create(createValidTransactionData({
-        date: new Date('2023-01-15'),
-        tags: ['food'],
-      }));
+
+      await Transaction.create(
+        createValidTransactionData({
+          date: new Date('2023-01-15'),
+          tags: ['food'],
+        })
+      );
 
       const result = await transactionRepository.getTransactionsByTags(
         testUserId.toString(),
@@ -866,15 +995,21 @@ describe('Transaction Repository', () => {
     it('should handle database errors in getTransactionsByTags', async () => {
       const startDate = new Date('2023-01-01');
       const endDate = new Date('2023-01-31');
-      
+
       const mockError = new Error('Aggregation failed');
-      jest.spyOn(transactionRepository['model'], 'aggregate').mockRejectedValueOnce(mockError);
+      jest
+        .spyOn(transactionRepository['model'], 'aggregate')
+        .mockRejectedValueOnce(mockError);
 
       await expect(
-        transactionRepository.getTransactionsByTags(testUserId.toString(), ['food'], {
-          startDate,
-          endDate,
-        })
+        transactionRepository.getTransactionsByTags(
+          testUserId.toString(),
+          ['food'],
+          {
+            startDate,
+            endDate,
+          }
+        )
       ).rejects.toThrow('Aggregation failed');
     });
   });
@@ -891,8 +1026,10 @@ describe('Transaction Repository', () => {
         { ...transactionData, _id: new mongoose.Types.ObjectId() },
         { ...transactionData, _id: new mongoose.Types.ObjectId() },
       ];
-      
-      jest.spyOn(transactionRepository['model'], 'createRecurringSeries').mockResolvedValueOnce(mockSeries as any);
+
+      jest
+        .spyOn(transactionRepository['model'], 'createRecurringSeries')
+        .mockResolvedValueOnce(mockSeries as any);
 
       const result = await transactionRepository.createRecurringSeries(
         transactionData,
@@ -907,8 +1044,10 @@ describe('Transaction Repository', () => {
     it('should handle database errors in createRecurringSeries', async () => {
       const transactionData = createValidTransactionData();
       const mockError = new Error('Series creation failed');
-      
-      jest.spyOn(transactionRepository['model'], 'createRecurringSeries').mockRejectedValueOnce(mockError);
+
+      jest
+        .spyOn(transactionRepository['model'], 'createRecurringSeries')
+        .mockRejectedValueOnce(mockError);
 
       await expect(
         transactionRepository.createRecurringSeries(
@@ -923,9 +1062,13 @@ describe('Transaction Repository', () => {
   describe('Inherited Base Repository Methods', () => {
     describe('findById', () => {
       it('should find transaction by ID', async () => {
-        const transaction = await Transaction.create(createValidTransactionData());
+        const transaction = await Transaction.create(
+          createValidTransactionData()
+        );
 
-        const foundTransaction = await transactionRepository.findById((transaction._id as mongoose.Types.ObjectId).toString());
+        const foundTransaction = await transactionRepository.findById(
+          (transaction._id as mongoose.Types.ObjectId).toString()
+        );
 
         expect(foundTransaction).toBeDefined();
         expect(foundTransaction?.description).toBe('Test Transaction');
@@ -933,8 +1076,10 @@ describe('Transaction Repository', () => {
 
       it('should return null for non-existent ID', async () => {
         const nonExistentId = new mongoose.Types.ObjectId();
-        
-        const foundTransaction = await transactionRepository.findById(nonExistentId.toString());
+
+        const foundTransaction = await transactionRepository.findById(
+          nonExistentId.toString()
+        );
 
         expect(foundTransaction).toBeNull();
       });
@@ -946,7 +1091,8 @@ describe('Transaction Repository', () => {
           description: 'New Transaction',
         });
 
-        const newTransaction = await transactionRepository.create(newTransactionData);
+        const newTransaction =
+          await transactionRepository.create(newTransactionData);
 
         expect(newTransaction.description).toBe('New Transaction');
         expect(newTransaction.userId).toEqual(testUserId);
@@ -956,12 +1102,17 @@ describe('Transaction Repository', () => {
 
     describe('updateById', () => {
       it('should update transaction by ID', async () => {
-        const transaction = await Transaction.create(createValidTransactionData({
-          description: 'Original Description',
-        }));
+        const transaction = await Transaction.create(
+          createValidTransactionData({
+            description: 'Original Description',
+          })
+        );
 
         const updateData = { description: 'Updated Description' };
-        const updatedTransaction = await transactionRepository.updateById((transaction._id as mongoose.Types.ObjectId).toString(), updateData);
+        const updatedTransaction = await transactionRepository.updateById(
+          (transaction._id as mongoose.Types.ObjectId).toString(),
+          updateData
+        );
 
         expect(updatedTransaction).toBeDefined();
         expect(updatedTransaction?.description).toBe('Updated Description');
@@ -969,8 +1120,11 @@ describe('Transaction Repository', () => {
 
       it('should return null for non-existent ID', async () => {
         const nonExistentId = new mongoose.Types.ObjectId();
-        
-        const updatedTransaction = await transactionRepository.updateById(nonExistentId.toString(), { description: 'Updated' });
+
+        const updatedTransaction = await transactionRepository.updateById(
+          nonExistentId.toString(),
+          { description: 'Updated' }
+        );
 
         expect(updatedTransaction).toBeNull();
       });
@@ -978,9 +1132,13 @@ describe('Transaction Repository', () => {
 
     describe('deleteById', () => {
       it('should delete transaction by ID', async () => {
-        const transaction = await Transaction.create(createValidTransactionData());
+        const transaction = await Transaction.create(
+          createValidTransactionData()
+        );
 
-        const deletedTransaction = await transactionRepository.deleteById((transaction._id as mongoose.Types.ObjectId).toString());
+        const deletedTransaction = await transactionRepository.deleteById(
+          (transaction._id as mongoose.Types.ObjectId).toString()
+        );
 
         expect(deletedTransaction).toBeDefined();
         expect(deletedTransaction?.description).toBe('Test Transaction');
@@ -988,8 +1146,10 @@ describe('Transaction Repository', () => {
 
       it('should return null for non-existent ID', async () => {
         const nonExistentId = new mongoose.Types.ObjectId();
-        
-        const deletedTransaction = await transactionRepository.deleteById(nonExistentId.toString());
+
+        const deletedTransaction = await transactionRepository.deleteById(
+          nonExistentId.toString()
+        );
 
         expect(deletedTransaction).toBeNull();
       });
@@ -997,24 +1157,32 @@ describe('Transaction Repository', () => {
 
     describe('find', () => {
       it('should find transactions with filter', async () => {
-        await Transaction.create(createValidTransactionData({
-          description: 'Active Transaction',
+        await Transaction.create(
+          createValidTransactionData({
+            description: 'Active Transaction',
+            isDeleted: false,
+          })
+        );
+
+        await Transaction.create(
+          createValidTransactionData({
+            description: 'Inactive Transaction',
+            isDeleted: true,
+          })
+        );
+
+        const transactions = await transactionRepository.find({
           isDeleted: false,
-        }));
-
-        await Transaction.create(createValidTransactionData({
-          description: 'Inactive Transaction',
-          isDeleted: true,
-        }));
-
-        const transactions = await transactionRepository.find({ isDeleted: false });
+        });
 
         expect(transactions).toHaveLength(1);
         expect(transactions[0].description).toBe('Active Transaction');
       });
 
       it('should return empty array for no matches', async () => {
-        const transactions = await transactionRepository.find({ isDeleted: true });
+        const transactions = await transactionRepository.find({
+          isDeleted: true,
+        });
 
         expect(transactions).toHaveLength(0);
       });
@@ -1024,14 +1192,18 @@ describe('Transaction Repository', () => {
       it('should find one transaction with filter', async () => {
         await Transaction.create(createValidTransactionData());
 
-        const transaction = await transactionRepository.findOne({ description: 'Test Transaction' });
+        const transaction = await transactionRepository.findOne({
+          description: 'Test Transaction',
+        });
 
         expect(transaction).toBeDefined();
         expect(transaction?.description).toBe('Test Transaction');
       });
 
       it('should return null for no matches', async () => {
-        const transaction = await transactionRepository.findOne({ description: 'Non-existent' });
+        const transaction = await transactionRepository.findOne({
+          description: 'Non-existent',
+        });
 
         expect(transaction).toBeNull();
       });
@@ -1039,15 +1211,19 @@ describe('Transaction Repository', () => {
 
     describe('count', () => {
       it('should count transactions with filter', async () => {
-        await Transaction.create(createValidTransactionData({
-          description: 'Active Transaction',
-          isDeleted: false,
-        }));
+        await Transaction.create(
+          createValidTransactionData({
+            description: 'Active Transaction',
+            isDeleted: false,
+          })
+        );
 
-        await Transaction.create(createValidTransactionData({
-          description: 'Inactive Transaction',
-          isDeleted: true,
-        }));
+        await Transaction.create(
+          createValidTransactionData({
+            description: 'Inactive Transaction',
+            isDeleted: true,
+          })
+        );
 
         const count = await transactionRepository.count({ isDeleted: false });
 
@@ -1063,17 +1239,23 @@ describe('Transaction Repository', () => {
 
     describe('exists', () => {
       it('should return true for existing transaction', async () => {
-        const transaction = await Transaction.create(createValidTransactionData());
+        const transaction = await Transaction.create(
+          createValidTransactionData()
+        );
 
-        const exists = await transactionRepository.exists({ _id: transaction._id as mongoose.Types.ObjectId });
+        const exists = await transactionRepository.exists({
+          _id: transaction._id as mongoose.Types.ObjectId,
+        });
 
         expect(exists).toBe(true);
       });
 
       it('should return false for non-existent transaction', async () => {
         const nonExistentId = new mongoose.Types.ObjectId();
-        
-        const exists = await transactionRepository.exists({ _id: nonExistentId });
+
+        const exists = await transactionRepository.exists({
+          _id: nonExistentId,
+        });
 
         expect(exists).toBe(false);
       });
@@ -1081,13 +1263,17 @@ describe('Transaction Repository', () => {
 
     describe('updateMany', () => {
       it('should update many transactions', async () => {
-        await Transaction.create(createValidTransactionData({
-          description: 'Transaction 1',
-        }));
+        await Transaction.create(
+          createValidTransactionData({
+            description: 'Transaction 1',
+          })
+        );
 
-        await Transaction.create(createValidTransactionData({
-          description: 'Transaction 2',
-        }));
+        await Transaction.create(
+          createValidTransactionData({
+            description: 'Transaction 2',
+          })
+        );
 
         const result = await transactionRepository.updateMany(
           { userId: testUserId },
@@ -1100,15 +1286,21 @@ describe('Transaction Repository', () => {
 
     describe('deleteMany', () => {
       it('should delete many transactions', async () => {
-        await Transaction.create(createValidTransactionData({
-          description: 'Transaction 1',
-        }));
+        await Transaction.create(
+          createValidTransactionData({
+            description: 'Transaction 1',
+          })
+        );
 
-        await Transaction.create(createValidTransactionData({
-          description: 'Transaction 2',
-        }));
+        await Transaction.create(
+          createValidTransactionData({
+            description: 'Transaction 2',
+          })
+        );
 
-        const result = await transactionRepository.deleteMany({ userId: testUserId });
+        const result = await transactionRepository.deleteMany({
+          userId: testUserId,
+        });
 
         expect(result.deletedCount).toBe(2);
       });
@@ -1116,17 +1308,25 @@ describe('Transaction Repository', () => {
 
     describe('aggregate', () => {
       it('should execute aggregation pipeline', async () => {
-        await Transaction.create(createValidTransactionData({
-          description: 'Transaction 1',
-        }));
+        await Transaction.create(
+          createValidTransactionData({
+            description: 'Transaction 1',
+          })
+        );
 
-        await Transaction.create(createValidTransactionData({
-          description: 'Transaction 2',
-        }));
+        await Transaction.create(
+          createValidTransactionData({
+            description: 'Transaction 2',
+          })
+        );
 
         const result = await transactionRepository.aggregate([
-          { $match: { userId: new mongoose.Types.ObjectId(testUserId.toString()) } },
-          { $group: { _id: null, total: { $sum: 1 } } }
+          {
+            $match: {
+              userId: new mongoose.Types.ObjectId(testUserId.toString()),
+            },
+          },
+          { $group: { _id: null, total: { $sum: 1 } } },
         ]);
 
         expect(result).toHaveLength(1);
@@ -1136,22 +1336,28 @@ describe('Transaction Repository', () => {
   });
 
   describe('Error Handling', () => {
-        it('should handle database connection errors gracefully', async () => {
+    it('should handle database connection errors gracefully', async () => {
       // Mock the model to throw an error
       const mockFind = jest.fn().mockReturnValue({
         populate: jest.fn().mockReturnValue({
           sort: jest.fn().mockReturnValue({
             skip: jest.fn().mockReturnValue({
-              limit: jest.fn().mockRejectedValue(new Error('Connection failed')),
+              limit: jest
+                .fn()
+                .mockRejectedValue(new Error('Connection failed')),
             }),
           }),
         }),
       });
       const originalFind = transactionRepository['model'].find;
-      
+
       transactionRepository['model'].find = mockFind;
 
-      await expect(transactionRepository.findByUserId(testUserId.toString(), { populate: [] })).rejects.toThrow('Connection failed');
+      await expect(
+        transactionRepository.findByUserId(testUserId.toString(), {
+          populate: [],
+        })
+      ).rejects.toThrow('Connection failed');
 
       // Restore the original method
       transactionRepository['model'].find = originalFind;
@@ -1159,17 +1365,19 @@ describe('Transaction Repository', () => {
 
     it('should handle validation errors gracefully', async () => {
       const invalidData = { amount: 'invalid' } as any;
-      
+
       await expect(transactionRepository.create(invalidData)).rejects.toThrow();
     });
   });
 
   describe('getTransactionStats edge cases', () => {
     it('should handle type grouping correctly', async () => {
-      await Transaction.create(createValidTransactionData({
-        type: TransactionType.EXPENSE,
-        amount: 100,
-      }));
+      await Transaction.create(
+        createValidTransactionData({
+          type: TransactionType.EXPENSE,
+          amount: 100,
+        })
+      );
 
       const result = await transactionRepository.getTransactionStats(
         testUserId.toString(),
@@ -1180,10 +1388,12 @@ describe('Transaction Repository', () => {
     });
 
     it('should handle payment method grouping correctly', async () => {
-      await Transaction.create(createValidTransactionData({
-        paymentMethod: PaymentMethod.CASH,
-        amount: 100,
-      }));
+      await Transaction.create(
+        createValidTransactionData({
+          paymentMethod: PaymentMethod.CASH,
+          amount: 100,
+        })
+      );
 
       const result = await transactionRepository.getTransactionStats(
         testUserId.toString(),
@@ -1194,9 +1404,11 @@ describe('Transaction Repository', () => {
     });
 
     it('should handle includeSubcategories option correctly', async () => {
-      await Transaction.create(createValidTransactionData({
-        amount: 100,
-      }));
+      await Transaction.create(
+        createValidTransactionData({
+          amount: 100,
+        })
+      );
 
       const result = await transactionRepository.getTransactionStats(
         testUserId.toString(),
@@ -1214,11 +1426,13 @@ describe('Transaction Repository', () => {
     it('should handle weekly interval correctly', async () => {
       const startDate = new Date('2023-01-01');
       const endDate = new Date('2023-01-31');
-      
-      await Transaction.create(createValidTransactionData({
-        date: new Date('2023-01-15'),
-        amount: 100,
-      }));
+
+      await Transaction.create(
+        createValidTransactionData({
+          date: new Date('2023-01-15'),
+          amount: 100,
+        })
+      );
 
       const result = await transactionRepository.getCashFlowAnalysis(
         testUserId.toString(),
@@ -1235,11 +1449,13 @@ describe('Transaction Repository', () => {
     it('should handle daily interval correctly', async () => {
       const startDate = new Date('2023-01-01');
       const endDate = new Date('2023-01-31');
-      
-      await Transaction.create(createValidTransactionData({
-        date: new Date('2023-01-15'),
-        amount: 100,
-      }));
+
+      await Transaction.create(
+        createValidTransactionData({
+          date: new Date('2023-01-15'),
+          amount: 100,
+        })
+      );
 
       const result = await transactionRepository.getCashFlowAnalysis(
         testUserId.toString(),
@@ -1256,11 +1472,13 @@ describe('Transaction Repository', () => {
     it('should handle account filtering in cash flow analysis', async () => {
       const startDate = new Date('2023-01-01');
       const endDate = new Date('2023-01-31');
-      
-      await Transaction.create(createValidTransactionData({
-        date: new Date('2023-01-15'),
-        amount: 100,
-      }));
+
+      await Transaction.create(
+        createValidTransactionData({
+          date: new Date('2023-01-15'),
+          amount: 100,
+        })
+      );
 
       const result = await transactionRepository.getCashFlowAnalysis(
         testUserId.toString(),
@@ -1279,11 +1497,13 @@ describe('Transaction Repository', () => {
     it('should handle populate option in date range search', async () => {
       const startDate = new Date('2023-01-01');
       const endDate = new Date('2023-01-31');
-      
-      await Transaction.create(createValidTransactionData({
-        date: new Date('2023-01-15'),
-        amount: 100,
-      }));
+
+      await Transaction.create(
+        createValidTransactionData({
+          date: new Date('2023-01-15'),
+          amount: 100,
+        })
+      );
 
       const result = await transactionRepository.findByDateRange(
         testUserId.toString(),
@@ -1301,11 +1521,14 @@ describe('Transaction Repository', () => {
 
   describe('findByUserId edge cases', () => {
     it('should handle empty results gracefully', async () => {
-      const result = await transactionRepository.findByUserId(testUserId.toString(), {
-        page: 1,
-        limit: 10,
-        populate: [],
-      });
+      const result = await transactionRepository.findByUserId(
+        testUserId.toString(),
+        {
+          page: 1,
+          limit: 10,
+          populate: [],
+        }
+      );
 
       expect(result.transactions).toHaveLength(0);
       expect(result.total).toBe(0);
@@ -1314,42 +1537,56 @@ describe('Transaction Repository', () => {
     });
 
     it('should handle custom sort options', async () => {
-      const transaction1 = await Transaction.create(createValidTransactionData({
-        amount: 100,
-        date: new Date('2023-01-01'),
-      }));
-      const transaction2 = await Transaction.create(createValidTransactionData({
-        amount: 200,
-        date: new Date('2023-01-02'),
-      }));
+      const transaction1 = await Transaction.create(
+        createValidTransactionData({
+          amount: 100,
+          date: new Date('2023-01-01'),
+        })
+      );
+      const transaction2 = await Transaction.create(
+        createValidTransactionData({
+          amount: 200,
+          date: new Date('2023-01-02'),
+        })
+      );
 
-      const result = await transactionRepository.findByUserId(testUserId.toString(), {
-        page: 1,
-        limit: 10,
-        sort: { amount: -1 }, // Sort by amount descending
-        populate: [],
-      });
+      const result = await transactionRepository.findByUserId(
+        testUserId.toString(),
+        {
+          page: 1,
+          limit: 10,
+          sort: { amount: -1 }, // Sort by amount descending
+          populate: [],
+        }
+      );
 
       expect(result.transactions[0].amount).toBe(200);
       expect(result.transactions[1].amount).toBe(100);
     });
 
     it('should handle custom filter options', async () => {
-      await Transaction.create(createValidTransactionData({
-        type: TransactionType.EXPENSE,
-        amount: 100,
-      }));
-      await Transaction.create(createValidTransactionData({
-        type: TransactionType.INCOME,
-        amount: 200,
-      }));
+      await Transaction.create(
+        createValidTransactionData({
+          type: TransactionType.EXPENSE,
+          amount: 100,
+        })
+      );
+      await Transaction.create(
+        createValidTransactionData({
+          type: TransactionType.INCOME,
+          amount: 200,
+        })
+      );
 
-      const result = await transactionRepository.findByUserId(testUserId.toString(), {
-        page: 1,
-        limit: 10,
-        filter: { type: TransactionType.INCOME },
-        populate: [],
-      });
+      const result = await transactionRepository.findByUserId(
+        testUserId.toString(),
+        {
+          page: 1,
+          limit: 10,
+          filter: { type: TransactionType.INCOME },
+          populate: [],
+        }
+      );
 
       expect(result.transactions).toHaveLength(1);
       expect(result.transactions[0].type).toBe(TransactionType.INCOME);
@@ -1358,14 +1595,18 @@ describe('Transaction Repository', () => {
 
   describe('findByAccountId edge cases', () => {
     it('should handle custom sort options', async () => {
-      const transaction1 = await Transaction.create(createValidTransactionData({
-        amount: 100,
-        date: new Date('2023-01-01'),
-      }));
-      const transaction2 = await Transaction.create(createValidTransactionData({
-        amount: 200,
-        date: new Date('2023-01-02'),
-      }));
+      const transaction1 = await Transaction.create(
+        createValidTransactionData({
+          amount: 100,
+          date: new Date('2023-01-01'),
+        })
+      );
+      const transaction2 = await Transaction.create(
+        createValidTransactionData({
+          amount: 200,
+          date: new Date('2023-01-02'),
+        })
+      );
 
       const result = await transactionRepository.findByAccountId(
         testAccountId.toString(),
@@ -1382,14 +1623,18 @@ describe('Transaction Repository', () => {
     });
 
     it('should handle custom filter options', async () => {
-      await Transaction.create(createValidTransactionData({
-        type: TransactionType.EXPENSE,
-        amount: 100,
-      }));
-      await Transaction.create(createValidTransactionData({
-        type: TransactionType.INCOME,
-        amount: 200,
-      }));
+      await Transaction.create(
+        createValidTransactionData({
+          type: TransactionType.EXPENSE,
+          amount: 100,
+        })
+      );
+      await Transaction.create(
+        createValidTransactionData({
+          type: TransactionType.INCOME,
+          amount: 200,
+        })
+      );
 
       const result = await transactionRepository.findByAccountId(
         testAccountId.toString(),
@@ -1408,59 +1653,72 @@ describe('Transaction Repository', () => {
 
   describe('getRecurringTransactionAnalysis', () => {
     it('should generate recurring transaction analysis successfully', async () => {
-      await Transaction.create(createValidTransactionData({
-        isRecurring: true,
-        recurrencePattern: RecurrencePattern.MONTHLY,
-        amount: 100,
-        status: TransactionStatus.COMPLETED,
-      }));
-
-      const result = await transactionRepository.getRecurringTransactionAnalysis(
-        testUserId.toString()
+      await Transaction.create(
+        createValidTransactionData({
+          isRecurring: true,
+          recurrencePattern: RecurrencePattern.MONTHLY,
+          amount: 100,
+          status: TransactionStatus.COMPLETED,
+        })
       );
+
+      const result =
+        await transactionRepository.getRecurringTransactionAnalysis(
+          testUserId.toString()
+        );
 
       expect(result).toBeDefined();
       expect(Array.isArray(result)).toBe(true);
     });
 
     it('should handle account filtering in recurring analysis', async () => {
-      await Transaction.create(createValidTransactionData({
-        isRecurring: true,
-        recurrencePattern: RecurrencePattern.WEEKLY,
-        amount: 50,
-        status: TransactionStatus.COMPLETED,
-      }));
-
-      const result = await transactionRepository.getRecurringTransactionAnalysis(
-        testUserId.toString(),
-        { accountId: testAccountId.toString() }
+      await Transaction.create(
+        createValidTransactionData({
+          isRecurring: true,
+          recurrencePattern: RecurrencePattern.WEEKLY,
+          amount: 50,
+          status: TransactionStatus.COMPLETED,
+        })
       );
+
+      const result =
+        await transactionRepository.getRecurringTransactionAnalysis(
+          testUserId.toString(),
+          { accountId: testAccountId.toString() }
+        );
 
       expect(result).toBeDefined();
     });
 
     it('should handle includeInactive option', async () => {
-      await Transaction.create(createValidTransactionData({
-        isRecurring: true,
-        recurrencePattern: RecurrencePattern.BIWEEKLY,
-        amount: 75,
-        status: TransactionStatus.PENDING,
-      }));
-
-      const result = await transactionRepository.getRecurringTransactionAnalysis(
-        testUserId.toString(),
-        { includeInactive: true }
+      await Transaction.create(
+        createValidTransactionData({
+          isRecurring: true,
+          recurrencePattern: RecurrencePattern.BIWEEKLY,
+          amount: 75,
+          status: TransactionStatus.PENDING,
+        })
       );
+
+      const result =
+        await transactionRepository.getRecurringTransactionAnalysis(
+          testUserId.toString(),
+          { includeInactive: true }
+        );
 
       expect(result).toBeDefined();
     });
 
     it('should handle database errors in recurring analysis', async () => {
       const mockError = new Error('Aggregation failed');
-      jest.spyOn(transactionRepository['model'], 'aggregate').mockRejectedValueOnce(mockError);
+      jest
+        .spyOn(transactionRepository['model'], 'aggregate')
+        .mockRejectedValueOnce(mockError);
 
       await expect(
-        transactionRepository.getRecurringTransactionAnalysis(testUserId.toString())
+        transactionRepository.getRecurringTransactionAnalysis(
+          testUserId.toString()
+        )
       ).rejects.toThrow('Aggregation failed');
     });
   });
@@ -1469,18 +1727,22 @@ describe('Transaction Repository', () => {
     it('should generate dashboard summary successfully', async () => {
       // Create transactions within the last 30 days (default)
       const now = new Date();
-      
-      await Transaction.create(createValidTransactionData({
-        type: TransactionType.INCOME,
-        amount: 1000,
-        date: now,
-      }));
 
-      await Transaction.create(createValidTransactionData({
-        type: TransactionType.EXPENSE,
-        amount: 300,
-        date: now,
-      }));
+      await Transaction.create(
+        createValidTransactionData({
+          type: TransactionType.INCOME,
+          amount: 1000,
+          date: now,
+        })
+      );
+
+      await Transaction.create(
+        createValidTransactionData({
+          type: TransactionType.EXPENSE,
+          amount: 300,
+          date: now,
+        })
+      );
 
       const result = await transactionRepository.getDashboardSummary(
         testUserId.toString()
@@ -1496,11 +1758,13 @@ describe('Transaction Repository', () => {
     });
 
     it('should handle account filtering in dashboard summary', async () => {
-      await Transaction.create(createValidTransactionData({
-        type: TransactionType.INCOME,
-        amount: 500,
-        date: new Date(),
-      }));
+      await Transaction.create(
+        createValidTransactionData({
+          type: TransactionType.INCOME,
+          amount: 500,
+          date: new Date(),
+        })
+      );
 
       const result = await transactionRepository.getDashboardSummary(
         testUserId.toString(),
@@ -1514,11 +1778,13 @@ describe('Transaction Repository', () => {
       const oldDate = new Date();
       oldDate.setDate(oldDate.getDate() - 60);
 
-      await Transaction.create(createValidTransactionData({
-        type: TransactionType.EXPENSE,
-        amount: 200,
-        date: oldDate,
-      }));
+      await Transaction.create(
+        createValidTransactionData({
+          type: TransactionType.EXPENSE,
+          amount: 200,
+          date: oldDate,
+        })
+      );
 
       const result = await transactionRepository.getDashboardSummary(
         testUserId.toString(),
@@ -1530,11 +1796,13 @@ describe('Transaction Repository', () => {
     });
 
     it('should handle zero income case for savings rate', async () => {
-      await Transaction.create(createValidTransactionData({
-        type: TransactionType.EXPENSE,
-        amount: 100,
-        date: new Date(),
-      }));
+      await Transaction.create(
+        createValidTransactionData({
+          type: TransactionType.EXPENSE,
+          amount: 100,
+          date: new Date(),
+        })
+      );
 
       const result = await transactionRepository.getDashboardSummary(
         testUserId.toString()
@@ -1547,7 +1815,9 @@ describe('Transaction Repository', () => {
 
     it('should handle database errors in dashboard summary', async () => {
       const mockError = new Error('Aggregation failed');
-      jest.spyOn(transactionRepository['model'], 'aggregate').mockRejectedValueOnce(mockError);
+      jest
+        .spyOn(transactionRepository['model'], 'aggregate')
+        .mockRejectedValueOnce(mockError);
 
       await expect(
         transactionRepository.getDashboardSummary(testUserId.toString())
@@ -1557,11 +1827,13 @@ describe('Transaction Repository', () => {
 
   describe('searchTransactions', () => {
     it('should search transactions successfully', async () => {
-      await Transaction.create(createValidTransactionData({
-        title: 'Grocery Shopping',
-        description: 'Weekly groceries',
-        tags: ['food', 'essential'],
-      }));
+      await Transaction.create(
+        createValidTransactionData({
+          title: 'Grocery Shopping',
+          description: 'Weekly groceries',
+          tags: ['food', 'essential'],
+        })
+      );
 
       const result = await transactionRepository.searchTransactions(
         testUserId.toString(),
@@ -1576,10 +1848,12 @@ describe('Transaction Repository', () => {
     });
 
     it('should handle account filtering in search', async () => {
-      await Transaction.create(createValidTransactionData({
-        title: 'Restaurant',
-        description: 'Dinner out',
-      }));
+      await Transaction.create(
+        createValidTransactionData({
+          title: 'Restaurant',
+          description: 'Dinner out',
+        })
+      );
 
       const result = await transactionRepository.searchTransactions(
         testUserId.toString(),
@@ -1591,10 +1865,12 @@ describe('Transaction Repository', () => {
     });
 
     it('should handle category filtering in search', async () => {
-      await Transaction.create(createValidTransactionData({
-        title: 'Gas Station',
-        description: 'Fuel',
-      }));
+      await Transaction.create(
+        createValidTransactionData({
+          title: 'Gas Station',
+          description: 'Fuel',
+        })
+      );
 
       const result = await transactionRepository.searchTransactions(
         testUserId.toString(),
@@ -1606,10 +1882,12 @@ describe('Transaction Repository', () => {
     });
 
     it('should handle type filtering in search', async () => {
-      await Transaction.create(createValidTransactionData({
-        title: 'Salary',
-        type: TransactionType.INCOME,
-      }));
+      await Transaction.create(
+        createValidTransactionData({
+          title: 'Salary',
+          type: TransactionType.INCOME,
+        })
+      );
 
       const result = await transactionRepository.searchTransactions(
         testUserId.toString(),
@@ -1624,10 +1902,12 @@ describe('Transaction Repository', () => {
       const startDate = new Date('2023-01-01');
       const endDate = new Date('2023-01-31');
 
-      await Transaction.create(createValidTransactionData({
-        title: 'January Transaction',
-        date: new Date('2023-01-15'),
-      }));
+      await Transaction.create(
+        createValidTransactionData({
+          title: 'January Transaction',
+          date: new Date('2023-01-15'),
+        })
+      );
 
       const result = await transactionRepository.searchTransactions(
         testUserId.toString(),
@@ -1641,10 +1921,12 @@ describe('Transaction Repository', () => {
     it('should handle pagination in search', async () => {
       // Create multiple transactions
       for (let i = 0; i < 15; i++) {
-        await Transaction.create(createValidTransactionData({
-          title: `Transaction ${i + 1}`,
-          description: `Description ${i + 1}`,
-        }));
+        await Transaction.create(
+          createValidTransactionData({
+            title: `Transaction ${i + 1}`,
+            description: `Description ${i + 1}`,
+          })
+        );
       }
 
       const result = await transactionRepository.searchTransactions(
@@ -1659,10 +1941,12 @@ describe('Transaction Repository', () => {
     });
 
     it('should handle search with tags', async () => {
-      await Transaction.create(createValidTransactionData({
-        title: 'Tagged Transaction',
-        tags: ['important', 'business'],
-      }));
+      await Transaction.create(
+        createValidTransactionData({
+          title: 'Tagged Transaction',
+          tags: ['important', 'business'],
+        })
+      );
 
       const result = await transactionRepository.searchTransactions(
         testUserId.toString(),
@@ -1674,9 +1958,11 @@ describe('Transaction Repository', () => {
     });
 
     it('should handle search with populate options', async () => {
-      await Transaction.create(createValidTransactionData({
-        title: 'Populated Transaction',
-      }));
+      await Transaction.create(
+        createValidTransactionData({
+          title: 'Populated Transaction',
+        })
+      );
 
       const result = await transactionRepository.searchTransactions(
         testUserId.toString(),
@@ -1708,7 +1994,9 @@ describe('Transaction Repository', () => {
 
     it('should handle count errors in search', async () => {
       const mockError = new Error('Count failed');
-      jest.spyOn(transactionRepository['model'], 'countDocuments').mockRejectedValueOnce(mockError);
+      jest
+        .spyOn(transactionRepository['model'], 'countDocuments')
+        .mockRejectedValueOnce(mockError);
 
       await expect(
         transactionRepository.searchTransactions(testUserId.toString(), 'test')
@@ -1718,10 +2006,12 @@ describe('Transaction Repository', () => {
 
   describe('getTransactionsByTags edge cases', () => {
     it('should handle different groupBy options', async () => {
-      await Transaction.create(createValidTransactionData({
-        tags: ['food', 'groceries'],
-        date: new Date('2023-01-15'),
-      }));
+      await Transaction.create(
+        createValidTransactionData({
+          tags: ['food', 'groceries'],
+          date: new Date('2023-01-15'),
+        })
+      );
 
       // Test groupBy: 'category'
       const result1 = await transactionRepository.getTransactionsByTags(
@@ -1764,10 +2054,12 @@ describe('Transaction Repository', () => {
       const startDate = new Date('2023-01-01');
       const endDate = new Date('2023-01-31');
 
-      await Transaction.create(createValidTransactionData({
-        tags: ['monthly'],
-        date: new Date('2023-01-15'),
-      }));
+      await Transaction.create(
+        createValidTransactionData({
+          tags: ['monthly'],
+          date: new Date('2023-01-15'),
+        })
+      );
 
       const result = await transactionRepository.getTransactionsByTags(
         testUserId.toString(),
@@ -1784,11 +2076,13 @@ describe('Transaction Repository', () => {
       const startDate = new Date('2023-01-01');
       const endDate = new Date('2023-12-31');
 
-      await Transaction.create(createValidTransactionData({
-        type: TransactionType.INCOME,
-        amount: 1000,
-        date: new Date('2023-06-15'),
-      }));
+      await Transaction.create(
+        createValidTransactionData({
+          type: TransactionType.INCOME,
+          amount: 1000,
+          date: new Date('2023-06-15'),
+        })
+      );
 
       // Test daily interval
       const result1 = await transactionRepository.getCashFlowAnalysis(
@@ -1819,11 +2113,13 @@ describe('Transaction Repository', () => {
       const startDate = new Date('2023-01-01');
       const endDate = new Date('2023-12-31');
 
-      await Transaction.create(createValidTransactionData({
-        type: TransactionType.EXPENSE,
-        amount: 500,
-        date: new Date('2023-06-15'),
-      }));
+      await Transaction.create(
+        createValidTransactionData({
+          type: TransactionType.EXPENSE,
+          amount: 500,
+          date: new Date('2023-06-15'),
+        })
+      );
 
       const result = await transactionRepository.getCashFlowAnalysis(
         testUserId.toString(),

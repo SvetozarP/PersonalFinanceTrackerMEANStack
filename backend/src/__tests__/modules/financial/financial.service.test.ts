@@ -1,10 +1,15 @@
 import { FinancialService } from '../../../modules/financial/financial.service';
 import { TransactionService } from '../../../modules/financial/transactions/services/transaction.service';
 import { CategoryService } from '../../../modules/financial/categories/service/category.service';
-import { TransactionType, TransactionStatus } from '../../../modules/financial/transactions/interfaces/transaction.interface';
+import {
+  TransactionType,
+  TransactionStatus,
+} from '../../../modules/financial/transactions/interfaces/transaction.interface';
 
 // Mock the services
-jest.mock('../../../modules/financial/transactions/services/transaction.service');
+jest.mock(
+  '../../../modules/financial/transactions/services/transaction.service'
+);
 jest.mock('../../../modules/financial/categories/service/category.service');
 
 const MockedTransactionService = jest.mocked(TransactionService);
@@ -31,9 +36,27 @@ describe('FinancialService', () => {
       [TransactionType.ADJUSTMENT]: { count: 1, total: 200 },
     },
     transactionsByCategory: [
-      { categoryId: 'cat1', categoryName: 'Food', total: 2000, count: 4, percentage: 40 },
-      { categoryId: 'cat2', categoryName: 'Transport', total: 1500, count: 3, percentage: 30 },
-      { categoryId: 'cat3', categoryName: 'Entertainment', total: 500, count: 2, percentage: 10 },
+      {
+        categoryId: 'cat1',
+        categoryName: 'Food',
+        total: 2000,
+        count: 4,
+        percentage: 40,
+      },
+      {
+        categoryId: 'cat2',
+        categoryName: 'Transport',
+        total: 1500,
+        count: 3,
+        percentage: 30,
+      },
+      {
+        categoryId: 'cat3',
+        categoryName: 'Entertainment',
+        total: 500,
+        count: 2,
+        percentage: 10,
+      },
     ],
     monthlyTrends: [
       { month: '2024-01', income: 5000, expenses: 3000, net: 2000 },
@@ -43,8 +66,20 @@ describe('FinancialService', () => {
 
   const mockRecentTransactions = {
     transactions: [
-      { _id: 'trans1', title: 'Salary', amount: 5000, type: TransactionType.INCOME, date: new Date() },
-      { _id: 'trans2', title: 'Groceries', amount: 200, type: TransactionType.EXPENSE, date: new Date() },
+      {
+        _id: 'trans1',
+        title: 'Salary',
+        amount: 5000,
+        type: TransactionType.INCOME,
+        date: new Date(),
+      },
+      {
+        _id: 'trans2',
+        title: 'Groceries',
+        amount: 200,
+        type: TransactionType.EXPENSE,
+        date: new Date(),
+      },
     ] as any,
     total: 2,
     page: 1,
@@ -53,7 +88,13 @@ describe('FinancialService', () => {
 
   const mockPendingTransactions = {
     transactions: [
-      { _id: 'trans3', title: 'Pending Payment', amount: 150, type: TransactionType.EXPENSE, date: new Date() },
+      {
+        _id: 'trans3',
+        title: 'Pending Payment',
+        amount: 150,
+        type: TransactionType.EXPENSE,
+        date: new Date(),
+      },
     ] as any,
     total: 1,
     page: 1,
@@ -61,8 +102,20 @@ describe('FinancialService', () => {
   };
 
   const mockRecurringTransactions = [
-    { _id: 'trans4', title: 'Monthly Subscription', amount: 50, type: TransactionType.EXPENSE, nextOccurrence: new Date(Date.now() + 86400000) },
-    { _id: 'trans5', title: 'Rent', amount: 1200, type: TransactionType.EXPENSE, nextOccurrence: new Date(Date.now() + 2592000000) },
+    {
+      _id: 'trans4',
+      title: 'Monthly Subscription',
+      amount: 50,
+      type: TransactionType.EXPENSE,
+      nextOccurrence: new Date(Date.now() + 86400000),
+    },
+    {
+      _id: 'trans5',
+      title: 'Rent',
+      amount: 1200,
+      type: TransactionType.EXPENSE,
+      nextOccurrence: new Date(Date.now() + 2592000000),
+    },
   ] as any;
 
   const mockCategories = [
@@ -109,20 +162,36 @@ describe('FinancialService', () => {
   describe('getFinancialDashboard', () => {
     it('should get financial dashboard with default date range', async () => {
       // Setup mocks
-      mockTransactionService.getTransactionStats.mockResolvedValue(mockTransactionStats);
+      mockTransactionService.getTransactionStats.mockResolvedValue(
+        mockTransactionStats
+      );
       mockTransactionService.getUserTransactions
         .mockResolvedValueOnce(mockRecentTransactions)
         .mockResolvedValueOnce(mockPendingTransactions);
-      mockTransactionService.getRecurringTransactions.mockResolvedValue(mockRecurringTransactions);
-      mockCategoryService.getUserCategories.mockResolvedValue({ categories: mockCategories, total: 2, page: 1, totalPages: 1 });
+      mockTransactionService.getRecurringTransactions.mockResolvedValue(
+        mockRecurringTransactions
+      );
+      mockCategoryService.getUserCategories.mockResolvedValue({
+        categories: mockCategories,
+        total: 2,
+        page: 1,
+        totalPages: 1,
+      });
 
       // Execute
       const result = await financialService.getFinancialDashboard(mockUserId);
 
       // Verify
-      expect(mockTransactionService.getTransactionStats).toHaveBeenCalledWith(mockUserId, expect.any(Object));
-      expect(mockTransactionService.getUserTransactions).toHaveBeenCalledTimes(2);
-      expect(mockTransactionService.getRecurringTransactions).toHaveBeenCalledWith(mockUserId);
+      expect(mockTransactionService.getTransactionStats).toHaveBeenCalledWith(
+        mockUserId,
+        expect.any(Object)
+      );
+      expect(mockTransactionService.getUserTransactions).toHaveBeenCalledTimes(
+        2
+      );
+      expect(
+        mockTransactionService.getRecurringTransactions
+      ).toHaveBeenCalledWith(mockUserId);
       // Note: getUserCategories is called in the service but not used in the result, so we don't verify it
 
       expect(result).toBeDefined();
@@ -137,18 +206,33 @@ describe('FinancialService', () => {
       const endDate = new Date('2024-01-31');
 
       // Setup mocks
-      mockTransactionService.getTransactionStats.mockResolvedValue(mockTransactionStats);
+      mockTransactionService.getTransactionStats.mockResolvedValue(
+        mockTransactionStats
+      );
       mockTransactionService.getUserTransactions
         .mockResolvedValueOnce(mockRecentTransactions)
         .mockResolvedValueOnce(mockPendingTransactions);
-      mockTransactionService.getRecurringTransactions.mockResolvedValue(mockRecurringTransactions);
-      mockCategoryService.getUserCategories.mockResolvedValue({ categories: mockCategories, total: 2, page: 1, totalPages: 1 });
+      mockTransactionService.getRecurringTransactions.mockResolvedValue(
+        mockRecurringTransactions
+      );
+      mockCategoryService.getUserCategories.mockResolvedValue({
+        categories: mockCategories,
+        total: 2,
+        page: 1,
+        totalPages: 1,
+      });
 
       // Execute
-      const result = await financialService.getFinancialDashboard(mockUserId, { startDate, endDate });
+      const result = await financialService.getFinancialDashboard(mockUserId, {
+        startDate,
+        endDate,
+      });
 
       // Verify
-      expect(mockTransactionService.getTransactionStats).toHaveBeenCalledWith(mockUserId, { startDate, endDate });
+      expect(mockTransactionService.getTransactionStats).toHaveBeenCalledWith(
+        mockUserId,
+        { startDate, endDate }
+      );
       expect(result).toBeDefined();
     });
 
@@ -168,7 +252,12 @@ describe('FinancialService', () => {
         monthlyTrends: [],
       };
 
-      const emptyTransactions = { transactions: [], total: 0, page: 1, totalPages: 1 };
+      const emptyTransactions = {
+        transactions: [],
+        total: 0,
+        page: 1,
+        totalPages: 1,
+      };
 
       // Setup mocks
       mockTransactionService.getTransactionStats.mockResolvedValue(emptyStats);
@@ -176,7 +265,12 @@ describe('FinancialService', () => {
         .mockResolvedValueOnce(emptyTransactions)
         .mockResolvedValueOnce(emptyTransactions);
       mockTransactionService.getRecurringTransactions.mockResolvedValue([]);
-      mockCategoryService.getUserCategories.mockResolvedValue({ categories: [], total: 0, page: 1, totalPages: 1 });
+      mockCategoryService.getUserCategories.mockResolvedValue({
+        categories: [],
+        total: 0,
+        page: 1,
+        totalPages: 1,
+      });
 
       // Execute
       const result = await financialService.getFinancialDashboard(mockUserId);
@@ -195,7 +289,9 @@ describe('FinancialService', () => {
       mockTransactionService.getTransactionStats.mockRejectedValue(error);
 
       // Execute and verify
-      await expect(financialService.getFinancialDashboard(mockUserId)).rejects.toThrow('Service unavailable');
+      await expect(
+        financialService.getFinancialDashboard(mockUserId)
+      ).rejects.toThrow('Service unavailable');
     });
   });
 
@@ -209,13 +305,21 @@ describe('FinancialService', () => {
 
     it('should generate monthly report successfully', async () => {
       // Setup mocks
-      mockTransactionService.getTransactionStats.mockResolvedValue(mockTransactionStats);
+      mockTransactionService.getTransactionStats.mockResolvedValue(
+        mockTransactionStats
+      );
 
       // Execute
-      const result = await financialService.generateFinancialReport(mockUserId, reportOptions);
+      const result = await financialService.generateFinancialReport(
+        mockUserId,
+        reportOptions
+      );
 
       // Verify
-      expect(mockTransactionService.getTransactionStats).toHaveBeenCalledWith(mockUserId, expect.any(Object));
+      expect(mockTransactionService.getTransactionStats).toHaveBeenCalledWith(
+        mockUserId,
+        expect.any(Object)
+      );
       expect(result.reportType).toBe('monthly');
       expect(result.categories).toBeDefined();
       expect(result.trends).toBeDefined();
@@ -223,13 +327,21 @@ describe('FinancialService', () => {
     });
 
     it('should generate quarterly report successfully', async () => {
-      const quarterlyOptions = { ...reportOptions, reportType: 'quarterly' as const };
+      const quarterlyOptions = {
+        ...reportOptions,
+        reportType: 'quarterly' as const,
+      };
 
       // Setup mocks
-      mockTransactionService.getTransactionStats.mockResolvedValue(mockTransactionStats);
+      mockTransactionService.getTransactionStats.mockResolvedValue(
+        mockTransactionStats
+      );
 
       // Execute
-      const result = await financialService.generateFinancialReport(mockUserId, quarterlyOptions);
+      const result = await financialService.generateFinancialReport(
+        mockUserId,
+        quarterlyOptions
+      );
 
       // Verify
       expect(result.reportType).toBe('quarterly');
@@ -239,10 +351,15 @@ describe('FinancialService', () => {
       const invalidOptions = { ...reportOptions, reportType: 'invalid' as any };
 
       // Setup mocks
-      mockTransactionService.getTransactionStats.mockResolvedValue(mockTransactionStats);
+      mockTransactionService.getTransactionStats.mockResolvedValue(
+        mockTransactionStats
+      );
 
       // Execute
-      const result = await financialService.generateFinancialReport(mockUserId, invalidOptions);
+      const result = await financialService.generateFinancialReport(
+        mockUserId,
+        invalidOptions
+      );
 
       // Verify
       expect(result.reportType).toBe('invalid');
@@ -255,20 +372,27 @@ describe('FinancialService', () => {
       mockTransactionService.getTransactionStats.mockRejectedValue(error);
 
       // Execute and verify
-      await expect(financialService.generateFinancialReport(mockUserId, reportOptions)).rejects.toThrow('Service unavailable');
+      await expect(
+        financialService.generateFinancialReport(mockUserId, reportOptions)
+      ).rejects.toThrow('Service unavailable');
     });
   });
 
   describe('getFinancialInsights', () => {
     it('should get monthly insights successfully', async () => {
       // Setup mocks
-      mockTransactionService.getTransactionStats.mockResolvedValue(mockTransactionStats);
+      mockTransactionService.getTransactionStats.mockResolvedValue(
+        mockTransactionStats
+      );
 
       // Execute
       const result = await financialService.getFinancialInsights(mockUserId);
 
       // Verify
-      expect(mockTransactionService.getTransactionStats).toHaveBeenCalledWith(mockUserId, expect.any(Object));
+      expect(mockTransactionService.getTransactionStats).toHaveBeenCalledWith(
+        mockUserId,
+        expect.any(Object)
+      );
       expect(result).toBeDefined();
       // The service returns an object with insights array, not just an array
       expect(typeof result).toBe('object');
@@ -277,10 +401,14 @@ describe('FinancialService', () => {
 
     it('should get weekly insights successfully', async () => {
       // Setup mocks
-      mockTransactionService.getTransactionStats.mockResolvedValue(mockTransactionStats);
+      mockTransactionService.getTransactionStats.mockResolvedValue(
+        mockTransactionStats
+      );
 
       // Execute
-      const result = await financialService.getFinancialInsights(mockUserId, { period: 'week' });
+      const result = await financialService.getFinancialInsights(mockUserId, {
+        period: 'week',
+      });
 
       // Verify
       expect(result).toBeDefined();
@@ -288,10 +416,15 @@ describe('FinancialService', () => {
 
     it('should include predictions when requested', async () => {
       // Setup mocks
-      mockTransactionService.getTransactionStats.mockResolvedValue(mockTransactionStats);
+      mockTransactionService.getTransactionStats.mockResolvedValue(
+        mockTransactionStats
+      );
 
       // Execute
-      const result = await financialService.getFinancialInsights(mockUserId, { period: 'month', includePredictions: true });
+      const result = await financialService.getFinancialInsights(mockUserId, {
+        period: 'month',
+        includePredictions: true,
+      });
 
       // Verify
       expect(result).toBeDefined();
@@ -327,20 +460,27 @@ describe('FinancialService', () => {
       mockTransactionService.getTransactionStats.mockRejectedValue(error);
 
       // Execute and verify
-      await expect(financialService.getFinancialInsights(mockUserId)).rejects.toThrow('Analytics service failed');
+      await expect(
+        financialService.getFinancialInsights(mockUserId)
+      ).rejects.toThrow('Analytics service failed');
     });
   });
 
   describe('getBudgetAnalysis', () => {
     it('should get budget analysis successfully', async () => {
       // Setup mocks
-      mockTransactionService.getTransactionStats.mockResolvedValue(mockTransactionStats);
+      mockTransactionService.getTransactionStats.mockResolvedValue(
+        mockTransactionStats
+      );
 
       // Execute
       const result = await financialService.getBudgetAnalysis(mockUserId);
 
       // Verify
-      expect(mockTransactionService.getTransactionStats).toHaveBeenCalledWith(mockUserId, expect.any(Object));
+      expect(mockTransactionService.getTransactionStats).toHaveBeenCalledWith(
+        mockUserId,
+        expect.any(Object)
+      );
       expect(result.currentSpending).toBeDefined();
       expect(result.recommendations).toBeDefined();
       expect(result.alerts).toBeDefined();
@@ -353,7 +493,9 @@ describe('FinancialService', () => {
       };
 
       // Setup mocks
-      mockTransactionService.getTransactionStats.mockResolvedValue(statsWithoutBudget);
+      mockTransactionService.getTransactionStats.mockResolvedValue(
+        statsWithoutBudget
+      );
 
       // Execute
       const result = await financialService.getBudgetAnalysis(mockUserId);
@@ -369,7 +511,9 @@ describe('FinancialService', () => {
       mockTransactionService.getTransactionStats.mockRejectedValue(error);
 
       // Execute and verify
-      await expect(financialService.getBudgetAnalysis(mockUserId)).rejects.toThrow('Budget service failed');
+      await expect(
+        financialService.getBudgetAnalysis(mockUserId)
+      ).rejects.toThrow('Budget service failed');
     });
   });
 
@@ -385,15 +529,30 @@ describe('FinancialService', () => {
 
     it('should export JSON data successfully', async () => {
       // Setup mocks
-      mockTransactionService.getTransactionStats.mockResolvedValue(mockTransactionStats);
-      mockTransactionService.getUserTransactions.mockResolvedValue(mockRecentTransactions);
-      mockCategoryService.getUserCategories.mockResolvedValue({ categories: mockCategories, total: 2, page: 1, totalPages: 1 });
+      mockTransactionService.getTransactionStats.mockResolvedValue(
+        mockTransactionStats
+      );
+      mockTransactionService.getUserTransactions.mockResolvedValue(
+        mockRecentTransactions
+      );
+      mockCategoryService.getUserCategories.mockResolvedValue({
+        categories: mockCategories,
+        total: 2,
+        page: 1,
+        totalPages: 1,
+      });
 
       // Execute
-      const result = await financialService.exportFinancialData(mockUserId, exportOptions);
+      const result = await financialService.exportFinancialData(
+        mockUserId,
+        exportOptions
+      );
 
       // Verify
-      expect(mockTransactionService.getTransactionStats).toHaveBeenCalledWith(mockUserId, expect.any(Object));
+      expect(mockTransactionService.getTransactionStats).toHaveBeenCalledWith(
+        mockUserId,
+        expect.any(Object)
+      );
       expect(result.format).toBe('json');
       expect(result.data).toBeDefined();
       expect(result.filename).toContain('.json');
@@ -403,12 +562,24 @@ describe('FinancialService', () => {
       const csvOptions = { ...exportOptions, format: 'csv' as const };
 
       // Setup mocks
-      mockTransactionService.getTransactionStats.mockResolvedValue(mockTransactionStats);
-      mockTransactionService.getUserTransactions.mockResolvedValue(mockRecentTransactions);
-      mockCategoryService.getUserCategories.mockResolvedValue({ categories: mockCategories, total: 2, page: 1, totalPages: 1 });
+      mockTransactionService.getTransactionStats.mockResolvedValue(
+        mockTransactionStats
+      );
+      mockTransactionService.getUserTransactions.mockResolvedValue(
+        mockRecentTransactions
+      );
+      mockCategoryService.getUserCategories.mockResolvedValue({
+        categories: mockCategories,
+        total: 2,
+        page: 1,
+        totalPages: 1,
+      });
 
       // Execute
-      const result = await financialService.exportFinancialData(mockUserId, csvOptions);
+      const result = await financialService.exportFinancialData(
+        mockUserId,
+        csvOptions
+      );
 
       // Verify
       expect(result.format).toBe('csv');
@@ -419,12 +590,24 @@ describe('FinancialService', () => {
       const unsupportedOptions = { ...exportOptions, format: 'pdf' as any };
 
       // Setup mocks
-      mockTransactionService.getTransactionStats.mockResolvedValue(mockTransactionStats);
-      mockTransactionService.getUserTransactions.mockResolvedValue(mockRecentTransactions);
-      mockCategoryService.getUserCategories.mockResolvedValue({ categories: mockCategories, total: 2, page: 1, totalPages: 1 });
+      mockTransactionService.getTransactionStats.mockResolvedValue(
+        mockTransactionStats
+      );
+      mockTransactionService.getUserTransactions.mockResolvedValue(
+        mockRecentTransactions
+      );
+      mockCategoryService.getUserCategories.mockResolvedValue({
+        categories: mockCategories,
+        total: 2,
+        page: 1,
+        totalPages: 1,
+      });
 
       // Execute
-      const result = await financialService.exportFinancialData(mockUserId, unsupportedOptions);
+      const result = await financialService.exportFinancialData(
+        mockUserId,
+        unsupportedOptions
+      );
 
       // Verify
       expect(result.format).toBe('pdf');
@@ -442,10 +625,15 @@ describe('FinancialService', () => {
       };
 
       // Setup mocks
-      mockTransactionService.getTransactionStats.mockResolvedValue(mockTransactionStats);
+      mockTransactionService.getTransactionStats.mockResolvedValue(
+        mockTransactionStats
+      );
 
       // Execute
-      const result = await financialService.exportFinancialData(mockUserId, minimalOptions);
+      const result = await financialService.exportFinancialData(
+        mockUserId,
+        minimalOptions
+      );
 
       // Verify
       expect(result.data.stats).toBeDefined();
@@ -466,34 +654,42 @@ describe('FinancialService', () => {
           ],
         };
 
-        const result = (financialService as any).generateFinancialInsights(mockStats);
-        expect(result).toContain('Food accounts for 45.0% of your spending. Consider if this aligns with your priorities.');
+        const result = (financialService as any).generateFinancialInsights(
+          mockStats
+        );
+        expect(result).toContain(
+          'Food accounts for 45.0% of your spending. Consider if this aligns with your priorities.'
+        );
       });
 
       it('should generate insights for overspending', () => {
         const mockStats = {
           totalExpenses: 7000,
           totalIncome: 6000,
-          transactionsByCategory: [
-            { categoryName: 'Food', percentage: 30 },
-          ],
+          transactionsByCategory: [{ categoryName: 'Food', percentage: 30 }],
         };
 
-        const result = (financialService as any).generateFinancialInsights(mockStats);
-        expect(result).toContain('You are spending more than you earn. Focus on reducing expenses or increasing income.');
+        const result = (financialService as any).generateFinancialInsights(
+          mockStats
+        );
+        expect(result).toContain(
+          'You are spending more than you earn. Focus on reducing expenses or increasing income.'
+        );
       });
 
       it('should generate insights for high expense ratio', () => {
         const mockStats = {
           totalExpenses: 5000,
           totalIncome: 6000,
-          transactionsByCategory: [
-            { categoryName: 'Food', percentage: 20 },
-          ],
+          transactionsByCategory: [{ categoryName: 'Food', percentage: 20 }],
         };
 
-        const result = (financialService as any).generateFinancialInsights(mockStats);
-        expect(result).toContain('Your expenses are high relative to income. Consider reviewing discretionary spending.');
+        const result = (financialService as any).generateFinancialInsights(
+          mockStats
+        );
+        expect(result).toContain(
+          'Your expenses are high relative to income. Consider reviewing discretionary spending.'
+        );
       });
     });
 
@@ -504,7 +700,10 @@ describe('FinancialService', () => {
           { categoryName: 'Transport', percentage: 20 },
         ];
 
-        const result = (financialService as any).generateBudgetRecommendations(mockCategories, {});
+        const result = (financialService as any).generateBudgetRecommendations(
+          mockCategories,
+          {}
+        );
         expect(result).toHaveLength(1);
         expect(result[0]).toEqual({
           category: 'Food',
@@ -520,7 +719,10 @@ describe('FinancialService', () => {
           { categoryName: 'Transport', percentage: 20 },
         ];
 
-        const result = (financialService as any).generateBudgetRecommendations(mockCategories, {});
+        const result = (financialService as any).generateBudgetRecommendations(
+          mockCategories,
+          {}
+        );
         expect(result).toHaveLength(0);
       });
     });
@@ -533,7 +735,10 @@ describe('FinancialService', () => {
           totalIncome: 6000,
         };
 
-        const result = (financialService as any).generateBudgetAlerts(mockCategories, mockStats);
+        const result = (financialService as any).generateBudgetAlerts(
+          mockCategories,
+          mockStats
+        );
         expect(result).toHaveLength(1);
         expect(result[0]).toEqual({
           type: 'overspending',
@@ -549,7 +754,10 @@ describe('FinancialService', () => {
           totalIncome: 6000,
         };
 
-        const result = (financialService as any).generateBudgetAlerts(mockCategories, mockStats);
+        const result = (financialService as any).generateBudgetAlerts(
+          mockCategories,
+          mockStats
+        );
         expect(result).toHaveLength(0);
       });
     });
@@ -561,7 +769,10 @@ describe('FinancialService', () => {
           totalIncome: 6000,
         };
 
-        const result = (financialService as any).generatePeriodInsights(mockStats, 'month');
+        const result = (financialService as any).generatePeriodInsights(
+          mockStats,
+          'month'
+        );
         expect(result).toHaveLength(1);
         expect(result[0]).toEqual({
           type: 'spending',
@@ -579,7 +790,10 @@ describe('FinancialService', () => {
           totalIncome: 6000,
         };
 
-        const result = (financialService as any).generatePeriodInsights(mockStats, 'month');
+        const result = (financialService as any).generatePeriodInsights(
+          mockStats,
+          'month'
+        );
         expect(result).toHaveLength(0);
       });
 
@@ -589,7 +803,10 @@ describe('FinancialService', () => {
           totalIncome: 6000,
         };
 
-        const result = (financialService as any).generatePeriodInsights(mockStats, 'week');
+        const result = (financialService as any).generatePeriodInsights(
+          mockStats,
+          'week'
+        );
         expect(result).toHaveLength(0);
       });
     });
@@ -601,7 +818,9 @@ describe('FinancialService', () => {
           { categoryName: 'Transport', amount: 300 },
         ];
 
-        const result = (financialService as any).analyzeCategoryTrends(mockCategories);
+        const result = (financialService as any).analyzeCategoryTrends(
+          mockCategories
+        );
         expect(result).toHaveLength(2);
         expect(result[0]).toEqual({
           category: 'Food',
@@ -625,7 +844,10 @@ describe('FinancialService', () => {
         };
         const mockTrends: any[] = [];
 
-        const result = (financialService as any).generateFinancialPredictions(mockStats, mockTrends);
+        const result = (financialService as any).generateFinancialPredictions(
+          mockStats,
+          mockTrends
+        );
         expect(result).toHaveLength(1);
         expect(result[0]).toEqual({
           type: 'expense',

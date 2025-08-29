@@ -79,7 +79,7 @@ const userSchema = new Schema<IUser>(
 );
 
 // Virtual for full name
-userSchema.virtual('fullName').get(function () {
+userSchema.virtual('fullName').get(function (this: IUser) {
   return `${this.firstName} ${this.lastName}`;
 });
 
@@ -104,12 +104,12 @@ userSchema.pre('save', async function (next: (error?: Error) => void) {
     const UserModel = this.constructor as mongoose.Model<IUser>;
     const existingUser = await UserModel.findOne({
       email: this.email,
-      _id: { $ne: this._id } // Exclude current document when updating
+      _id: { $ne: this._id }, // Exclude current document when updating
     });
 
     if (existingUser) {
       const error = new Error('Email already exists');
-      (error as any).name = 'ValidationError';
+      (error as Error & { name: string }).name = 'ValidationError';
       return next(error);
     }
     next();

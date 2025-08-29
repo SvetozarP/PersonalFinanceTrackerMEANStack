@@ -59,7 +59,9 @@ describe('Category Model', () => {
       const category = new Category(categoryData);
       const savedCategory = await category.save();
 
-      expect(savedCategory.description).toBe('A comprehensive category description');
+      expect(savedCategory.description).toBe(
+        'A comprehensive category description'
+      );
       expect(savedCategory.color).toBe('#FF0000');
       expect(savedCategory.icon).toBe('star');
       expect(savedCategory.parentId).toEqual(categoryData.parentId);
@@ -161,7 +163,7 @@ describe('Category Model', () => {
   describe('Indexes and Constraints', () => {
     it('should enforce unique category names per user and parent', async () => {
       const parentId = new mongoose.Types.ObjectId();
-      
+
       // Create first category
       await Category.create({
         name: 'Duplicate Name',
@@ -239,7 +241,7 @@ describe('Category Model', () => {
       });
 
       const savedCategory = await category.save();
-      
+
       expect(savedCategory.createdAt).toBeDefined();
       expect(savedCategory.updatedAt).toBeDefined();
       expect(savedCategory.createdAt).toBeInstanceOf(Date);
@@ -261,7 +263,9 @@ describe('Category Model', () => {
       savedCategory.name = 'Updated Name';
       const updatedCategory = await savedCategory.save();
 
-      expect(updatedCategory.updatedAt.getTime()).toBeGreaterThan(originalUpdatedAt.getTime());
+      expect(updatedCategory.updatedAt.getTime()).toBeGreaterThan(
+        originalUpdatedAt.getTime()
+      );
     });
   });
 
@@ -375,13 +379,16 @@ describe('Category Model', () => {
       });
 
       const savedGrandchild = await grandchildCategory.save();
-      expect(savedGrandchild.path).toEqual(['Parent Category', 'Child Category']);
+      expect(savedGrandchild.path).toEqual([
+        'Parent Category',
+        'Child Category',
+      ]);
       expect(savedGrandchild.level).toBe(2);
     });
 
     it('should handle invalid parent ID gracefully', async () => {
       const invalidParentId = new mongoose.Types.ObjectId();
-      
+
       const category = new Category({
         name: 'Invalid Parent Category',
         userId: testUserId,
@@ -439,7 +446,9 @@ describe('Category Model', () => {
         userId: testUserId,
       });
 
-      await expect(duplicateCategory.save()).rejects.toThrow('Category name must be unique within the same parent and user');
+      await expect(duplicateCategory.save()).rejects.toThrow(
+        'Category name must be unique within the same parent and user'
+      );
     });
 
     it('should allow same name for different users', async () => {
@@ -572,14 +581,12 @@ describe('Category Model', () => {
         parentId: parent._id,
       });
 
-            // Delete parent
+      // Delete parent
       await Category.deleteOne({ _id: parent._id });
-      
+
       // Check that children are now root categories
       const updatedChild1 = await Category.findById(child1._id);
       const updatedChild2 = await Category.findById(child2._id);
-
-
 
       expect(updatedChild1?.parentId).toBeNull();
       expect(updatedChild2?.parentId).toBeNull();
@@ -676,7 +683,9 @@ describe('Category Model', () => {
         parentId: parent._id,
       });
 
-      const path = await Category.getCategoryPath((child._id as mongoose.Types.ObjectId).toString());
+      const path = await Category.getCategoryPath(
+        (child._id as mongoose.Types.ObjectId).toString()
+      );
 
       expect(path).toBeDefined();
       expect(path?.id).toEqual(child._id);

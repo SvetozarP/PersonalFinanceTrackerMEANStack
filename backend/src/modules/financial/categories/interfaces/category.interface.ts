@@ -19,7 +19,10 @@ export interface ICategory extends Document {
 // Category Model Interface with static methods
 export interface ICategoryModel extends Model<ICategory> {
   getCategoryTree(userId: string): Promise<ICategory[]>;
-  getCategoryPath(
-    categoryId: string
-  ): Promise<{ id: mongoose.Types.ObjectId; name: string; path: string[]; fullPath: string } | null>;
+  getCategoryPath(categoryId: string): Promise<{
+    id: mongoose.Types.ObjectId;
+    name: string;
+    path: string[];
+    fullPath: string;
+  } | null>;
 }

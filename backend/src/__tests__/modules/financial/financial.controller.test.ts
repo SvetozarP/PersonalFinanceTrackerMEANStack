@@ -14,7 +14,9 @@ const mockFinancialService = {
 } as unknown as jest.Mocked<FinancialService>;
 
 // Mock the constructor to return our mocked instance
-jest.mocked(FinancialService).mockImplementation(() => mockFinancialService as any);
+jest
+  .mocked(FinancialService)
+  .mockImplementation(() => mockFinancialService as any);
 
 // Extend the Request interface to include user property
 interface AuthenticatedRequest extends Request {
@@ -30,10 +32,10 @@ describe('FinancialController', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    
+
     // Create the controller instance
     financialController = new FinancialController();
-    
+
     // Manually inject our mock service
     (financialController as any).financialService = mockFinancialService;
 
@@ -68,14 +70,19 @@ describe('FinancialController', () => {
         budgetStatus: [],
       };
 
-      mockFinancialService.getFinancialDashboard.mockResolvedValue(mockDashboard);
+      mockFinancialService.getFinancialDashboard.mockResolvedValue(
+        mockDashboard
+      );
 
       await financialController.getFinancialDashboard(
         mockRequest as AuthenticatedRequest,
         mockResponse as Response
       );
 
-      expect(mockFinancialService.getFinancialDashboard).toHaveBeenCalledWith('user123', {});
+      expect(mockFinancialService.getFinancialDashboard).toHaveBeenCalledWith(
+        'user123',
+        {}
+      );
       expect(mockResponse.status).toHaveBeenCalledWith(200);
       expect(mockResponse.json).toHaveBeenCalledWith({
         success: true,
@@ -108,18 +115,23 @@ describe('FinancialController', () => {
         budgetStatus: [],
       };
 
-      mockFinancialService.getFinancialDashboard.mockResolvedValue(mockDashboard);
+      mockFinancialService.getFinancialDashboard.mockResolvedValue(
+        mockDashboard
+      );
 
       await financialController.getFinancialDashboard(
         mockRequestWithQuery as AuthenticatedRequest,
         mockResponse as Response
       );
 
-      expect(mockFinancialService.getFinancialDashboard).toHaveBeenCalledWith('user123', {
-        startDate: new Date('2024-01-01'),
-        endDate: new Date('2024-01-31'),
-        accountId: 'account123',
-      });
+      expect(mockFinancialService.getFinancialDashboard).toHaveBeenCalledWith(
+        'user123',
+        {
+          startDate: new Date('2024-01-01'),
+          endDate: new Date('2024-01-31'),
+          accountId: 'account123',
+        }
+      );
     });
 
     it('should return 401 when user is not authenticated', async () => {
@@ -187,21 +199,26 @@ describe('FinancialController', () => {
         },
       };
 
-      mockFinancialService.generateFinancialReport.mockResolvedValue(mockReport);
+      mockFinancialService.generateFinancialReport.mockResolvedValue(
+        mockReport
+      );
 
       await financialController.generateFinancialReport(
         mockRequestWithBody as AuthenticatedRequest,
         mockResponse as Response
       );
 
-      expect(mockFinancialService.generateFinancialReport).toHaveBeenCalledWith('user123', {
-        reportType: 'monthly',
-        startDate: new Date('2024-01-01'),
-        endDate: new Date('2024-01-31'),
-        includeCategories: true,
-        includeTrends: true,
-        includeProjections: false,
-      });
+      expect(mockFinancialService.generateFinancialReport).toHaveBeenCalledWith(
+        'user123',
+        {
+          reportType: 'monthly',
+          startDate: new Date('2024-01-01'),
+          endDate: new Date('2024-01-31'),
+          includeCategories: true,
+          includeTrends: true,
+          includeProjections: false,
+        }
+      );
       expect(mockResponse.status).toHaveBeenCalledWith(200);
       expect(mockResponse.json).toHaveBeenCalledWith({
         success: true,
@@ -328,11 +345,14 @@ describe('FinancialController', () => {
         mockResponse as Response
       );
 
-      expect(mockFinancialService.getBudgetAnalysis).toHaveBeenCalledWith('user123', {
-        startDate: new Date('2024-01-01'),
-        endDate: new Date('2024-01-31'),
-        categoryId: 'cat123',
-      });
+      expect(mockFinancialService.getBudgetAnalysis).toHaveBeenCalledWith(
+        'user123',
+        {
+          startDate: new Date('2024-01-01'),
+          endDate: new Date('2024-01-31'),
+          categoryId: 'cat123',
+        }
+      );
       expect(mockResponse.status).toHaveBeenCalledWith(200);
       expect(mockResponse.json).toHaveBeenCalledWith({
         success: true,
@@ -399,10 +419,13 @@ describe('FinancialController', () => {
         mockResponse as Response
       );
 
-      expect(mockFinancialService.getFinancialInsights).toHaveBeenCalledWith('user123', {
-        period: 'month',
-        includePredictions: true,
-      });
+      expect(mockFinancialService.getFinancialInsights).toHaveBeenCalledWith(
+        'user123',
+        {
+          period: 'month',
+          includePredictions: true,
+        }
+      );
       expect(mockResponse.status).toHaveBeenCalledWith(200);
       expect(mockResponse.json).toHaveBeenCalledWith({
         success: true,
@@ -466,21 +489,26 @@ describe('FinancialController', () => {
         },
       };
 
-      mockFinancialService.exportFinancialData.mockResolvedValue(mockExportResult);
+      mockFinancialService.exportFinancialData.mockResolvedValue(
+        mockExportResult
+      );
 
       await financialController.exportFinancialData(
         mockRequestWithBody as AuthenticatedRequest,
         mockResponse as Response
       );
 
-      expect(mockFinancialService.exportFinancialData).toHaveBeenCalledWith('user123', {
-        format: 'json',
-        startDate: new Date('2024-01-01'),
-        endDate: new Date('2024-01-31'),
-        includeCategories: true,
-        includeTransactions: true,
-        includeStats: true,
-      });
+      expect(mockFinancialService.exportFinancialData).toHaveBeenCalledWith(
+        'user123',
+        {
+          format: 'json',
+          startDate: new Date('2024-01-01'),
+          endDate: new Date('2024-01-31'),
+          includeCategories: true,
+          includeTransactions: true,
+          includeStats: true,
+        }
+      );
       expect(mockResponse.status).toHaveBeenCalledWith(200);
       expect(mockResponse.json).toHaveBeenCalledWith({
         success: true,
@@ -582,13 +610,44 @@ describe('FinancialController', () => {
       const mockInsights = {
         period: 'month',
         insights: [
-          { type: 'spending' as const, title: 'High spending on food', description: 'Food expenses are above average', value: 500, change: 20, changeType: 'increase' as const },
-          { type: 'savings' as const, title: 'Good savings rate', description: 'You are saving 40% of income', value: 2000, change: 15, changeType: 'increase' as const },
-          { type: 'trend' as const, title: 'Consider investment', description: 'Consider investing excess funds', value: 1000, change: 0, changeType: 'stable' as const },
+          {
+            type: 'spending' as const,
+            title: 'High spending on food',
+            description: 'Food expenses are above average',
+            value: 500,
+            change: 20,
+            changeType: 'increase' as const,
+          },
+          {
+            type: 'savings' as const,
+            title: 'Good savings rate',
+            description: 'You are saving 40% of income',
+            value: 2000,
+            change: 15,
+            changeType: 'increase' as const,
+          },
+          {
+            type: 'trend' as const,
+            title: 'Consider investment',
+            description: 'Consider investing excess funds',
+            value: 1000,
+            change: 0,
+            changeType: 'stable' as const,
+          },
         ],
         trends: [
-          { category: 'Food', trend: 'rising' as const, change: 20, confidence: 0.8 },
-          { category: 'Transport', trend: 'stable' as const, change: 5, confidence: 0.6 },
+          {
+            category: 'Food',
+            trend: 'rising' as const,
+            change: 20,
+            confidence: 0.8,
+          },
+          {
+            category: 'Transport',
+            trend: 'stable' as const,
+            change: 5,
+            confidence: 0.6,
+          },
         ],
         predictions: [],
       };
@@ -615,21 +674,29 @@ describe('FinancialController', () => {
       };
 
       mockFinancialService.getFinancialInsights.mockResolvedValue(mockInsights);
-      mockFinancialService.getFinancialDashboard.mockResolvedValue(mockDashboardData);
+      mockFinancialService.getFinancialDashboard.mockResolvedValue(
+        mockDashboardData
+      );
 
       await financialController.getFinancialSummary(
         mockRequest as AuthenticatedRequest,
         mockResponse as Response
       );
 
-      expect(mockFinancialService.getFinancialInsights).toHaveBeenCalledWith('user123', {
-        period: 'month',
-        includePredictions: false,
-      });
-      expect(mockFinancialService.getFinancialDashboard).toHaveBeenCalledWith('user123', {
-        startDate: expect.any(Date),
-        endDate: expect.any(Date),
-      });
+      expect(mockFinancialService.getFinancialInsights).toHaveBeenCalledWith(
+        'user123',
+        {
+          period: 'month',
+          includePredictions: false,
+        }
+      );
+      expect(mockFinancialService.getFinancialDashboard).toHaveBeenCalledWith(
+        'user123',
+        {
+          startDate: expect.any(Date),
+          endDate: expect.any(Date),
+        }
+      );
       expect(mockResponse.status).toHaveBeenCalledWith(200);
       expect(mockResponse.json).toHaveBeenCalledWith({
         success: true,
@@ -656,10 +723,22 @@ describe('FinancialController', () => {
       const mockInsights = {
         period: 'week',
         insights: [
-          { type: 'spending' as const, title: 'Weekly spending analysis', description: 'Weekly spending is within budget', value: 200, change: -10, changeType: 'decrease' as const },
+          {
+            type: 'spending' as const,
+            title: 'Weekly spending analysis',
+            description: 'Weekly spending is within budget',
+            value: 200,
+            change: -10,
+            changeType: 'decrease' as const,
+          },
         ],
         trends: [
-          { category: 'Food', trend: 'stable' as const, change: 5, confidence: 0.7 },
+          {
+            category: 'Food',
+            trend: 'stable' as const,
+            change: 5,
+            confidence: 0.7,
+          },
         ],
         predictions: [],
       };
@@ -680,17 +759,22 @@ describe('FinancialController', () => {
       };
 
       mockFinancialService.getFinancialInsights.mockResolvedValue(mockInsights);
-      mockFinancialService.getFinancialDashboard.mockResolvedValue(mockDashboardData);
+      mockFinancialService.getFinancialDashboard.mockResolvedValue(
+        mockDashboardData
+      );
 
       await financialController.getFinancialSummary(
         mockRequestWithPeriod as AuthenticatedRequest,
         mockResponse as Response
       );
 
-      expect(mockFinancialService.getFinancialInsights).toHaveBeenCalledWith('user123', {
-        period: 'week',
-        includePredictions: false,
-      });
+      expect(mockFinancialService.getFinancialInsights).toHaveBeenCalledWith(
+        'user123',
+        {
+          period: 'week',
+          includePredictions: false,
+        }
+      );
       expect(mockResponse.status).toHaveBeenCalledWith(200);
     });
 
@@ -731,87 +815,115 @@ describe('FinancialController', () => {
 
   describe('calculatePeriodDateRange', () => {
     it('should calculate week date range correctly', () => {
-      const result = (financialController as any).calculatePeriodDateRange('week');
-      
+      const result = (financialController as any).calculatePeriodDateRange(
+        'week'
+      );
+
       // Verify the result has the expected structure and logic
       expect(result).toHaveProperty('startDate');
       expect(result).toHaveProperty('endDate');
       expect(result.startDate).toBeInstanceOf(Date);
       expect(result.endDate).toBeInstanceOf(Date);
-      
+
       // Verify week logic: start date should be at the beginning of the week
       const now = new Date();
       const expectedWeekStart = new Date(now);
       expectedWeekStart.setDate(now.getDate() - now.getDay());
-      
+
       // Allow for small time differences (within 1 second)
-      expect(Math.abs(result.startDate.getTime() - expectedWeekStart.getTime())).toBeLessThan(1000);
-      expect(Math.abs(result.endDate.getTime() - now.getTime())).toBeLessThan(1000);
+      expect(
+        Math.abs(result.startDate.getTime() - expectedWeekStart.getTime())
+      ).toBeLessThan(1000);
+      expect(Math.abs(result.endDate.getTime() - now.getTime())).toBeLessThan(
+        1000
+      );
     });
 
     it('should calculate month date range correctly', () => {
-      const result = (financialController as any).calculatePeriodDateRange('month');
-      
+      const result = (financialController as any).calculatePeriodDateRange(
+        'month'
+      );
+
       expect(result).toHaveProperty('startDate');
       expect(result).toHaveProperty('endDate');
       expect(result.startDate).toBeInstanceOf(Date);
       expect(result.endDate).toBeInstanceOf(Date);
-      
+
       // Verify month logic: start date should be at the beginning of the month
       const now = new Date();
       const expectedMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-      
-      expect(Math.abs(result.startDate.getTime() - expectedMonthStart.getTime())).toBeLessThan(1000);
-      expect(Math.abs(result.endDate.getTime() - now.getTime())).toBeLessThan(1000);
+
+      expect(
+        Math.abs(result.startDate.getTime() - expectedMonthStart.getTime())
+      ).toBeLessThan(1000);
+      expect(Math.abs(result.endDate.getTime() - now.getTime())).toBeLessThan(
+        1000
+      );
     });
 
     it('should calculate quarter date range correctly', () => {
-      const result = (financialController as any).calculatePeriodDateRange('quarter');
-      
+      const result = (financialController as any).calculatePeriodDateRange(
+        'quarter'
+      );
+
       expect(result).toHaveProperty('startDate');
       expect(result).toHaveProperty('endDate');
       expect(result.startDate).toBeInstanceOf(Date);
       expect(result.endDate).toBeInstanceOf(Date);
-      
+
       // Verify quarter logic
       const now = new Date();
       const quarter = Math.floor(now.getMonth() / 3);
       const expectedQuarterStart = new Date(now.getFullYear(), quarter * 3, 1);
-      
-      expect(Math.abs(result.startDate.getTime() - expectedQuarterStart.getTime())).toBeLessThan(1000);
-      expect(Math.abs(result.endDate.getTime() - now.getTime())).toBeLessThan(1000);
+
+      expect(
+        Math.abs(result.startDate.getTime() - expectedQuarterStart.getTime())
+      ).toBeLessThan(1000);
+      expect(Math.abs(result.endDate.getTime() - now.getTime())).toBeLessThan(
+        1000
+      );
     });
 
     it('should calculate year date range correctly', () => {
-      const result = (financialController as any).calculatePeriodDateRange('year');
-      
+      const result = (financialController as any).calculatePeriodDateRange(
+        'year'
+      );
+
       expect(result).toHaveProperty('startDate');
       expect(result).toHaveProperty('endDate');
       expect(result.startDate).toBeInstanceOf(Date);
       expect(result.endDate).toBeInstanceOf(Date);
-      
+
       // Verify year logic: start date should be at the beginning of the year
       const now = new Date();
       const expectedYearStart = new Date(now.getFullYear(), 0, 1);
-      
-      expect(Math.abs(result.startDate.getTime() - expectedYearStart.getTime())).toBeLessThan(1000);
+
+      expect(
+        Math.abs(result.startDate.getTime() - expectedYearStart.getTime())
+      ).toBeLessThan(1000);
       expect(result.endDate.getTime() - now.getTime()).toBeLessThan(1000);
     });
 
     it('should use month as default for unknown period', () => {
-      const result = (financialController as any).calculatePeriodDateRange('unknown');
-      
+      const result = (financialController as any).calculatePeriodDateRange(
+        'unknown'
+      );
+
       expect(result).toHaveProperty('startDate');
       expect(result).toHaveProperty('endDate');
       expect(result.startDate).toBeInstanceOf(Date);
       expect(result.endDate).toBeInstanceOf(Date);
-      
+
       // Verify default month logic
       const now = new Date();
       const expectedMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-      
-      expect(Math.abs(result.startDate.getTime() - expectedMonthStart.getTime())).toBeLessThan(1000);
-      expect(Math.abs(result.endDate.getTime() - now.getTime())).toBeLessThan(1000);
+
+      expect(
+        Math.abs(result.startDate.getTime() - expectedMonthStart.getTime())
+      ).toBeLessThan(1000);
+      expect(Math.abs(result.endDate.getTime() - now.getTime())).toBeLessThan(
+        1000
+      );
     });
   });
 });

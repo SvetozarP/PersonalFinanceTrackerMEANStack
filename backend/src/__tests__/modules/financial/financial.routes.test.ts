@@ -14,7 +14,7 @@ jest.mock('../../../modules/auth/auth.middleware');
 jest.mock('../../../modules/financial/financial.routes', () => {
   const express = require('express');
   const router = express.Router();
-  
+
   // Mock controller methods will be set up in beforeEach
   const mockController = {
     getFinancialDashboard: jest.fn(),
@@ -32,7 +32,10 @@ jest.mock('../../../modules/financial/financial.routes', () => {
 
   router.get('/dashboard', asyncHandler(mockController.getFinancialDashboard));
   router.post('/reports', asyncHandler(mockController.generateFinancialReport));
-  router.get('/budget-analysis', asyncHandler(mockController.getBudgetAnalysis));
+  router.get(
+    '/budget-analysis',
+    asyncHandler(mockController.getBudgetAnalysis)
+  );
   router.get('/insights', asyncHandler(mockController.getFinancialInsights));
   router.post('/export', asyncHandler(mockController.exportFinancialData));
   router.get('/summary', asyncHandler(mockController.getFinancialSummary));
@@ -78,183 +81,222 @@ describe('Financial Routes', () => {
       getFinancialSummary: jest.fn(),
     } as any;
 
-    mockAuthenticateToken = jest.fn() as jest.MockedFunction<typeof authenticateToken>;
+    mockAuthenticateToken = jest.fn() as jest.MockedFunction<
+      typeof authenticateToken
+    >;
 
     // Mock the FinancialService constructor
-    (FinancialService as jest.MockedClass<typeof FinancialService>).mockImplementation(() => mockFinancialService);
-    
+    (
+      FinancialService as jest.MockedClass<typeof FinancialService>
+    ).mockImplementation(() => mockFinancialService);
+
     // Mock the FinancialController constructor
-    (FinancialController as jest.MockedClass<typeof FinancialController>).mockImplementation(() => mockFinancialController);
+    (
+      FinancialController as jest.MockedClass<typeof FinancialController>
+    ).mockImplementation(() => mockFinancialController);
 
     // Get the mock routes and controller
     const financialRoutesModule = require('../../../modules/financial/financial.routes');
     mockRoutes = financialRoutesModule.mockController;
 
     // Mock the controller methods
-    mockRoutes.getFinancialDashboard.mockImplementation(async (req: any, res: any): Promise<void> => {
-      const userId = req.user?.userId;
-      if (!userId) {
-        res.status(401).json({
-          success: false,
-          message: 'Authentication required',
-        });
-        return;
+    mockRoutes.getFinancialDashboard.mockImplementation(
+      async (req: any, res: any): Promise<void> => {
+        const userId = req.user?.userId;
+        if (!userId) {
+          res.status(401).json({
+            success: false,
+            message: 'Authentication required',
+          });
+          return;
+        }
+
+        const { startDate, endDate, accountId } = req.query;
+        const options: any = {};
+        if (startDate) options.startDate = new Date(startDate as string);
+        if (endDate) options.endDate = new Date(endDate as string);
+        if (accountId) options.accountId = accountId as string;
+
+        try {
+          const dashboard = await mockFinancialService.getFinancialDashboard(
+            userId,
+            options
+          );
+          res.status(200).json({
+            success: true,
+            data: dashboard,
+          });
+        } catch (error) {
+          res.status(500).json({
+            success: false,
+            message: 'Internal server error',
+          });
+        }
       }
+    );
 
-      const { startDate, endDate, accountId } = req.query;
-      const options: any = {};
-      if (startDate) options.startDate = new Date(startDate as string);
-      if (endDate) options.endDate = new Date(endDate as string);
-      if (accountId) options.accountId = accountId as string;
+    mockRoutes.generateFinancialReport.mockImplementation(
+      async (req: any, res: any): Promise<void> => {
+        const userId = req.user?.userId;
+        if (!userId) {
+          res.status(401).json({
+            success: false,
+            message: 'Authentication required',
+          });
+          return;
+        }
 
-      try {
-        const dashboard = await mockFinancialService.getFinancialDashboard(userId, options);
-        res.status(200).json({
-          success: true,
-          data: dashboard,
-        });
-      } catch (error) {
-        res.status(500).json({
-          success: false,
-          message: 'Internal server error',
-        });
+        try {
+          const report = await mockFinancialService.generateFinancialReport(
+            userId,
+            req.body
+          );
+          res.status(200).json({
+            success: true,
+            data: report,
+          });
+        } catch (error) {
+          res.status(500).json({
+            success: false,
+            message: 'Internal server error',
+          });
+        }
       }
-    });
+    );
 
-    mockRoutes.generateFinancialReport.mockImplementation(async (req: any, res: any): Promise<void> => {
-      const userId = req.user?.userId;
-      if (!userId) {
-        res.status(401).json({
-          success: false,
-          message: 'Authentication required',
-        });
-        return;
+    mockRoutes.getBudgetAnalysis.mockImplementation(
+      async (req: any, res: any): Promise<void> => {
+        const userId = req.user?.userId;
+        if (!userId) {
+          res.status(401).json({
+            success: false,
+            message: 'Authentication required',
+          });
+          return;
+        }
+
+        try {
+          const analysis = await mockFinancialService.getBudgetAnalysis(
+            userId,
+            req.query
+          );
+          res.status(200).json({
+            success: true,
+            data: analysis,
+          });
+        } catch (error) {
+          res.status(500).json({
+            success: false,
+            message: 'Internal server error',
+          });
+        }
       }
+    );
 
-      try {
-        const report = await mockFinancialService.generateFinancialReport(userId, req.body);
-        res.status(200).json({
-          success: true,
-          data: report,
-        });
-      } catch (error) {
-        res.status(500).json({
-          success: false,
-          message: 'Internal server error',
-        });
+    mockRoutes.getFinancialInsights.mockImplementation(
+      async (req: any, res: any): Promise<void> => {
+        const userId = req.user?.userId;
+        if (!userId) {
+          res.status(401).json({
+            success: false,
+            message: 'Authentication required',
+          });
+          return;
+        }
+
+        try {
+          const insights = await mockFinancialService.getFinancialInsights(
+            userId,
+            req.query
+          );
+          res.status(200).json({
+            success: true,
+            data: insights,
+          });
+        } catch (error) {
+          res.status(500).json({
+            success: false,
+            message: 'Internal server error',
+          });
+        }
       }
-    });
+    );
 
-    mockRoutes.getBudgetAnalysis.mockImplementation(async (req: any, res: any): Promise<void> => {
-      const userId = req.user?.userId;
-      if (!userId) {
-        res.status(401).json({
-          success: false,
-          message: 'Authentication required',
-        });
-        return;
+    mockRoutes.exportFinancialData.mockImplementation(
+      async (req: any, res: any): Promise<void> => {
+        const userId = req.user?.userId;
+        if (!userId) {
+          res.status(401).json({
+            success: false,
+            message: 'Authentication required',
+          });
+          return;
+        }
+
+        try {
+          const exportData = await mockFinancialService.exportFinancialData(
+            userId,
+            req.body
+          );
+          res.status(200).json({
+            success: true,
+            data: exportData,
+          });
+        } catch (error) {
+          res.status(500).json({
+            success: false,
+            message: 'Internal server error',
+          });
+        }
       }
+    );
 
-      try {
-        const analysis = await mockFinancialService.getBudgetAnalysis(userId, req.query);
-        res.status(200).json({
-          success: true,
-          data: analysis,
-        });
-      } catch (error) {
-        res.status(500).json({
-          success: false,
-          message: 'Internal server error',
-        });
+    mockRoutes.getFinancialSummary.mockImplementation(
+      async (req: any, res: any): Promise<void> => {
+        const userId = req.user?.userId;
+        if (!userId) {
+          res.status(401).json({
+            success: false,
+            message: 'Authentication required',
+          });
+          return;
+        }
+
+        try {
+          // The controller calls getFinancialDashboard and getFinancialInsights, not getFinancialSummary
+          const insights = await mockFinancialService.getFinancialInsights(
+            userId,
+            { period: 'month' }
+          );
+          const dashboard = await mockFinancialService.getFinancialDashboard(
+            userId,
+            {}
+          );
+
+          const summary = {
+            period: 'month',
+            overview: {
+              totalIncome: dashboard.overview.monthlyIncome,
+              totalExpenses: dashboard.overview.monthlyExpenses,
+              netAmount: dashboard.overview.monthlyNet,
+              transactionCount: dashboard.recentTransactions.length,
+            },
+            topInsights: insights.insights?.slice(0, 3) || [],
+            topCategories: dashboard.topCategories,
+          };
+
+          res.status(200).json({
+            success: true,
+            data: summary,
+          });
+        } catch (error) {
+          res.status(500).json({
+            success: false,
+            message: 'Internal server error',
+          });
+        }
       }
-    });
-
-    mockRoutes.getFinancialInsights.mockImplementation(async (req: any, res: any): Promise<void> => {
-      const userId = req.user?.userId;
-      if (!userId) {
-        res.status(401).json({
-          success: false,
-          message: 'Authentication required',
-        });
-        return;
-      }
-
-      try {
-        const insights = await mockFinancialService.getFinancialInsights(userId, req.query);
-        res.status(200).json({
-          success: true,
-          data: insights,
-        });
-      } catch (error) {
-        res.status(500).json({
-          success: false,
-          message: 'Internal server error',
-        });
-      }
-    });
-
-    mockRoutes.exportFinancialData.mockImplementation(async (req: any, res: any): Promise<void> => {
-      const userId = req.user?.userId;
-      if (!userId) {
-        res.status(401).json({
-          success: false,
-          message: 'Authentication required',
-        });
-        return;
-      }
-
-      try {
-        const exportData = await mockFinancialService.exportFinancialData(userId, req.body);
-        res.status(200).json({
-          success: true,
-          data: exportData,
-        });
-      } catch (error) {
-        res.status(500).json({
-          success: false,
-          message: 'Internal server error',
-        });
-      }
-    });
-
-    mockRoutes.getFinancialSummary.mockImplementation(async (req: any, res: any): Promise<void> => {
-      const userId = req.user?.userId;
-      if (!userId) {
-        res.status(401).json({
-          success: false,
-          message: 'Authentication required',
-        });
-        return;
-      }
-
-      try {
-        // The controller calls getFinancialDashboard and getFinancialInsights, not getFinancialSummary
-        const insights = await mockFinancialService.getFinancialInsights(userId, { period: 'month' });
-        const dashboard = await mockFinancialService.getFinancialDashboard(userId, {});
-        
-        const summary = {
-          period: 'month',
-          overview: {
-            totalIncome: dashboard.overview.monthlyIncome,
-            totalExpenses: dashboard.overview.monthlyExpenses,
-            netAmount: dashboard.overview.monthlyNet,
-            transactionCount: dashboard.recentTransactions.length,
-          },
-          topInsights: insights.insights?.slice(0, 3) || [],
-          topCategories: dashboard.topCategories,
-        };
-
-        res.status(200).json({
-          success: true,
-          data: summary,
-        });
-      } catch (error) {
-        res.status(500).json({
-          success: false,
-          message: 'Internal server error',
-        });
-      }
-    });
+    );
 
     // Mock the authentication middleware
     mockAuthenticateToken.mockImplementation(async (req, res, next) => {
@@ -265,13 +307,13 @@ describe('Financial Routes', () => {
     // Create Express app with mocked routes
     app = express();
     app.use(express.json());
-    
+
     // Mock the authenticateToken middleware for all routes
     app.use((req: any, res, next) => {
       req.user = { userId: testUserId };
       next();
     });
-    
+
     app.use('/api/financial', financialRoutesModule.default);
   });
 
@@ -297,7 +339,9 @@ describe('Financial Routes', () => {
         budgetStatus: [],
       };
 
-      mockFinancialService.getFinancialDashboard.mockResolvedValue(dashboardData as any);
+      mockFinancialService.getFinancialDashboard.mockResolvedValue(
+        dashboardData as any
+      );
 
       const response = await request(app)
         .get('/api/financial/dashboard')
@@ -307,11 +351,14 @@ describe('Financial Routes', () => {
         success: true,
         data: dashboardData,
       });
-      expect(mockFinancialService.getFinancialDashboard).toHaveBeenCalledWith(testUserId, {});
+      expect(mockFinancialService.getFinancialDashboard).toHaveBeenCalledWith(
+        testUserId,
+        {}
+      );
     });
 
     it('should get financial dashboard with date range', async () => {
-      const dashboardData = { 
+      const dashboardData = {
         overview: {
           totalBalance: 500,
           monthlyIncome: 2000,
@@ -327,7 +374,9 @@ describe('Financial Routes', () => {
       };
       const queryParams = { startDate: '2024-01-01', endDate: '2024-01-31' };
 
-      mockFinancialService.getFinancialDashboard.mockResolvedValue(dashboardData as any);
+      mockFinancialService.getFinancialDashboard.mockResolvedValue(
+        dashboardData as any
+      );
 
       const response = await request(app)
         .get('/api/financial/dashboard')
@@ -338,14 +387,19 @@ describe('Financial Routes', () => {
         success: true,
         data: dashboardData,
       });
-      expect(mockFinancialService.getFinancialDashboard).toHaveBeenCalledWith(testUserId, {
-        startDate: new Date('2024-01-01'),
-        endDate: new Date('2024-01-31'),
-      });
+      expect(mockFinancialService.getFinancialDashboard).toHaveBeenCalledWith(
+        testUserId,
+        {
+          startDate: new Date('2024-01-01'),
+          endDate: new Date('2024-01-31'),
+        }
+      );
     });
 
     it('should handle service errors gracefully', async () => {
-      mockFinancialService.getFinancialDashboard.mockRejectedValue(new Error('Service error'));
+      mockFinancialService.getFinancialDashboard.mockRejectedValue(
+        new Error('Service error')
+      );
 
       const response = await request(app)
         .get('/api/financial/dashboard')
@@ -363,10 +417,14 @@ describe('Financial Routes', () => {
       const reportData = {
         reportId: 'report123',
         type: 'monthly',
-        data: { /* report data */ },
+        data: {
+          /* report data */
+        },
       };
 
-      mockFinancialService.generateFinancialReport.mockResolvedValue(reportData as any);
+      mockFinancialService.generateFinancialReport.mockResolvedValue(
+        reportData as any
+      );
 
       const response = await request(app)
         .post('/api/financial/reports')
@@ -392,7 +450,9 @@ describe('Financial Routes', () => {
         categoryAnalysis: [],
       };
 
-      mockFinancialService.getBudgetAnalysis.mockResolvedValue(analysisData as any);
+      mockFinancialService.getBudgetAnalysis.mockResolvedValue(
+        analysisData as any
+      );
 
       const response = await request(app)
         .get('/api/financial/budget-analysis')
@@ -413,7 +473,9 @@ describe('Financial Routes', () => {
         recommendations: ['Consider setting up automatic savings'],
       };
 
-      mockFinancialService.getFinancialInsights.mockResolvedValue(insightsData as any);
+      mockFinancialService.getFinancialInsights.mockResolvedValue(
+        insightsData as any
+      );
 
       const response = await request(app)
         .get('/api/financial/insights')
@@ -433,7 +495,9 @@ describe('Financial Routes', () => {
         expiresAt: '2024-01-02T00:00:00.000Z',
       };
 
-      mockFinancialService.exportFinancialData.mockResolvedValue(exportData as any);
+      mockFinancialService.exportFinancialData.mockResolvedValue(
+        exportData as any
+      );
 
       const response = await request(app)
         .post('/api/financial/export')
@@ -468,8 +532,12 @@ describe('Financial Routes', () => {
         topCategories: [],
       };
 
-      mockFinancialService.getFinancialInsights.mockResolvedValue(insightsData as any);
-      mockFinancialService.getFinancialDashboard.mockResolvedValue(dashboardData as any);
+      mockFinancialService.getFinancialInsights.mockResolvedValue(
+        insightsData as any
+      );
+      mockFinancialService.getFinancialDashboard.mockResolvedValue(
+        dashboardData as any
+      );
 
       const response = await request(app)
         .get('/api/financial/summary')

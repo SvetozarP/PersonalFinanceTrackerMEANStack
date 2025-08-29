@@ -1,4 +1,9 @@
-import { EnvironmentService, environment, config, EnvironmentConfig } from '../../config/environment';
+import {
+  EnvironmentService,
+  environment,
+  config,
+  EnvironmentConfig,
+} from '../../config/environment';
 import { logger } from '../../shared/services/logger.service';
 
 // Mock dependencies
@@ -41,12 +46,16 @@ describe('Environment Configuration', () => {
       expect(config.NODE_ENV).toBe('development');
       expect(config.BACKEND_PORT).toBe(3000);
       expect(config.CORS_ORIGIN).toBe('http://localhost:4200');
-      expect(config.MONGO_URI).toBe('mongodb://localhost:27017/finance_tracker');
+      expect(config.MONGO_URI).toBe(
+        'mongodb://localhost:27017/finance_tracker'
+      );
       expect(config.MONGO_PORT).toBe(27017);
       expect(config.MONGO_ROOT_USERNAME).toBe('admin');
       expect(config.MONGO_ROOT_PASSWORD).toBe('password123');
       expect(config.MONGO_DATABASE).toBe('finance_tracker');
-      expect(config.JWT_SECRET).toBe('your-super-secret-jwt-key-change-this-in-production');
+      expect(config.JWT_SECRET).toBe(
+        'your-super-secret-jwt-key-change-this-in-production'
+      );
       expect(config.JWT_ACCESS_TOKEN_EXPIRY).toBe('15m');
       expect(config.JWT_REFRESH_TOKEN_EXPIRY).toBe('7d');
       expect(config.BCRYPT_SALT_ROUNDS).toBe(12);
@@ -102,10 +111,10 @@ describe('Environment Configuration', () => {
       // Since all the "required" fields have defaults, let's test that validation
       // passes when all fields have values (either from env or defaults)
       const envService = new (EnvironmentService as any)();
-      
+
       // This should not throw since all fields have defaults
       expect(() => envService.getConfig()).not.toThrow();
-      
+
       const config = envService.getConfig();
       expect(config.MONGO_URI).toBeDefined();
       expect(config.JWT_SECRET).toBeDefined();
@@ -164,7 +173,9 @@ describe('Environment Configuration', () => {
     it('should log successful validation', () => {
       new (EnvironmentService as any)();
 
-      expect(mockLogger.info).toHaveBeenCalledWith('Environment configuration validated successfully');
+      expect(mockLogger.info).toHaveBeenCalledWith(
+        'Environment configuration validated successfully'
+      );
     });
   });
 
@@ -222,7 +233,7 @@ describe('Environment Configuration', () => {
 
     it('should provide consistent config through different access methods', () => {
       const directConfig = environment.getConfig();
-      
+
       expect(config.NODE_ENV).toBe(directConfig.NODE_ENV);
       expect(config.BACKEND_PORT).toBe(directConfig.BACKEND_PORT);
       expect(config.MONGO_URI).toBe(directConfig.MONGO_URI);
@@ -280,11 +291,17 @@ describe('Environment Configuration', () => {
       // Empty strings will trigger the OR operator to use defaults
       const envService = new (EnvironmentService as any)();
       const config = envService.getConfig();
-      
+
       // Should fall back to defaults since empty strings are falsy
-      expect(config.MONGO_URI).toBe('mongodb://localhost:27017/finance_tracker');
-      expect(config.JWT_SECRET).toBe('your-super-secret-jwt-key-change-this-in-production');
-      expect(config.COOKIE_SECRET).toBe('your-cookie-secret-key-change-this-in-production');
+      expect(config.MONGO_URI).toBe(
+        'mongodb://localhost:27017/finance_tracker'
+      );
+      expect(config.JWT_SECRET).toBe(
+        'your-super-secret-jwt-key-change-this-in-production'
+      );
+      expect(config.COOKIE_SECRET).toBe(
+        'your-cookie-secret-key-change-this-in-production'
+      );
     });
 
     it('should handle whitespace-only environment variables', () => {
@@ -304,7 +321,7 @@ describe('Environment Configuration', () => {
 
     it('should handle extreme but valid port numbers', () => {
       process.env.BACKEND_PORT = '1';
-      
+
       const envService = new (EnvironmentService as any)();
       const config = envService.getConfig();
 
@@ -313,7 +330,7 @@ describe('Environment Configuration', () => {
 
     it('should handle extreme but valid bcrypt salt rounds', () => {
       process.env.BCRYPT_SALT_ROUNDS = '20';
-      
+
       const envService = new (EnvironmentService as any)();
       const config = envService.getConfig();
 

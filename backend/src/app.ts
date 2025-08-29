@@ -71,9 +71,11 @@ const startServer = async () => {
 
     // Import and mount financial routes BEFORE starting the server
     console.log('Starting to import financial routes...');
-    
+
     try {
-      const financialRoutes = await import('./modules/financial/financial.routes');
+      const financialRoutes = await import(
+        './modules/financial/financial.routes'
+      );
       app.use('/api/financial', financialRoutes.default);
       console.log('✅ Financial routes mounted at /api/financial');
     } catch (error) {
@@ -81,7 +83,9 @@ const startServer = async () => {
     }
 
     try {
-      const transactionRoutes = await import('./modules/financial/transactions/routes/transaction.routes');
+      const transactionRoutes = await import(
+        './modules/financial/transactions/routes/transaction.routes'
+      );
       app.use('/api/transactions', transactionRoutes.default);
       console.log('✅ Transaction routes mounted at /api/transactions');
     } catch (error) {
@@ -89,7 +93,9 @@ const startServer = async () => {
     }
 
     try {
-      const categoryRoutes = await import('./modules/financial/categories/routes/category.routes');
+      const categoryRoutes = await import(
+        './modules/financial/categories/routes/category.routes'
+      );
       app.use('/api/categories', categoryRoutes.default);
       console.log('✅ Category routes mounted at /api/categories');
     } catch (error) {
@@ -110,14 +116,18 @@ const startServer = async () => {
     console.log('🔍 All registered routes:');
     app._router.stack.forEach((middleware: any) => {
       if (middleware.route) {
-        console.log(`  ${Object.keys(middleware.route.methods).join(',').toUpperCase()} ${middleware.route.path}`);
+        console.log(
+          `  ${Object.keys(middleware.route.methods).join(',').toUpperCase()} ${middleware.route.path}`
+        );
       } else if (middleware.name === 'router') {
         console.log(`  Router: ${middleware.regexp}`);
         // Show what's inside the router
         if (middleware.handle && middleware.handle.stack) {
           middleware.handle.stack.forEach((route: any) => {
             if (route.route) {
-              console.log(`    ${Object.keys(route.route.methods).join(',').toUpperCase()} ${route.route.path}`);
+              console.log(
+                `    ${Object.keys(route.route.methods).join(',').toUpperCase()} ${route.route.path}`
+              );
             }
           });
         }

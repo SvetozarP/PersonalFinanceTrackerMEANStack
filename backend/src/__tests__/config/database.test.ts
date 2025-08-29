@@ -17,7 +17,7 @@ describe('DatabaseConnection', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    
+
     // Reset the singleton instance for each test
     (DatabaseConnection as any).instance = undefined;
     dbInstance = DatabaseConnection.getInstance();
@@ -33,7 +33,7 @@ describe('DatabaseConnection', () => {
       readyState: 1,
     };
     mockConnection.on = jest.fn().mockReturnValue(mockConnection);
-    
+
     // Mock the connection property
     Object.defineProperty(mockMongoose, 'connection', {
       value: mockConnection,
@@ -84,7 +84,9 @@ describe('DatabaseConnection', () => {
           bufferCommands: false,
         }
       );
-      expect(mockLogger.info).toHaveBeenCalledWith('✅ MongoDB connected successfully');
+      expect(mockLogger.info).toHaveBeenCalledWith(
+        '✅ MongoDB connected successfully'
+      );
       expect(dbInstance.getConnectionStatus()).toBe(true);
     });
 
@@ -110,7 +112,9 @@ describe('DatabaseConnection', () => {
       // Second connection attempt
       await dbInstance.connect();
       expect(mockMongoose.connect).toHaveBeenCalledTimes(1);
-      expect(mockLogger.info).toHaveBeenCalledWith('Database already connected');
+      expect(mockLogger.info).toHaveBeenCalledWith(
+        'Database already connected'
+      );
     });
 
     it('should handle connection errors', async () => {
@@ -118,7 +122,10 @@ describe('DatabaseConnection', () => {
       mockMongoose.connect.mockRejectedValue(connectionError);
 
       await expect(dbInstance.connect()).rejects.toThrow('Connection failed');
-      expect(mockLogger.error).toHaveBeenCalledWith('Failed to connect to MongoDB:', connectionError);
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        'Failed to connect to MongoDB:',
+        connectionError
+      );
       expect(dbInstance.getConnectionStatus()).toBe(false);
     });
 
@@ -127,21 +134,32 @@ describe('DatabaseConnection', () => {
 
       await dbInstance.connect();
 
-      expect(mockMongoose.connection.on).toHaveBeenCalledWith('error', expect.any(Function));
-      expect(mockMongoose.connection.on).toHaveBeenCalledWith('disconnected', expect.any(Function));
-      expect(mockMongoose.connection.on).toHaveBeenCalledWith('reconnected', expect.any(Function));
+      expect(mockMongoose.connection.on).toHaveBeenCalledWith(
+        'error',
+        expect.any(Function)
+      );
+      expect(mockMongoose.connection.on).toHaveBeenCalledWith(
+        'disconnected',
+        expect.any(Function)
+      );
+      expect(mockMongoose.connection.on).toHaveBeenCalledWith(
+        'reconnected',
+        expect.any(Function)
+      );
     });
 
     it('should handle connection error event', async () => {
       mockMongoose.connect.mockResolvedValue(undefined as any);
       let errorHandler: Function;
 
-      (mockMongoose.connection.on as jest.Mock).mockImplementation((event: string, handler: Function) => {
-        if (event === 'error') {
-          errorHandler = handler;
+      (mockMongoose.connection.on as jest.Mock).mockImplementation(
+        (event: string, handler: Function) => {
+          if (event === 'error') {
+            errorHandler = handler;
+          }
+          return mockMongoose.connection;
         }
-        return mockMongoose.connection;
-      });
+      );
 
       await dbInstance.connect();
 
@@ -149,7 +167,10 @@ describe('DatabaseConnection', () => {
       const testError = new Error('Connection lost');
       errorHandler!(testError);
 
-      expect(mockLogger.error).toHaveBeenCalledWith('MongoDB connection error:', testError);
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        'MongoDB connection error:',
+        testError
+      );
       expect(dbInstance.getConnectionStatus()).toBe(false);
     });
 
@@ -157,12 +178,14 @@ describe('DatabaseConnection', () => {
       mockMongoose.connect.mockResolvedValue(undefined as any);
       let disconnectedHandler: Function;
 
-      (mockMongoose.connection.on as jest.Mock).mockImplementation((event: string, handler: Function) => {
-        if (event === 'disconnected') {
-          disconnectedHandler = handler;
+      (mockMongoose.connection.on as jest.Mock).mockImplementation(
+        (event: string, handler: Function) => {
+          if (event === 'disconnected') {
+            disconnectedHandler = handler;
+          }
+          return mockMongoose.connection;
         }
-        return mockMongoose.connection;
-      });
+      );
 
       await dbInstance.connect();
 
@@ -177,12 +200,14 @@ describe('DatabaseConnection', () => {
       mockMongoose.connect.mockResolvedValue(undefined as any);
       let reconnectedHandler: Function;
 
-      (mockMongoose.connection.on as jest.Mock).mockImplementation((event: string, handler: Function) => {
-        if (event === 'reconnected') {
-          reconnectedHandler = handler;
+      (mockMongoose.connection.on as jest.Mock).mockImplementation(
+        (event: string, handler: Function) => {
+          if (event === 'reconnected') {
+            reconnectedHandler = handler;
+          }
+          return mockMongoose.connection;
         }
-        return mockMongoose.connection;
-      });
+      );
 
       await dbInstance.connect();
 
@@ -236,14 +261,20 @@ describe('DatabaseConnection', () => {
       await dbInstance.connect();
 
       // Then try to disconnect with error
-      await expect(dbInstance.disconnect()).rejects.toThrow('Disconnect failed');
-      expect(mockLogger.error).toHaveBeenCalledWith('Error disconnecting from MongoDB:', disconnectError);
+      await expect(dbInstance.disconnect()).rejects.toThrow(
+        'Disconnect failed'
+      );
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        'Error disconnecting from MongoDB:',
+        disconnectError
+      );
     });
   });
 
   describe('buildMongoUri', () => {
     it('should return complete URI if provided', async () => {
-      mockConfig.MONGO_URI = 'mongodb://user:pass@host:27017/db?authSource=admin';
+      mockConfig.MONGO_URI =
+        'mongodb://user:pass@host:27017/db?authSource=admin';
       mockMongoose.connect.mockResolvedValue(undefined as any);
 
       await dbInstance.connect();
@@ -298,9 +329,9 @@ describe('DatabaseConnection', () => {
   describe('SIGINT handler', () => {
     it('should set up SIGINT handler when connecting', async () => {
       mockMongoose.connect.mockResolvedValue(undefined as any);
-      
+
       await dbInstance.connect();
-      
+
       expect(process.on).toHaveBeenCalledWith('SIGINT', expect.any(Function));
     });
 
@@ -319,10 +350,10 @@ describe('DatabaseConnection', () => {
       if (sigintCallback) {
         // Call the callback directly (it's synchronous but contains async operations)
         sigintCallback();
-        
+
         // Wait a bit for the async operations to complete
         await new Promise(resolve => setTimeout(resolve, 10));
-        
+
         expect(mockMongoose.disconnect).toHaveBeenCalled();
         expect(mockExit).not.toHaveBeenCalled();
       }

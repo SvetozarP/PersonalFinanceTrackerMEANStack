@@ -792,8 +792,8 @@ export class TransactionRepository extends BaseRepository<ITransaction> {
         $or: [
           { title: { $regex: searchQuery, $options: 'i' } },
           { description: { $regex: searchQuery, $options: 'i' } },
-          { tags: { $in: [new RegExp(searchQuery, 'i')] } }
-        ]
+          { tags: { $in: [new RegExp(searchQuery, 'i')] } },
+        ],
       };
 
       if (accountId) filter.accountId = accountId;

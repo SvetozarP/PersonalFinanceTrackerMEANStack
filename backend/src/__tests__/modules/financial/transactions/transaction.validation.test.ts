@@ -1,11 +1,16 @@
 import { transactionValidation } from '../../../../modules/financial/transactions/validators/transaction.validation';
-import { TransactionType, TransactionStatus, PaymentMethod, RecurrencePattern } from '../../../../modules/financial/transactions/interfaces/transaction.interface';
+import {
+  TransactionType,
+  TransactionStatus,
+  PaymentMethod,
+  RecurrencePattern,
+} from '../../../../modules/financial/transactions/interfaces/transaction.interface';
 
 describe('Transaction Validation', () => {
   describe('create schema', () => {
     const validTransactionData = {
       title: 'Test Transaction',
-      amount: 100.50,
+      amount: 100.5,
       currency: 'GBP',
       type: TransactionType.EXPENSE,
       categoryId: '507f1f77bcf86cd799439011',
@@ -14,11 +19,12 @@ describe('Transaction Validation', () => {
     };
 
     it('should validate valid transaction creation data', () => {
-      const { error, value } = transactionValidation.create.validate(validTransactionData);
+      const { error, value } =
+        transactionValidation.create.validate(validTransactionData);
 
       expect(error).toBeUndefined();
       expect(value.title).toBe('Test Transaction');
-      expect(value.amount).toBe(100.50);
+      expect(value.amount).toBe(100.5);
       expect(value.currency).toBe('GBP');
       expect(value.type).toBe(TransactionType.EXPENSE);
     });
@@ -32,7 +38,8 @@ describe('Transaction Validation', () => {
         paymentMethod: PaymentMethod.CASH,
       };
 
-      const { error, value } = transactionValidation.create.validate(minimalData);
+      const { error, value } =
+        transactionValidation.create.validate(minimalData);
 
       expect(error).toBeUndefined();
       expect(value.currency).toBe('GBP'); // default
@@ -52,12 +59,18 @@ describe('Transaction Validation', () => {
         type: TransactionType.EXPENSE,
       };
 
-      const { error } = transactionValidation.create.validate(invalidData, { abortEarly: false });
+      const { error } = transactionValidation.create.validate(invalidData, {
+        abortEarly: false,
+      });
 
       expect(error).toBeDefined();
       expect(error?.details.some(d => d.path.includes('title'))).toBe(true);
-      expect(error?.details.some(d => d.path.includes('categoryId'))).toBe(true);
-      expect(error?.details.some(d => d.path.includes('paymentMethod'))).toBe(true);
+      expect(error?.details.some(d => d.path.includes('categoryId'))).toBe(
+        true
+      );
+      expect(error?.details.some(d => d.path.includes('paymentMethod'))).toBe(
+        true
+      );
     });
 
     it('should reject empty title', () => {
@@ -69,7 +82,9 @@ describe('Transaction Validation', () => {
       const { error } = transactionValidation.create.validate(invalidData);
 
       expect(error).toBeDefined();
-      expect(error?.details[0].message).toBe('Transaction title cannot be empty');
+      expect(error?.details[0].message).toBe(
+        'Transaction title cannot be empty'
+      );
     });
 
     it('should reject title that is too long', () => {
@@ -81,7 +96,9 @@ describe('Transaction Validation', () => {
       const { error } = transactionValidation.create.validate(invalidData);
 
       expect(error).toBeDefined();
-      expect(error?.details[0].message).toBe('Transaction title must be less than 200 characters');
+      expect(error?.details[0].message).toBe(
+        'Transaction title must be less than 200 characters'
+      );
     });
 
     it('should reject negative amount', () => {
@@ -93,7 +110,9 @@ describe('Transaction Validation', () => {
       const { error } = transactionValidation.create.validate(invalidData);
 
       expect(error).toBeDefined();
-      expect(error?.details[0].message).toBe('Transaction amount must be at least 0.01');
+      expect(error?.details[0].message).toBe(
+        'Transaction amount must be at least 0.01'
+      );
     });
 
     it('should reject zero amount', () => {
@@ -105,7 +124,9 @@ describe('Transaction Validation', () => {
       const { error } = transactionValidation.create.validate(invalidData);
 
       expect(error).toBeDefined();
-      expect(error?.details[0].message).toBe('Transaction amount must be at least 0.01');
+      expect(error?.details[0].message).toBe(
+        'Transaction amount must be at least 0.01'
+      );
     });
 
     it('should reject invalid currency format', () => {
@@ -117,7 +138,9 @@ describe('Transaction Validation', () => {
       const { error } = transactionValidation.create.validate(invalidData);
 
       expect(error).toBeDefined();
-      expect(error?.details[0].message).toBe('Currency must be a valid 3-letter ISO code (e.g. GBP, USD, EUR)');
+      expect(error?.details[0].message).toBe(
+        'Currency must be a valid 3-letter ISO code (e.g. GBP, USD, EUR)'
+      );
     });
 
     it('should accept valid currency codes', () => {
@@ -143,7 +166,9 @@ describe('Transaction Validation', () => {
       const { error } = transactionValidation.create.validate(invalidData);
 
       expect(error).toBeDefined();
-      expect(error?.details[0].message).toBe('Transaction type must be one of: income, expense, transfer, adjustment');
+      expect(error?.details[0].message).toBe(
+        'Transaction type must be one of: income, expense, transfer, adjustment'
+      );
     });
 
     it('should validate all transaction types', () => {
@@ -249,7 +274,9 @@ describe('Transaction Validation', () => {
       const { error } = transactionValidation.create.validate(invalidData);
 
       expect(error).toBeDefined();
-      expect(error?.details[0].message).toBe('Tag must be less than 50 characters');
+      expect(error?.details[0].message).toBe(
+        'Tag must be less than 50 characters'
+      );
     });
 
     it('should accept future dates', () => {
@@ -326,7 +353,9 @@ describe('Transaction Validation', () => {
       const { error } = transactionValidation.create.validate(invalidData);
 
       expect(error).toBeDefined();
-      expect(error?.details[0].message).toBe('Latitude must be between -90 and 90');
+      expect(error?.details[0].message).toBe(
+        'Latitude must be between -90 and 90'
+      );
     });
 
     it('should validate all payment methods', () => {
@@ -356,7 +385,7 @@ describe('Transaction Validation', () => {
     it('should validate original currency fields together', () => {
       const validData = {
         ...validTransactionData,
-        originalAmount: 120.00,
+        originalAmount: 120.0,
         originalCurrency: 'USD',
         exchangeRate: 0.8333,
       };
@@ -369,7 +398,7 @@ describe('Transaction Validation', () => {
     it('should require exchange rate when original currency is provided', () => {
       const invalidData = {
         ...validTransactionData,
-        originalAmount: 120.00,
+        originalAmount: 120.0,
         originalCurrency: 'USD',
         // exchangeRate missing
       };
@@ -377,7 +406,9 @@ describe('Transaction Validation', () => {
       const { error } = transactionValidation.create.validate(invalidData);
 
       expect(error).toBeDefined();
-      expect(error?.details[0].message).toBe('Exchange rate is required when original currency is provided');
+      expect(error?.details[0].message).toBe(
+        'Exchange rate is required when original currency is provided'
+      );
     });
 
     it('should validate recurring transaction fields', () => {
@@ -405,7 +436,11 @@ describe('Transaction Validation', () => {
       const { error } = transactionValidation.create.validate(invalidData);
 
       expect(error).toBeDefined();
-      expect(error?.details.some(d => d.message.includes('Recurrence pattern is required'))).toBe(true);
+      expect(
+        error?.details.some(d =>
+          d.message.includes('Recurrence pattern is required')
+        )
+      ).toBe(true);
     });
 
     it('should validate attachments array', () => {
@@ -442,7 +477,9 @@ describe('Transaction Validation', () => {
       const { error } = transactionValidation.create.validate(invalidData);
 
       expect(error).toBeDefined();
-      expect(error?.details[0].message).toBe('Maximum of 10 attachments allowed');
+      expect(error?.details[0].message).toBe(
+        'Maximum of 10 attachments allowed'
+      );
     });
 
     it('should reject files that are too large', () => {
@@ -462,7 +499,9 @@ describe('Transaction Validation', () => {
       const { error } = transactionValidation.create.validate(invalidData);
 
       expect(error).toBeDefined();
-      expect(error?.details[0].message).toBe('File size must be less than 50MB');
+      expect(error?.details[0].message).toBe(
+        'File size must be less than 50MB'
+      );
     });
 
     it('should trim whitespace from string fields', () => {
@@ -473,7 +512,8 @@ describe('Transaction Validation', () => {
         notes: '  Test Notes  ',
       };
 
-      const { error, value } = transactionValidation.create.validate(dataWithWhitespace);
+      const { error, value } =
+        transactionValidation.create.validate(dataWithWhitespace);
 
       expect(error).toBeUndefined();
       expect(value.title).toBe('Test Transaction');
@@ -507,10 +547,14 @@ describe('Transaction Validation', () => {
         title: '', // empty title
       };
 
-      const { error } = transactionValidation.update.validate(invalidData, { abortEarly: false });
+      const { error } = transactionValidation.update.validate(invalidData, {
+        abortEarly: false,
+      });
 
       expect(error).toBeDefined();
-      expect(error?.details.some(d => d.message.includes('positive'))).toBe(true);
+      expect(error?.details.some(d => d.message.includes('positive'))).toBe(
+        true
+      );
       expect(error?.details.some(d => d.message.includes('empty'))).toBe(true);
     });
   });
@@ -549,7 +593,9 @@ describe('Transaction Validation', () => {
       const { error } = transactionValidation.bulk.validate(invalidData);
 
       expect(error).toBeDefined();
-      expect(error?.details[0].message).toBe('At least one transaction is required');
+      expect(error?.details[0].message).toBe(
+        'At least one transaction is required'
+      );
     });
 
     it('should reject missing transactions array', () => {
@@ -558,7 +604,9 @@ describe('Transaction Validation', () => {
       const { error } = transactionValidation.bulk.validate(invalidData);
 
       expect(error).toBeDefined();
-      expect(error?.details[0].message).toBe('At least one transaction is required');
+      expect(error?.details[0].message).toBe(
+        'At least one transaction is required'
+      );
     });
 
     it('should reject too many transactions', () => {
@@ -575,7 +623,9 @@ describe('Transaction Validation', () => {
       const { error } = transactionValidation.bulk.validate(invalidData);
 
       expect(error).toBeDefined();
-      expect(error?.details[0].message).toBe('Maximum of 100 transactions allowed');
+      expect(error?.details[0].message).toBe(
+        'Maximum of 100 transactions allowed'
+      );
     });
   });
 
@@ -644,7 +694,9 @@ describe('Transaction Validation', () => {
       const { error } = transactionValidation.query.validate(invalidQuery);
 
       expect(error).toBeDefined();
-      expect(error?.details[0].message).toBe('End date must be after start date');
+      expect(error?.details[0].message).toBe(
+        'End date must be after start date'
+      );
     });
 
     it('should reject invalid amount range', () => {
@@ -656,7 +708,9 @@ describe('Transaction Validation', () => {
       const { error } = transactionValidation.query.validate(invalidQuery);
 
       expect(error).toBeDefined();
-      expect(error?.details[0].message).toBe('Maximum amount must be greater than minimum amount');
+      expect(error?.details[0].message).toBe(
+        'Maximum amount must be greater than minimum amount'
+      );
     });
 
     it('should reject future dates', () => {
@@ -670,7 +724,9 @@ describe('Transaction Validation', () => {
       const { error } = transactionValidation.query.validate(invalidQuery);
 
       expect(error).toBeDefined();
-      expect(error?.details[0].message).toBe('Start date cannot be in the future');
+      expect(error?.details[0].message).toBe(
+        'Start date cannot be in the future'
+      );
     });
 
     it('should reject invalid sort field', () => {
@@ -714,7 +770,9 @@ describe('Transaction Validation', () => {
       const { error } = transactionValidation.query.validate(invalidQuery);
 
       expect(error).toBeDefined();
-      expect(error?.details[0].message).toBe('Search term must be less than 100 characters');
+      expect(error?.details[0].message).toBe(
+        'Search term must be less than 100 characters'
+      );
     });
   });
 
@@ -871,7 +929,7 @@ describe('Transaction Validation', () => {
           address: 'Test Address',
           coordinates: {
             latitude: 40.7128,
-            longitude: -74.0060,
+            longitude: -74.006,
           },
         },
       };
@@ -1222,7 +1280,7 @@ describe('Transaction Validation', () => {
         categoryId: '507f1f77bcf86cd799439011',
         paymentMethod: PaymentMethod.CASH,
         date: new Date(),
-        originalAmount: 85.50,
+        originalAmount: 85.5,
         originalCurrency: 'EUR',
         exchangeRate: 1.1695906432748538, // High precision exchange rate
       };

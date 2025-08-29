@@ -27,16 +27,19 @@ beforeAll(async () => {
 
   // Create mock Account model if it doesn't exist
   if (!mongoose.models.Account) {
-    const accountSchema = new mongoose.Schema({
-      name: { type: String, required: true },
-      type: { type: String, required: true },
-      balance: { type: Number, default: 0 },
-      currency: { type: String, default: 'USD' },
-      userId: { type: mongoose.Schema.Types.ObjectId, required: true },
-      isActive: { type: Boolean, default: true },
-      isDeleted: { type: Boolean, default: false },
-    }, { timestamps: true });
-    
+    const accountSchema = new mongoose.Schema(
+      {
+        name: { type: String, required: true },
+        type: { type: String, required: true },
+        balance: { type: Number, default: 0 },
+        currency: { type: String, default: 'USD' },
+        userId: { type: mongoose.Schema.Types.ObjectId, required: true },
+        isActive: { type: Boolean, default: true },
+        isDeleted: { type: Boolean, default: false },
+      },
+      { timestamps: true }
+    );
+
     mongoose.model('Account', accountSchema);
   }
 });

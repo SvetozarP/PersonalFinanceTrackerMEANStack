@@ -59,7 +59,9 @@ describe('Category Validation', () => {
       const { error } = categoryValidation.create.validate(invalidData);
 
       expect(error).toBeDefined();
-      expect(error?.details[0].message).toBe('Category name cannot exceed 100 characters');
+      expect(error?.details[0].message).toBe(
+        'Category name cannot exceed 100 characters'
+      );
     });
 
     it('should reject description that is too long', () => {
@@ -71,7 +73,9 @@ describe('Category Validation', () => {
       const { error } = categoryValidation.create.validate(invalidData);
 
       expect(error).toBeDefined();
-      expect(error?.details[0].message).toBe('Description cannot exceed 500 characters');
+      expect(error?.details[0].message).toBe(
+        'Description cannot exceed 500 characters'
+      );
     });
 
     it('should reject invalid color format', () => {
@@ -83,7 +87,9 @@ describe('Category Validation', () => {
       const { error } = categoryValidation.create.validate(invalidData);
 
       expect(error).toBeDefined();
-      expect(error?.details[0].message).toBe('Color must be a valid hex color code');
+      expect(error?.details[0].message).toBe(
+        'Color must be a valid hex color code'
+      );
     });
 
     it('should accept valid hex colors', () => {
@@ -109,7 +115,9 @@ describe('Category Validation', () => {
       const { error } = categoryValidation.create.validate(invalidData);
 
       expect(error).toBeDefined();
-      expect(error?.details[0].message).toBe('Icon name cannot exceed 50 characters');
+      expect(error?.details[0].message).toBe(
+        'Icon name cannot exceed 50 characters'
+      );
     });
 
     it('should reject invalid parentId format', () => {
@@ -121,7 +129,9 @@ describe('Category Validation', () => {
       const { error } = categoryValidation.create.validate(invalidData);
 
       expect(error).toBeDefined();
-      expect(error?.details[0].message).toBe('Parent ID must be a valid MongoDB ObjectId');
+      expect(error?.details[0].message).toBe(
+        'Parent ID must be a valid MongoDB ObjectId'
+      );
     });
 
     it('should accept valid parentId', () => {
@@ -142,7 +152,8 @@ describe('Category Validation', () => {
         icon: '  test-icon  ',
       };
 
-      const { error, value } = categoryValidation.create.validate(dataWithWhitespace);
+      const { error, value } =
+        categoryValidation.create.validate(dataWithWhitespace);
 
       expect(error).toBeUndefined();
       expect(value.name).toBe('Test Category');
@@ -207,7 +218,9 @@ describe('Category Validation', () => {
       const { error } = categoryValidation.update.validate(invalidData);
 
       expect(error).toBeDefined();
-      expect(error?.details[0].message).toBe('Category name cannot exceed 100 characters');
+      expect(error?.details[0].message).toBe(
+        'Category name cannot exceed 100 characters'
+      );
     });
 
     it('should reject description that is too long', () => {
@@ -218,7 +231,9 @@ describe('Category Validation', () => {
       const { error } = categoryValidation.update.validate(invalidData);
 
       expect(error).toBeDefined();
-      expect(error?.details[0].message).toBe('Description cannot exceed 500 characters');
+      expect(error?.details[0].message).toBe(
+        'Description cannot exceed 500 characters'
+      );
     });
 
     it('should reject invalid color format', () => {
@@ -229,7 +244,9 @@ describe('Category Validation', () => {
       const { error } = categoryValidation.update.validate(invalidData);
 
       expect(error).toBeDefined();
-      expect(error?.details[0].message).toBe('Color must be a valid hex color code');
+      expect(error?.details[0].message).toBe(
+        'Color must be a valid hex color code'
+      );
     });
 
     it('should reject icon that is too long', () => {
@@ -240,7 +257,9 @@ describe('Category Validation', () => {
       const { error } = categoryValidation.update.validate(invalidData);
 
       expect(error).toBeDefined();
-      expect(error?.details[0].message).toBe('Icon name cannot exceed 50 characters');
+      expect(error?.details[0].message).toBe(
+        'Icon name cannot exceed 50 characters'
+      );
     });
 
     it('should reject invalid parentId format', () => {
@@ -251,7 +270,9 @@ describe('Category Validation', () => {
       const { error } = categoryValidation.update.validate(invalidData);
 
       expect(error).toBeDefined();
-      expect(error?.details[0].message).toBe('Parent ID must be a valid MongoDB ObjectId');
+      expect(error?.details[0].message).toBe(
+        'Parent ID must be a valid MongoDB ObjectId'
+      );
     });
 
     it('should validate isActive boolean', () => {
@@ -272,7 +293,8 @@ describe('Category Validation', () => {
         icon: '  updated-icon  ',
       };
 
-      const { error, value } = categoryValidation.update.validate(dataWithWhitespace);
+      const { error, value } =
+        categoryValidation.update.validate(dataWithWhitespace);
 
       expect(error).toBeUndefined();
       expect(value.name).toBe('Updated Category');
@@ -310,7 +332,9 @@ describe('Category Validation', () => {
       const { error } = categoryValidation.id.validate(invalidData);
 
       expect(error).toBeDefined();
-      expect(error?.details[0].message).toBe('Category ID must be a valid MongoDB ObjectId');
+      expect(error?.details[0].message).toBe(
+        'Category ID must be a valid MongoDB ObjectId'
+      );
     });
 
     it('should reject empty id', () => {
@@ -360,7 +384,9 @@ describe('Category Validation', () => {
       const { error } = categoryValidation.query.validate(invalidData);
 
       expect(error).toBeDefined();
-      expect(error?.details[0].message).toBe('Parent ID must be a valid MongoDB ObjectId');
+      expect(error?.details[0].message).toBe(
+        'Parent ID must be a valid MongoDB ObjectId'
+      );
     });
 
     it('should reject negative level', () => {
@@ -415,7 +441,9 @@ describe('Category Validation', () => {
       const { error } = categoryValidation.query.validate(invalidData);
 
       expect(error).toBeDefined();
-      expect(error?.details[0].message).toContain('must be greater than or equal to 1');
+      expect(error?.details[0].message).toContain(
+        'must be greater than or equal to 1'
+      );
     });
 
     it('should reject limit less than 1', () => {
@@ -426,7 +454,9 @@ describe('Category Validation', () => {
       const { error } = categoryValidation.query.validate(invalidData);
 
       expect(error).toBeDefined();
-      expect(error?.details[0].message).toContain('must be greater than or equal to 1');
+      expect(error?.details[0].message).toContain(
+        'must be greater than or equal to 1'
+      );
     });
 
     it('should reject limit greater than 100', () => {
@@ -437,7 +467,9 @@ describe('Category Validation', () => {
       const { error } = categoryValidation.query.validate(invalidData);
 
       expect(error).toBeDefined();
-      expect(error?.details[0].message).toContain('must be less than or equal to 100');
+      expect(error?.details[0].message).toContain(
+        'must be less than or equal to 100'
+      );
     });
 
     it('should apply default values', () => {
@@ -455,7 +487,8 @@ describe('Category Validation', () => {
         search: '  test search  ',
       };
 
-      const { error, value } = categoryValidation.query.validate(dataWithWhitespace);
+      const { error, value } =
+        categoryValidation.query.validate(dataWithWhitespace);
 
       expect(error).toBeUndefined();
       expect(value.search).toBe('test search');
@@ -498,7 +531,8 @@ describe('Category Validation', () => {
         unknownField: 'should be stripped',
       };
 
-      const { error, value } = categoryValidation.create.validate(dataWithExtraFields);
+      const { error, value } =
+        categoryValidation.create.validate(dataWithExtraFields);
 
       expect(error).toBeDefined();
       expect(error?.details[0].message).toContain('not allowed');
@@ -517,7 +551,9 @@ describe('Category Validation', () => {
 
       expect(error).toBeUndefined();
       expect(value.name).toBe('Complex Category');
-      expect(value.description).toBe('Complex description with special chars !@#$%^&*()');
+      expect(value.description).toBe(
+        'Complex description with special chars !@#$%^&*()'
+      );
       expect(value.color).toBe('#AbCdEf');
       expect(value.icon).toBe('complex-icon-name');
     });

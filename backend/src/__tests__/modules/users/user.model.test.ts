@@ -26,7 +26,7 @@ describe('User Model', () => {
   beforeEach(async () => {
     await User.deleteMany({});
     jest.clearAllMocks();
-    
+
     // Reset bcrypt mocks
     mockBcrypt.genSalt.mockReset();
     mockBcrypt.hash.mockReset();
@@ -258,7 +258,9 @@ describe('User Model', () => {
 
       // Verify that the password was hashed (should not be the original password)
       expect(savedUser.password).not.toBe('TestPass123!');
-      expect(savedUser.password).toMatch(/^\$2[aby]\$\d{1,2}\$[./A-Za-z0-9]{53}$/); // bcrypt hash pattern
+      expect(savedUser.password).toMatch(
+        /^\$2[aby]\$\d{1,2}\$[./A-Za-z0-9]{53}$/
+      ); // bcrypt hash pattern
     });
 
     it('should hash password when password is modified', async () => {

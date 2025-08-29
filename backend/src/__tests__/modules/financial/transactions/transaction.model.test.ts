@@ -1,7 +1,12 @@
 import mongoose from 'mongoose';
 import { Transaction } from '../../../../modules/financial/transactions/models/transaction.model';
 import { ITransaction } from '../../../../modules/financial/transactions/interfaces/transaction.interface';
-import { TransactionType, TransactionStatus, PaymentMethod, RecurrencePattern } from '../../../../modules/financial/transactions/interfaces/transaction.interface';
+import {
+  TransactionType,
+  TransactionStatus,
+  PaymentMethod,
+  RecurrencePattern,
+} from '../../../../modules/financial/transactions/interfaces/transaction.interface';
 
 describe('Transaction Model', () => {
   let testTransaction: ITransaction;
@@ -27,7 +32,7 @@ describe('Transaction Model', () => {
     it('should create a valid transaction with required fields', async () => {
       const transactionData = {
         title: 'Test Transaction',
-        amount: 100.50,
+        amount: 100.5,
         currency: 'USD',
         type: TransactionType.EXPENSE,
         categoryId: testCategoryId,
@@ -43,7 +48,7 @@ describe('Transaction Model', () => {
       const savedTransaction = await transaction.save();
 
       expect(savedTransaction.title).toBe('Test Transaction');
-      expect(savedTransaction.amount).toBe(100.50);
+      expect(savedTransaction.amount).toBe(100.5);
       expect(savedTransaction.currency).toBe('USD');
       expect(savedTransaction.type).toBe(TransactionType.EXPENSE);
       expect(savedTransaction.status).toBe(TransactionStatus.COMPLETED);
@@ -77,21 +82,23 @@ describe('Transaction Model', () => {
         originalAmount: 250.75,
         originalCurrency: 'EUR',
         exchangeRate: 1.0,
-        fees: 2.50,
+        fees: 2.5,
         tax: 25.08,
         isRecurring: true,
         recurrencePattern: RecurrencePattern.MONTHLY,
         recurrenceInterval: 1,
         recurrenceEndDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
         nextOccurrence: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-        attachments: [{
-          filename: 'receipt.pdf',
-          originalName: 'receipt.pdf',
-          mimeType: 'application/pdf',
-          size: 1024,
-          url: 'https://example.com/receipt.pdf',
-          uploadedAt: new Date(),
-        }],
+        attachments: [
+          {
+            filename: 'receipt.pdf',
+            originalName: 'receipt.pdf',
+            mimeType: 'application/pdf',
+            size: 1024,
+            url: 'https://example.com/receipt.pdf',
+            uploadedAt: new Date(),
+          },
+        ],
         notes: 'Monthly salary payment',
         source: 'api',
         externalId: 'EXT123',
@@ -103,17 +110,23 @@ describe('Transaction Model', () => {
       const transaction = new Transaction(transactionData);
       const savedTransaction = await transaction.save();
 
-      expect(savedTransaction.description).toBe('A comprehensive transaction description');
-      expect(savedTransaction.subcategoryId).toEqual(transactionData.subcategoryId);
+      expect(savedTransaction.description).toBe(
+        'A comprehensive transaction description'
+      );
+      expect(savedTransaction.subcategoryId).toEqual(
+        transactionData.subcategoryId
+      );
       expect(savedTransaction.tags).toEqual(['salary', 'monthly']);
       expect(savedTransaction.location).toEqual(transactionData.location);
       expect(savedTransaction.paymentReference).toBe('REF123456');
       expect(savedTransaction.merchantName).toBe('Company Inc');
       expect(savedTransaction.originalAmount).toBe(250.75);
-      expect(savedTransaction.fees).toBe(2.50);
+      expect(savedTransaction.fees).toBe(2.5);
       expect(savedTransaction.tax).toBe(25.08);
       expect(savedTransaction.isRecurring).toBe(true);
-      expect(savedTransaction.recurrencePattern).toBe(RecurrencePattern.MONTHLY);
+      expect(savedTransaction.recurrencePattern).toBe(
+        RecurrencePattern.MONTHLY
+      );
       expect(savedTransaction.attachments).toHaveLength(1);
       expect(savedTransaction.notes).toBe('Monthly salary payment');
       expect(savedTransaction.source).toBe('api');
@@ -178,7 +191,7 @@ describe('Transaction Model', () => {
     });
 
     it('should validate amount constraints', async () => {
-      const invalidAmounts = [0, -1, -100.50];
+      const invalidAmounts = [0, -1, -100.5];
 
       for (const invalidAmount of invalidAmounts) {
         const transaction = new Transaction({
@@ -528,7 +541,7 @@ describe('Transaction Model', () => {
       });
 
       const savedTransaction = await transaction.save();
-      
+
       expect(savedTransaction.createdAt).toBeDefined();
       expect(savedTransaction.updatedAt).toBeDefined();
       expect(savedTransaction.createdAt).toBeInstanceOf(Date);
@@ -559,7 +572,9 @@ describe('Transaction Model', () => {
       savedTransaction.title = 'Updated Title';
       const updatedTransaction = await savedTransaction.save();
 
-      expect(updatedTransaction.updatedAt.getTime()).toBeGreaterThan(originalUpdatedAt.getTime());
+      expect(updatedTransaction.updatedAt.getTime()).toBeGreaterThan(
+        originalUpdatedAt.getTime()
+      );
     });
   });
 
@@ -750,10 +765,11 @@ describe('Transaction Model', () => {
         date: new Date(),
         location: {
           name: 'Complex Store Name with Special Characters: & Co.',
-          address: '123 Complex Street, Suite 456, Complex City, Complex State 12345, Complex Country',
+          address:
+            '123 Complex Street, Suite 456, Complex City, Complex State 12345, Complex Country',
           coordinates: {
             latitude: 40.7128,
-            longitude: -74.0060,
+            longitude: -74.006,
           },
         },
         userId: testUserId,
@@ -763,9 +779,11 @@ describe('Transaction Model', () => {
       const transaction = new Transaction(transactionData);
       const savedTransaction = await transaction.save();
 
-      expect(savedTransaction.location?.name).toBe('Complex Store Name with Special Characters: & Co.');
+      expect(savedTransaction.location?.name).toBe(
+        'Complex Store Name with Special Characters: & Co.'
+      );
       expect(savedTransaction.location?.coordinates?.latitude).toBe(40.7128);
-      expect(savedTransaction.location?.coordinates?.longitude).toBe(-74.0060);
+      expect(savedTransaction.location?.coordinates?.longitude).toBe(-74.006);
       expect(savedTransaction.$isValid('location')).toBe(true);
     });
 
@@ -904,7 +922,9 @@ describe('Transaction Model', () => {
       const savedTransaction = await transaction.save();
 
       expect(savedTransaction.attachments).toHaveLength(3);
-      expect(savedTransaction.attachments[0].filename).toBe('complex-receipt-1.pdf');
+      expect(savedTransaction.attachments[0].filename).toBe(
+        'complex-receipt-1.pdf'
+      );
       expect(savedTransaction.attachments[1].size).toBe(2 * 1024 * 1024);
       expect(savedTransaction.$isValid('attachments')).toBe(true);
     });
@@ -970,7 +990,9 @@ describe('Transaction Model', () => {
       const savedTransaction = await transaction.save();
 
       expect(savedTransaction.isRecurring).toBe(true);
-      expect(savedTransaction.recurrencePattern).toBe(RecurrencePattern.MONTHLY);
+      expect(savedTransaction.recurrencePattern).toBe(
+        RecurrencePattern.MONTHLY
+      );
       expect(savedTransaction.recurrenceInterval).toBe(2);
       expect(savedTransaction.$isValid('recurrencePattern')).toBe(true);
     });
@@ -1008,11 +1030,11 @@ describe('Transaction Model', () => {
         categoryId: new mongoose.Types.ObjectId(),
         paymentMethod: PaymentMethod.CASH,
         date: new Date(),
-        originalAmount: 85.50,
+        originalAmount: 85.5,
         originalCurrency: 'EUR',
         exchangeRate: 1.1695906432748538, // High precision exchange rate
-        fees: 2.50,
-        tax: 8.50,
+        fees: 2.5,
+        tax: 8.5,
         userId: testUserId,
         accountId: testAccountId,
       };
@@ -1020,11 +1042,11 @@ describe('Transaction Model', () => {
       const transaction = new Transaction(transactionData);
       const savedTransaction = await transaction.save();
 
-      expect(savedTransaction.originalAmount).toBe(85.50);
+      expect(savedTransaction.originalAmount).toBe(85.5);
       expect(savedTransaction.originalCurrency).toBe('EUR');
       expect(savedTransaction.exchangeRate).toBe(1.1695906432748538);
-      expect(savedTransaction.fees).toBe(2.50);
-      expect(savedTransaction.tax).toBe(8.50);
+      expect(savedTransaction.fees).toBe(2.5);
+      expect(savedTransaction.tax).toBe(8.5);
       expect(savedTransaction.$isValid('originalAmount')).toBe(true);
     });
 
@@ -1065,7 +1087,8 @@ describe('Transaction Model', () => {
         categoryId: new mongoose.Types.ObjectId(),
         paymentMethod: PaymentMethod.CREDIT_CARD,
         date: new Date(),
-        merchantName: 'Complex Merchant Name with Special Characters: & Co. (LLC)',
+        merchantName:
+          'Complex Merchant Name with Special Characters: & Co. (LLC)',
         merchantId: 'MERCH-123-456-789-ABC-DEF',
         paymentReference: 'REF-2024-001-002-003-004-005',
         userId: testUserId,
@@ -1075,9 +1098,13 @@ describe('Transaction Model', () => {
       const transaction = new Transaction(transactionData);
       const savedTransaction = await transaction.save();
 
-      expect(savedTransaction.merchantName).toBe('Complex Merchant Name with Special Characters: & Co. (LLC)');
+      expect(savedTransaction.merchantName).toBe(
+        'Complex Merchant Name with Special Characters: & Co. (LLC)'
+      );
       expect(savedTransaction.merchantId).toBe('MERCH-123-456-789-ABC-DEF');
-      expect(savedTransaction.paymentReference).toBe('REF-2024-001-002-003-004-005');
+      expect(savedTransaction.paymentReference).toBe(
+        'REF-2024-001-002-003-004-005'
+      );
       expect(savedTransaction.$isValid('merchantName')).toBe(true);
     });
 
@@ -1115,8 +1142,10 @@ describe('Transaction Model', () => {
         categoryId: new mongoose.Types.ObjectId(),
         paymentMethod: PaymentMethod.CASH,
         date: new Date(),
-        description: 'This is a very detailed description with multiple sentences. It includes various details about the transaction, such as the purpose, context, and any relevant information that might be useful for future reference.',
-        notes: 'Additional notes with special characters: @#$%^&*()_+-=[]{}|;:,.<>? and numbers 1234567890',
+        description:
+          'This is a very detailed description with multiple sentences. It includes various details about the transaction, such as the purpose, context, and any relevant information that might be useful for future reference.',
+        notes:
+          'Additional notes with special characters: @#$%^&*()_+-=[]{}|;:,.<>? and numbers 1234567890',
         userId: testUserId,
         accountId: testAccountId,
       };
@@ -1124,8 +1153,12 @@ describe('Transaction Model', () => {
       const transaction = new Transaction(transactionData);
       const savedTransaction = await transaction.save();
 
-      expect(savedTransaction.description).toBe('This is a very detailed description with multiple sentences. It includes various details about the transaction, such as the purpose, context, and any relevant information that might be useful for future reference.');
-      expect(savedTransaction.notes).toBe('Additional notes with special characters: @#$%^&*()_+-=[]{}|;:,.<>? and numbers 1234567890');
+      expect(savedTransaction.description).toBe(
+        'This is a very detailed description with multiple sentences. It includes various details about the transaction, such as the purpose, context, and any relevant information that might be useful for future reference.'
+      );
+      expect(savedTransaction.notes).toBe(
+        'Additional notes with special characters: @#$%^&*()_+-=[]{}|;:,.<>? and numbers 1234567890'
+      );
       expect(savedTransaction.$isValid('description')).toBe(true);
     });
 

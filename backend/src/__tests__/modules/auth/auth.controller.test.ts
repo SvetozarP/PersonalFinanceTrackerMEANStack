@@ -1,7 +1,10 @@
 import { AuthController } from '../../../modules/auth/auth.controller';
 import { AuthService } from '../../../modules/auth/auth.service';
 import { Request, Response, NextFunction } from 'express';
-import { registerSchema, loginSchema } from '../../../modules/auth/auth.validation';
+import {
+  registerSchema,
+  loginSchema,
+} from '../../../modules/auth/auth.validation';
 import mongoose from 'mongoose';
 
 // Mock AuthService
@@ -51,7 +54,9 @@ describe('Auth Controller', () => {
     } as any;
 
     // Mock the AuthService constructor to return our mock instance
-    (AuthService as jest.MockedClass<typeof AuthService>).mockImplementation(() => mockAuthService);
+    (AuthService as jest.MockedClass<typeof AuthService>).mockImplementation(
+      () => mockAuthService
+    );
 
     authController = new AuthController(mockAuthService);
 
@@ -75,16 +80,21 @@ describe('Auth Controller', () => {
 
   describe('register', () => {
     it('should register a new user successfully', async () => {
-      const mockUser = { 
+      const mockUser = {
         _id: new mongoose.Types.ObjectId('507f1f77bcf86cd799439011'),
         email: 'test@example.com',
         firstName: 'Test',
         lastName: 'User',
         isActive: true,
         createdAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
       };
-      const mockRegisterData = { email: 'test@example.com', password: 'password123', firstName: 'Test', lastName: 'User' };
+      const mockRegisterData = {
+        email: 'test@example.com',
+        password: 'password123',
+        firstName: 'Test',
+        lastName: 'User',
+      };
 
       (registerSchema.validate as jest.Mock).mockReturnValue({
         error: null,
@@ -93,7 +103,10 @@ describe('Auth Controller', () => {
       mockAuthService.register.mockResolvedValue(mockUser as any);
 
       const req = { body: mockRegisterData } as Request;
-      const res = { status: jest.fn().mockReturnThis(), json: jest.fn() } as any;
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn(),
+      } as any;
       const next = jest.fn();
 
       await authController.register(req, res, next);
@@ -116,7 +129,10 @@ describe('Auth Controller', () => {
       (registerSchema.validate as jest.Mock).mockReturnValue(validationError);
 
       const req = { body: {} } as Request;
-      const res = { status: jest.fn().mockReturnThis(), json: jest.fn() } as any;
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn(),
+      } as any;
       const next = jest.fn();
 
       await authController.register(req, res, next);
@@ -130,7 +146,10 @@ describe('Auth Controller', () => {
     });
 
     it('should handle user already exists error', async () => {
-      const mockRegisterData = { email: 'test@example.com', password: 'password123' };
+      const mockRegisterData = {
+        email: 'test@example.com',
+        password: 'password123',
+      };
       const mockError = new Error('User with this email already exists');
 
       (registerSchema.validate as jest.Mock).mockReturnValue({
@@ -140,7 +159,10 @@ describe('Auth Controller', () => {
       mockAuthService.register.mockRejectedValue(mockError);
 
       const req = { body: mockRegisterData } as Request;
-      const res = { status: jest.fn().mockReturnThis(), json: jest.fn() } as any;
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn(),
+      } as any;
       const next = jest.fn();
 
       await authController.register(req, res, next);
@@ -154,7 +176,10 @@ describe('Auth Controller', () => {
     });
 
     it('should handle other errors by passing to next', async () => {
-      const mockRegisterData = { email: 'test@example.com', password: 'password123' };
+      const mockRegisterData = {
+        email: 'test@example.com',
+        password: 'password123',
+      };
       const mockError = new Error('Database error');
 
       (registerSchema.validate as jest.Mock).mockReturnValue({
@@ -164,7 +189,10 @@ describe('Auth Controller', () => {
       mockAuthService.register.mockRejectedValue(mockError);
 
       const req = { body: mockRegisterData } as Request;
-      const res = { status: jest.fn().mockReturnThis(), json: jest.fn() } as any;
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn(),
+      } as any;
       const next = jest.fn();
 
       await authController.register(req, res, next);
@@ -185,7 +213,10 @@ describe('Auth Controller', () => {
       (registerSchema.validate as jest.Mock).mockReturnValue(validationError);
 
       const req = { body: {} } as Request;
-      const res = { status: jest.fn().mockReturnThis(), json: jest.fn() } as any;
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn(),
+      } as any;
       const next = jest.fn();
 
       await authController.register(req, res, next);
@@ -201,27 +232,36 @@ describe('Auth Controller', () => {
 
   describe('login', () => {
     it('should login user successfully', async () => {
-      const mockUser = { 
+      const mockUser = {
         _id: new mongoose.Types.ObjectId('507f1f77bcf86cd799439011'),
         email: 'test@example.com',
         firstName: 'Test',
         lastName: 'User',
         isActive: true,
         createdAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
       };
-      const mockTokens = { accessToken: 'access123', refreshToken: 'refresh123' };
-      const mockLoginData = { email: 'test@example.com', password: 'password123' };
+      const mockTokens = {
+        accessToken: 'access123',
+        refreshToken: 'refresh123',
+      };
+      const mockLoginData = {
+        email: 'test@example.com',
+        password: 'password123',
+      };
 
       (loginSchema.validate as jest.Mock).mockReturnValue({
         error: null,
         value: mockLoginData,
       });
-      mockAuthService.login.mockResolvedValue({ user: mockUser, tokens: mockTokens });
+      mockAuthService.login.mockResolvedValue({
+        user: mockUser,
+        tokens: mockTokens,
+      });
 
       const req = { body: mockLoginData } as Request;
-      const res = { 
-        status: jest.fn().mockReturnThis(), 
+      const res = {
+        status: jest.fn().mockReturnThis(),
         json: jest.fn(),
         cookie: jest.fn(),
       } as any;
@@ -260,7 +300,10 @@ describe('Auth Controller', () => {
       (loginSchema.validate as jest.Mock).mockReturnValue(validationError);
 
       const req = { body: {} } as Request;
-      const res = { status: jest.fn().mockReturnThis(), json: jest.fn() } as any;
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn(),
+      } as any;
       const next = jest.fn();
 
       await authController.login(req, res, next);
@@ -274,7 +317,10 @@ describe('Auth Controller', () => {
     });
 
     it('should handle invalid email or password error', async () => {
-      const mockLoginData = { email: 'test@example.com', password: 'wrongpassword' };
+      const mockLoginData = {
+        email: 'test@example.com',
+        password: 'wrongpassword',
+      };
       const mockError = new Error('Invalid email or password');
 
       (loginSchema.validate as jest.Mock).mockReturnValue({
@@ -284,7 +330,10 @@ describe('Auth Controller', () => {
       mockAuthService.login.mockRejectedValue(mockError);
 
       const req = { body: mockLoginData } as Request;
-      const res = { status: jest.fn().mockReturnThis(), json: jest.fn() } as any;
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn(),
+      } as any;
       const next = jest.fn();
 
       await authController.login(req, res, next);
@@ -298,7 +347,10 @@ describe('Auth Controller', () => {
     });
 
     it('should handle account deactivated error', async () => {
-      const mockLoginData = { email: 'test@example.com', password: 'password123' };
+      const mockLoginData = {
+        email: 'test@example.com',
+        password: 'password123',
+      };
       const mockError = new Error('Account is deactivated');
 
       (loginSchema.validate as jest.Mock).mockReturnValue({
@@ -308,7 +360,10 @@ describe('Auth Controller', () => {
       mockAuthService.login.mockRejectedValue(mockError);
 
       const req = { body: mockLoginData } as Request;
-      const res = { status: jest.fn().mockReturnThis(), json: jest.fn() } as any;
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn(),
+      } as any;
       const next = jest.fn();
 
       await authController.login(req, res, next);
@@ -322,7 +377,10 @@ describe('Auth Controller', () => {
     });
 
     it('should handle other login errors by passing to next', async () => {
-      const mockLoginData = { email: 'test@example.com', password: 'password123' };
+      const mockLoginData = {
+        email: 'test@example.com',
+        password: 'password123',
+      };
       const mockError = new Error('Database error');
 
       (loginSchema.validate as jest.Mock).mockReturnValue({
@@ -332,7 +390,10 @@ describe('Auth Controller', () => {
       mockAuthService.login.mockRejectedValue(mockError);
 
       const req = { body: mockLoginData } as Request;
-      const res = { status: jest.fn().mockReturnThis(), json: jest.fn() } as any;
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn(),
+      } as any;
       const next = jest.fn();
 
       await authController.login(req, res, next);
@@ -341,27 +402,36 @@ describe('Auth Controller', () => {
     });
 
     it('should set secure cookie in production environment', async () => {
-      const mockUser = { 
+      const mockUser = {
         _id: new mongoose.Types.ObjectId('507f1f77bcf86cd799439011'),
         email: 'test@example.com',
         firstName: 'Test',
         lastName: 'User',
         isActive: true,
         createdAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
       };
-      const mockTokens = { accessToken: 'access123', refreshToken: 'refresh123' };
-      const mockLoginData = { email: 'test@example.com', password: 'password123' };
+      const mockTokens = {
+        accessToken: 'access123',
+        refreshToken: 'refresh123',
+      };
+      const mockLoginData = {
+        email: 'test@example.com',
+        password: 'password123',
+      };
 
       (loginSchema.validate as jest.Mock).mockReturnValue({
         error: null,
         value: mockLoginData,
       });
-      mockAuthService.login.mockResolvedValue({ user: mockUser, tokens: mockTokens });
+      mockAuthService.login.mockResolvedValue({
+        user: mockUser,
+        tokens: mockTokens,
+      });
 
       const req = { body: mockLoginData } as Request;
-      const res = { 
-        status: jest.fn().mockReturnThis(), 
+      const res = {
+        status: jest.fn().mockReturnThis(),
         json: jest.fn(),
         cookie: jest.fn(),
       } as any;
@@ -387,13 +457,16 @@ describe('Auth Controller', () => {
 
   describe('refreshToken', () => {
     it('should refresh token successfully', async () => {
-      const mockTokens = { accessToken: 'newAccess123', refreshToken: 'newRefresh123' };
+      const mockTokens = {
+        accessToken: 'newAccess123',
+        refreshToken: 'newRefresh123',
+      };
 
       mockAuthService.refreshToken.mockResolvedValue(mockTokens);
 
       const req = { cookies: { refreshToken: 'oldRefresh123' } } as any;
-      const res = { 
-        status: jest.fn().mockReturnThis(), 
+      const res = {
+        status: jest.fn().mockReturnThis(),
         json: jest.fn(),
         cookie: jest.fn(),
       } as any;
@@ -424,7 +497,10 @@ describe('Auth Controller', () => {
 
     it('should handle missing refresh token', async () => {
       const req = { cookies: {} } as any;
-      const res = { status: jest.fn().mockReturnThis(), json: jest.fn() } as any;
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn(),
+      } as any;
       const next = jest.fn();
 
       await authController.refreshToken(req, res, next);
@@ -442,7 +518,10 @@ describe('Auth Controller', () => {
       mockAuthService.refreshToken.mockRejectedValue(mockError);
 
       const req = { cookies: { refreshToken: 'invalidToken' } } as any;
-      const res = { status: jest.fn().mockReturnThis(), json: jest.fn() } as any;
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn(),
+      } as any;
       const next = jest.fn();
 
       await authController.refreshToken(req, res, next);
@@ -461,7 +540,10 @@ describe('Auth Controller', () => {
       mockAuthService.refreshToken.mockRejectedValue(mockError);
 
       const req = { cookies: { refreshToken: 'validToken' } } as any;
-      const res = { status: jest.fn().mockReturnThis(), json: jest.fn() } as any;
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn(),
+      } as any;
       const next = jest.fn();
 
       await authController.refreshToken(req, res, next);
@@ -471,7 +553,10 @@ describe('Auth Controller', () => {
 
     it('should handle undefined cookies', async () => {
       const req = { cookies: {} } as any;
-      const res = { status: jest.fn().mockReturnThis(), json: jest.fn() } as any;
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn(),
+      } as any;
       const next = jest.fn();
 
       await authController.refreshToken(req, res, next);
@@ -485,7 +570,10 @@ describe('Auth Controller', () => {
 
     it('should handle empty refresh token string', async () => {
       const req = { cookies: { refreshToken: '' } } as any;
-      const res = { status: jest.fn().mockReturnThis(), json: jest.fn() } as any;
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn(),
+      } as any;
       const next = jest.fn();
 
       await authController.refreshToken(req, res, next);
@@ -501,8 +589,8 @@ describe('Auth Controller', () => {
   describe('logout', () => {
     it('should handle logout with user', async () => {
       const req = { user: { userId: '123' } } as any;
-      const res = { 
-        status: jest.fn().mockReturnThis(), 
+      const res = {
+        status: jest.fn().mockReturnThis(),
         json: jest.fn(),
         clearCookie: jest.fn(),
       } as any;
@@ -521,8 +609,8 @@ describe('Auth Controller', () => {
 
     it('should handle logout without user', async () => {
       const req = { user: undefined } as any;
-      const res = { 
-        status: jest.fn().mockReturnThis(), 
+      const res = {
+        status: jest.fn().mockReturnThis(),
         json: jest.fn(),
         clearCookie: jest.fn(),
       } as any;
@@ -543,7 +631,10 @@ describe('Auth Controller', () => {
   describe('getProfile', () => {
     it('should get user profile successfully', async () => {
       const req = { user: { userId: '123' } } as any;
-      const res = { status: jest.fn().mockReturnThis(), json: jest.fn() } as any;
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn(),
+      } as any;
       const next = jest.fn();
 
       await authController.getProfile(req, res, next);
@@ -558,7 +649,10 @@ describe('Auth Controller', () => {
 
     it('should handle profile request without user', async () => {
       const req = { user: undefined } as any;
-      const res = { status: jest.fn().mockReturnThis(), json: jest.fn() } as any;
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn(),
+      } as any;
       const next = jest.fn();
 
       await authController.getProfile(req, res, next);
@@ -574,7 +668,10 @@ describe('Auth Controller', () => {
       const mockError = new Error('Profile retrieval failed');
 
       const req = { user: { userId: '123' } } as any;
-      const res = { status: jest.fn().mockReturnThis(), json: jest.fn() } as any;
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn(),
+      } as any;
       const next = jest.fn();
 
       // Mock the response methods to throw an error

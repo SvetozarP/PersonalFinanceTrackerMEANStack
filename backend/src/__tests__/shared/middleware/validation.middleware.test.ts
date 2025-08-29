@@ -1,4 +1,7 @@
-import { validateRequest, validateMultiple } from '../../../shared/middleware/validation.middleware';
+import {
+  validateRequest,
+  validateMultiple,
+} from '../../../shared/middleware/validation.middleware';
 import { Schema } from 'joi';
 
 // Mock the logger service
@@ -108,7 +111,11 @@ describe('Validation Middleware', () => {
         value: validParams,
       });
 
-      validateRequest(testSchema, 'params')(mockRequest, mockResponse, mockNext);
+      validateRequest(testSchema, 'params')(
+        mockRequest,
+        mockResponse,
+        mockNext
+      );
 
       expect(mockRequest.params).toEqual(validParams);
       expect(mockNext).toHaveBeenCalled();
@@ -188,7 +195,10 @@ describe('Validation Middleware', () => {
 
       bodySchema.validate.mockReturnValue({ error: null, value: validBody });
       querySchema.validate.mockReturnValue({ error: null, value: validQuery });
-      paramsSchema.validate.mockReturnValue({ error: null, value: validParams });
+      paramsSchema.validate.mockReturnValue({
+        error: null,
+        value: validParams,
+      });
 
       validateMultiple({
         body: bodySchema,

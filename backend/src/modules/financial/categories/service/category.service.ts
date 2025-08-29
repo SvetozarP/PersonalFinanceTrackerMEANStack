@@ -170,8 +170,8 @@ export class CategoryService {
         ];
       }
 
-      // Get total count
-      const total = await this.categoryRepository.count(query);
+      // Get total count (stored in result.total)
+      await this.categoryRepository.count(query);
 
       // Get paginated results using the proper pagination method
       const result = await this.categoryRepository.findWithPagination(

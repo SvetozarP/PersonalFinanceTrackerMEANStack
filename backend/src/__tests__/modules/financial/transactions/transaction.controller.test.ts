@@ -5,9 +5,13 @@ import { logger } from '../../../../shared/services/logger.service';
 import { transactionValidation } from '../../../../modules/financial/transactions/validators/transaction.validation';
 
 // Mock dependencies
-jest.mock('../../../../modules/financial/transactions/services/transaction.service');
+jest.mock(
+  '../../../../modules/financial/transactions/services/transaction.service'
+);
 jest.mock('../../../../shared/services/logger.service');
-jest.mock('../../../../modules/financial/transactions/validators/transaction.validation');
+jest.mock(
+  '../../../../modules/financial/transactions/validators/transaction.validation'
+);
 
 interface AuthenticatedRequest extends Request {
   user?: {
@@ -61,7 +65,7 @@ describe('TransactionController', () => {
   describe('createTransaction', () => {
     const validTransactionData = {
       title: 'Test Transaction',
-      amount: 100.50,
+      amount: 100.5,
       type: 'expense',
       categoryId: '507f1f77bcf86cd799439011',
       date: new Date().toISOString(),
@@ -70,7 +74,7 @@ describe('TransactionController', () => {
     const mockCreatedTransaction = {
       _id: '507f1f77bcf86cd799439012',
       title: 'Test Transaction',
-      amount: 100.50,
+      amount: 100.5,
       type: 'expense',
       categoryId: '507f1f77bcf86cd799439011',
       userId: 'user123',
@@ -83,7 +87,9 @@ describe('TransactionController', () => {
         value: validTransactionData,
       });
 
-      mockTransactionService.createTransaction = jest.fn().mockResolvedValue(mockCreatedTransaction);
+      mockTransactionService.createTransaction = jest
+        .fn()
+        .mockResolvedValue(mockCreatedTransaction);
 
       mockRequest.body = validTransactionData;
 
@@ -161,9 +167,9 @@ describe('TransactionController', () => {
         value: validTransactionData,
       });
 
-      mockTransactionService.createTransaction = jest.fn().mockRejectedValue(
-        new Error('Category not found')
-      );
+      mockTransactionService.createTransaction = jest
+        .fn()
+        .mockRejectedValue(new Error('Category not found'));
 
       mockRequest.body = validTransactionData;
 
@@ -186,9 +192,9 @@ describe('TransactionController', () => {
         value: validTransactionData,
       });
 
-      mockTransactionService.createTransaction = jest.fn().mockRejectedValue(
-        new Error('Invalid amount')
-      );
+      mockTransactionService.createTransaction = jest
+        .fn()
+        .mockRejectedValue(new Error('Invalid amount'));
 
       mockRequest.body = validTransactionData;
 
@@ -210,7 +216,9 @@ describe('TransactionController', () => {
         value: validTransactionData,
       });
 
-      mockTransactionService.createTransaction = jest.fn().mockRejectedValue('Unknown error');
+      mockTransactionService.createTransaction = jest
+        .fn()
+        .mockRejectedValue('Unknown error');
 
       mockRequest.body = validTransactionData;
 
@@ -232,13 +240,15 @@ describe('TransactionController', () => {
     const mockTransaction = {
       _id: transactionId,
       title: 'Test Transaction',
-      amount: 100.50,
+      amount: 100.5,
       type: 'expense',
       userId: 'user123',
     };
 
     it('should get transaction by ID successfully', async () => {
-      mockTransactionService.getTransactionById = jest.fn().mockResolvedValue(mockTransaction);
+      mockTransactionService.getTransactionById = jest
+        .fn()
+        .mockResolvedValue(mockTransaction);
 
       mockRequest.params = { id: transactionId };
 
@@ -285,9 +295,9 @@ describe('TransactionController', () => {
     });
 
     it('should handle transaction not found error', async () => {
-      mockTransactionService.getTransactionById = jest.fn().mockRejectedValue(
-        new Error('Transaction not found')
-      );
+      mockTransactionService.getTransactionById = jest
+        .fn()
+        .mockRejectedValue(new Error('Transaction not found'));
 
       mockRequest.params = { id: transactionId };
 
@@ -304,9 +314,9 @@ describe('TransactionController', () => {
     });
 
     it('should handle access denied error', async () => {
-      mockTransactionService.getTransactionById = jest.fn().mockRejectedValue(
-        new Error('access denied')
-      );
+      mockTransactionService.getTransactionById = jest
+        .fn()
+        .mockRejectedValue(new Error('access denied'));
 
       mockRequest.params = { id: transactionId };
 
@@ -335,7 +345,9 @@ describe('TransactionController', () => {
     };
 
     it('should get user transactions successfully', async () => {
-      mockTransactionService.getUserTransactions = jest.fn().mockResolvedValue(mockTransactions);
+      mockTransactionService.getUserTransactions = jest
+        .fn()
+        .mockResolvedValue(mockTransactions);
 
       mockRequest.query = { page: '1', limit: '10' };
 
@@ -349,22 +361,27 @@ describe('TransactionController', () => {
         success: true,
         data: mockTransactions,
       });
-      expect(mockTransactionService.getUserTransactions).toHaveBeenCalledWith('user123', {
-        page: 1,
-        limit: 10,
-        sortBy: 'date',
-        sortOrder: 'desc',
-      });
+      expect(mockTransactionService.getUserTransactions).toHaveBeenCalledWith(
+        'user123',
+        {
+          page: 1,
+          limit: 10,
+          sortBy: 'date',
+          sortOrder: 'desc',
+        }
+      );
     });
 
     it('should handle array query parameters', async () => {
-      mockTransactionService.getUserTransactions = jest.fn().mockResolvedValue(mockTransactions);
+      mockTransactionService.getUserTransactions = jest
+        .fn()
+        .mockResolvedValue(mockTransactions);
 
-      mockRequest.query = { 
-        page: ['1'], 
-        limit: ['20'], 
-        sort: ['amount'], 
-        order: ['asc'] 
+      mockRequest.query = {
+        page: ['1'],
+        limit: ['20'],
+        sort: ['amount'],
+        order: ['asc'],
       };
 
       await transactionController.getUserTransactions(
@@ -372,16 +389,21 @@ describe('TransactionController', () => {
         mockResponse as Response
       );
 
-      expect(mockTransactionService.getUserTransactions).toHaveBeenCalledWith('user123', {
-        page: 1,
-        limit: 20,
-        sortBy: 'amount',
-        sortOrder: 'asc',
-      });
+      expect(mockTransactionService.getUserTransactions).toHaveBeenCalledWith(
+        'user123',
+        {
+          page: 1,
+          limit: 20,
+          sortBy: 'amount',
+          sortOrder: 'asc',
+        }
+      );
     });
 
     it('should use default values for missing query parameters', async () => {
-      mockTransactionService.getUserTransactions = jest.fn().mockResolvedValue(mockTransactions);
+      mockTransactionService.getUserTransactions = jest
+        .fn()
+        .mockResolvedValue(mockTransactions);
 
       mockRequest.query = {};
 
@@ -390,12 +412,15 @@ describe('TransactionController', () => {
         mockResponse as Response
       );
 
-      expect(mockTransactionService.getUserTransactions).toHaveBeenCalledWith('user123', {
-        page: 1,
-        limit: 10,
-        sortBy: 'date',
-        sortOrder: 'desc',
-      });
+      expect(mockTransactionService.getUserTransactions).toHaveBeenCalledWith(
+        'user123',
+        {
+          page: 1,
+          limit: 10,
+          sortBy: 'date',
+          sortOrder: 'desc',
+        }
+      );
     });
 
     it('should return 401 when user is not authenticated', async () => {
@@ -414,9 +439,9 @@ describe('TransactionController', () => {
     });
 
     it('should handle service errors', async () => {
-      mockTransactionService.getUserTransactions = jest.fn().mockRejectedValue(
-        new Error('Database error')
-      );
+      mockTransactionService.getUserTransactions = jest
+        .fn()
+        .mockRejectedValue(new Error('Database error'));
 
       mockRequest.query = { page: '1', limit: '10' };
 
@@ -452,7 +477,9 @@ describe('TransactionController', () => {
         value: updateData,
       });
 
-      mockTransactionService.updateTransaction = jest.fn().mockResolvedValue(mockUpdatedTransaction);
+      mockTransactionService.updateTransaction = jest
+        .fn()
+        .mockResolvedValue(mockUpdatedTransaction);
 
       mockRequest.params = { id: transactionId };
       mockRequest.body = updateData;
@@ -546,9 +573,9 @@ describe('TransactionController', () => {
         value: updateData,
       });
 
-      mockTransactionService.updateTransaction = jest.fn().mockRejectedValue(
-        new Error('Transaction not found')
-      );
+      mockTransactionService.updateTransaction = jest
+        .fn()
+        .mockRejectedValue(new Error('Transaction not found'));
 
       mockRequest.params = { id: transactionId };
       mockRequest.body = updateData;
@@ -570,7 +597,9 @@ describe('TransactionController', () => {
     const transactionId = '507f1f77bcf86cd799439012';
 
     it('should delete transaction successfully', async () => {
-      mockTransactionService.deleteTransaction = jest.fn().mockResolvedValue(undefined);
+      mockTransactionService.deleteTransaction = jest
+        .fn()
+        .mockResolvedValue(undefined);
 
       mockRequest.params = { id: transactionId };
 
@@ -621,9 +650,9 @@ describe('TransactionController', () => {
     });
 
     it('should handle transaction not found error', async () => {
-      mockTransactionService.deleteTransaction = jest.fn().mockRejectedValue(
-        new Error('Transaction not found')
-      );
+      mockTransactionService.deleteTransaction = jest
+        .fn()
+        .mockRejectedValue(new Error('Transaction not found'));
 
       mockRequest.params = { id: transactionId };
 
@@ -654,7 +683,9 @@ describe('TransactionController', () => {
     };
 
     it('should get transaction stats successfully', async () => {
-      mockTransactionService.getTransactionStats = jest.fn().mockResolvedValue(mockStats);
+      mockTransactionService.getTransactionStats = jest
+        .fn()
+        .mockResolvedValue(mockStats);
 
       mockRequest.query = {
         startDate: '2024-01-01',
@@ -723,7 +754,9 @@ describe('TransactionController', () => {
     });
 
     it('should handle array query parameters for dates', async () => {
-      mockTransactionService.getTransactionStats = jest.fn().mockResolvedValue(mockStats);
+      mockTransactionService.getTransactionStats = jest
+        .fn()
+        .mockResolvedValue(mockStats);
 
       mockRequest.query = {
         startDate: ['2024-01-01'],
@@ -736,16 +769,19 @@ describe('TransactionController', () => {
       );
 
       expect(mockResponse.status).toHaveBeenCalledWith(200);
-      expect(mockTransactionService.getTransactionStats).toHaveBeenCalledWith('user123', {
-        startDate: new Date('2024-01-01'),
-        endDate: new Date('2024-01-31'),
-      });
+      expect(mockTransactionService.getTransactionStats).toHaveBeenCalledWith(
+        'user123',
+        {
+          startDate: new Date('2024-01-01'),
+          endDate: new Date('2024-01-31'),
+        }
+      );
     });
 
     it('should handle service errors', async () => {
-      mockTransactionService.getTransactionStats = jest.fn().mockRejectedValue(
-        new Error('Database error')
-      );
+      mockTransactionService.getTransactionStats = jest
+        .fn()
+        .mockRejectedValue(new Error('Database error'));
 
       mockRequest.query = {
         startDate: '2024-01-01',
@@ -777,7 +813,9 @@ describe('TransactionController', () => {
     };
 
     it('should search transactions successfully', async () => {
-      mockTransactionService.getUserTransactions = jest.fn().mockResolvedValue(mockResults);
+      mockTransactionService.getUserTransactions = jest
+        .fn()
+        .mockResolvedValue(mockResults);
 
       mockRequest.query = {
         q: 'grocery',
@@ -795,11 +833,14 @@ describe('TransactionController', () => {
         success: true,
         data: mockResults,
       });
-      expect(mockTransactionService.getUserTransactions).toHaveBeenCalledWith('user123', {
-        search: 'grocery',
-        page: 1,
-        limit: 10,
-      });
+      expect(mockTransactionService.getUserTransactions).toHaveBeenCalledWith(
+        'user123',
+        {
+          search: 'grocery',
+          page: 1,
+          limit: 10,
+        }
+      );
     });
 
     it('should return 401 when user is not authenticated', async () => {
@@ -833,7 +874,9 @@ describe('TransactionController', () => {
     });
 
     it('should handle array query parameter for search', async () => {
-      mockTransactionService.getUserTransactions = jest.fn().mockResolvedValue(mockResults);
+      mockTransactionService.getUserTransactions = jest
+        .fn()
+        .mockResolvedValue(mockResults);
 
       mockRequest.query = {
         q: ['grocery'],
@@ -846,17 +889,20 @@ describe('TransactionController', () => {
         mockResponse as Response
       );
 
-      expect(mockTransactionService.getUserTransactions).toHaveBeenCalledWith('user123', {
-        search: 'grocery',
-        page: 1,
-        limit: 10,
-      });
+      expect(mockTransactionService.getUserTransactions).toHaveBeenCalledWith(
+        'user123',
+        {
+          search: 'grocery',
+          page: 1,
+          limit: 10,
+        }
+      );
     });
 
     it('should handle service errors', async () => {
-      mockTransactionService.getUserTransactions = jest.fn().mockRejectedValue(
-        new Error('Database error')
-      );
+      mockTransactionService.getUserTransactions = jest
+        .fn()
+        .mockRejectedValue(new Error('Database error'));
 
       mockRequest.query = {
         q: 'grocery',
@@ -884,7 +930,9 @@ describe('TransactionController', () => {
     ];
 
     it('should get recurring transactions successfully', async () => {
-      mockTransactionService.getRecurringTransactions = jest.fn().mockResolvedValue(mockRecurringTransactions);
+      mockTransactionService.getRecurringTransactions = jest
+        .fn()
+        .mockResolvedValue(mockRecurringTransactions);
 
       await transactionController.getRecurringTransactions(
         mockRequest as AuthenticatedRequest,
@@ -914,9 +962,9 @@ describe('TransactionController', () => {
     });
 
     it('should handle service errors', async () => {
-      mockTransactionService.getRecurringTransactions = jest.fn().mockRejectedValue(
-        new Error('Database error')
-      );
+      mockTransactionService.getRecurringTransactions = jest
+        .fn()
+        .mockRejectedValue(new Error('Database error'));
 
       await transactionController.getRecurringTransactions(
         mockRequest as AuthenticatedRequest,
@@ -950,7 +998,9 @@ describe('TransactionController', () => {
         value: validTransactionsData,
       });
 
-      mockTransactionService.bulkCreateTransactions = jest.fn().mockResolvedValue(mockCreatedTransactions);
+      mockTransactionService.bulkCreateTransactions = jest
+        .fn()
+        .mockResolvedValue(mockCreatedTransactions);
 
       mockRequest.body = validTransactionsData;
 
@@ -970,11 +1020,14 @@ describe('TransactionController', () => {
           failed: 0,
         },
       });
-      expect(logger.info).toHaveBeenCalledWith('Bulk transactions created via API', {
-        userId: 'user123',
-        requested: 2,
-        created: 2,
-      });
+      expect(logger.info).toHaveBeenCalledWith(
+        'Bulk transactions created via API',
+        {
+          userId: 'user123',
+          requested: 2,
+          created: 2,
+        }
+      );
     });
 
     it('should return 401 when user is not authenticated', async () => {
@@ -1033,9 +1086,9 @@ describe('TransactionController', () => {
         value: validTransactionsData,
       });
 
-      mockTransactionService.bulkCreateTransactions = jest.fn().mockRejectedValue(
-        new Error('Bulk creation failed')
-      );
+      mockTransactionService.bulkCreateTransactions = jest
+        .fn()
+        .mockRejectedValue(new Error('Bulk creation failed'));
 
       mockRequest.body = validTransactionsData;
 
@@ -1057,7 +1110,9 @@ describe('TransactionController', () => {
         value: validTransactionsData,
       });
 
-      mockTransactionService.bulkCreateTransactions = jest.fn().mockRejectedValue('Unknown error');
+      mockTransactionService.bulkCreateTransactions = jest
+        .fn()
+        .mockRejectedValue('Unknown error');
 
       mockRequest.body = validTransactionsData;
 

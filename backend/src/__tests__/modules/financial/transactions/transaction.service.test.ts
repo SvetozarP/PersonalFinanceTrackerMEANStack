@@ -1,10 +1,18 @@
 import mongoose from 'mongoose';
 import { TransactionService } from '../../../../modules/financial/transactions/services/transaction.service';
 import { TransactionRepository } from '../../../../modules/financial/transactions/repositories/transaction.repository';
-import { ITransaction, TransactionType, TransactionStatus, PaymentMethod, RecurrencePattern } from '../../../../modules/financial/transactions/interfaces/transaction.interface';
+import {
+  ITransaction,
+  TransactionType,
+  TransactionStatus,
+  PaymentMethod,
+  RecurrencePattern,
+} from '../../../../modules/financial/transactions/interfaces/transaction.interface';
 
 // Mock the TransactionRepository
-jest.mock('../../../../modules/financial/transactions/repositories/transaction.repository');
+jest.mock(
+  '../../../../modules/financial/transactions/repositories/transaction.repository'
+);
 jest.mock('../../../../shared/services/logger.service', () => ({
   logger: {
     info: jest.fn(),
@@ -13,7 +21,9 @@ jest.mock('../../../../shared/services/logger.service', () => ({
   },
 }));
 
-const MockedTransactionRepository = TransactionRepository as jest.MockedClass<typeof TransactionRepository>;
+const MockedTransactionRepository = TransactionRepository as jest.MockedClass<
+  typeof TransactionRepository
+>;
 
 describe('TransactionService', () => {
   let transactionService: TransactionService;
@@ -31,7 +41,7 @@ describe('TransactionService', () => {
     accountId: new mongoose.Types.ObjectId(mockAccountId),
     title: 'Test Transaction',
     description: 'Test Description',
-    amount: 100.50,
+    amount: 100.5,
     currency: 'USD',
     type: TransactionType.EXPENSE,
     status: TransactionStatus.COMPLETED,
@@ -54,7 +64,7 @@ describe('TransactionService', () => {
     ...mockTransaction,
     _id: new mongoose.Types.ObjectId('507f1f77bcf86cd799439014'),
     type: TransactionType.INCOME,
-    amount: 2000.00,
+    amount: 2000.0,
     title: 'Salary',
   } as unknown as ITransaction;
 
@@ -77,10 +87,11 @@ describe('TransactionService', () => {
   beforeEach(() => {
     // Create a fresh instance of the service
     transactionService = new TransactionService();
-    
+
     // Get the mocked repository instance
-    mockTransactionRepository = (transactionService as any).transactionRepository;
-    
+    mockTransactionRepository = (transactionService as any)
+      .transactionRepository;
+
     // Reset all mocks
     jest.clearAllMocks();
   });
@@ -107,7 +118,10 @@ describe('TransactionService', () => {
       const newTransaction = { ...mockTransaction, ...transactionData } as any;
       mockTransactionRepository.create.mockResolvedValue(newTransaction);
 
-      const result = await transactionService.createTransaction(transactionData as any, mockUserId);
+      const result = await transactionService.createTransaction(
+        transactionData as any,
+        mockUserId
+      );
 
       expect(result).toEqual(newTransaction);
       expect(mockTransactionRepository.create).toHaveBeenCalledWith({
@@ -134,14 +148,21 @@ describe('TransactionService', () => {
 
       const newTransaction = { ...mockTransaction, ...recurringData } as any;
       mockTransactionRepository.create.mockResolvedValue(newTransaction);
-      mockTransactionRepository.createRecurringSeries = jest.fn().mockResolvedValue([mockTransaction]);
+      mockTransactionRepository.createRecurringSeries = jest
+        .fn()
+        .mockResolvedValue([mockTransaction]);
 
-      const result = await transactionService.createTransaction(recurringData as any, mockUserId);
+      const result = await transactionService.createTransaction(
+        recurringData as any,
+        mockUserId
+      );
 
       expect(result).toEqual(newTransaction);
       expect(result.isRecurring).toBe(true);
       expect(result.recurrencePattern).toBe(RecurrencePattern.MONTHLY);
-      expect(mockTransactionRepository.createRecurringSeries).toHaveBeenCalledWith(
+      expect(
+        mockTransactionRepository.createRecurringSeries
+      ).toHaveBeenCalledWith(
         newTransaction,
         RecurrencePattern.MONTHLY,
         recurringData.recurrenceEndDate
@@ -153,10 +174,15 @@ describe('TransactionService', () => {
     it('should get transaction by ID successfully', async () => {
       mockTransactionRepository.findById.mockResolvedValue(mockTransaction);
 
-      const result = await transactionService.getTransactionById(mockTransactionId, mockUserId);
+      const result = await transactionService.getTransactionById(
+        mockTransactionId,
+        mockUserId
+      );
 
       expect(result).toEqual(mockTransaction);
-      expect(mockTransactionRepository.findById).toHaveBeenCalledWith(mockTransactionId);
+      expect(mockTransactionRepository.findById).toHaveBeenCalledWith(
+        mockTransactionId
+      );
     });
 
     it('should throw error when transaction not found', async () => {
@@ -173,7 +199,9 @@ describe('TransactionService', () => {
         userId: new mongoose.Types.ObjectId('507f1f77bcf86cd799439020'),
       } as unknown as ITransaction;
 
-      mockTransactionRepository.findById.mockResolvedValue(differentUserTransaction);
+      mockTransactionRepository.findById.mockResolvedValue(
+        differentUserTransaction
+      );
 
       await expect(
         transactionService.getTransactionById(mockTransactionId, mockUserId)
@@ -195,13 +223,16 @@ describe('TransactionService', () => {
       const result = await transactionService.getUserTransactions(mockUserId);
 
       expect(result).toEqual(mockResult);
-      expect(mockTransactionRepository.findByUserId).toHaveBeenCalledWith(mockUserId, {
-        page: 1,
-        limit: 20,
-        sort: { date: -1 },
-        filter: {},
-        populate: ['categoryId', 'subcategoryId'],
-      });
+      expect(mockTransactionRepository.findByUserId).toHaveBeenCalledWith(
+        mockUserId,
+        {
+          page: 1,
+          limit: 20,
+          sort: { date: -1 },
+          filter: {},
+          populate: ['categoryId', 'subcategoryId'],
+        }
+      );
     });
 
     it('should get user transactions with custom filters', async () => {
@@ -227,29 +258,35 @@ describe('TransactionService', () => {
 
       mockTransactionRepository.findByUserId.mockResolvedValue(mockResult);
 
-      const result = await transactionService.getUserTransactions(mockUserId, customOptions);
+      const result = await transactionService.getUserTransactions(
+        mockUserId,
+        customOptions
+      );
 
       expect(result).toEqual(mockResult);
-      expect(mockTransactionRepository.findByUserId).toHaveBeenCalledWith(mockUserId, {
-        page: 2,
-        limit: 10,
-        sort: { date: -1 },
-        filter: expect.objectContaining({
-          date: {
-            $gte: customOptions.startDate,
-            $lte: customOptions.endDate,
-          },
-          categoryId: new mongoose.Types.ObjectId(mockCategoryId),
-          accountId: new mongoose.Types.ObjectId(mockAccountId),
-          type: TransactionType.EXPENSE,
-          amount: {
-            $gte: customOptions.minAmount,
-            $lte: customOptions.maxAmount,
-          },
-          tags: { $in: customOptions.tags },
-        }),
-        populate: ['categoryId', 'subcategoryId'],
-      });
+      expect(mockTransactionRepository.findByUserId).toHaveBeenCalledWith(
+        mockUserId,
+        {
+          page: 2,
+          limit: 10,
+          sort: { date: -1 },
+          filter: expect.objectContaining({
+            date: {
+              $gte: customOptions.startDate,
+              $lte: customOptions.endDate,
+            },
+            categoryId: new mongoose.Types.ObjectId(mockCategoryId),
+            accountId: new mongoose.Types.ObjectId(mockAccountId),
+            type: TransactionType.EXPENSE,
+            amount: {
+              $gte: customOptions.minAmount,
+              $lte: customOptions.maxAmount,
+            },
+            tags: { $in: customOptions.tags },
+          }),
+          populate: ['categoryId', 'subcategoryId'],
+        }
+      );
     });
 
     it('should handle date range filtering', async () => {
@@ -267,18 +304,21 @@ describe('TransactionService', () => {
 
       await transactionService.getUserTransactions(mockUserId, options);
 
-      expect(mockTransactionRepository.findByUserId).toHaveBeenCalledWith(mockUserId, {
-        page: 1,
-        limit: 20,
-        sort: { date: -1 },
-        filter: expect.objectContaining({
-          date: {
-            $gte: options.startDate,
-            $lte: options.endDate,
-          },
-        }),
-        populate: ['categoryId', 'subcategoryId'],
-      });
+      expect(mockTransactionRepository.findByUserId).toHaveBeenCalledWith(
+        mockUserId,
+        {
+          page: 1,
+          limit: 20,
+          sort: { date: -1 },
+          filter: expect.objectContaining({
+            date: {
+              $gte: options.startDate,
+              $lte: options.endDate,
+            },
+          }),
+          populate: ['categoryId', 'subcategoryId'],
+        }
+      );
     });
 
     it('should handle amount range filtering', async () => {
@@ -293,18 +333,21 @@ describe('TransactionService', () => {
 
       await transactionService.getUserTransactions(mockUserId, options);
 
-      expect(mockTransactionRepository.findByUserId).toHaveBeenCalledWith(mockUserId, {
-        page: 1,
-        limit: 20,
-        sort: { date: -1 },
-        filter: expect.objectContaining({
-          amount: {
-            $gte: 100,
-            $lte: 500,
-          },
-        }),
-        populate: ['categoryId', 'subcategoryId'],
-      });
+      expect(mockTransactionRepository.findByUserId).toHaveBeenCalledWith(
+        mockUserId,
+        {
+          page: 1,
+          limit: 20,
+          sort: { date: -1 },
+          filter: expect.objectContaining({
+            amount: {
+              $gte: 100,
+              $lte: 500,
+            },
+          }),
+          populate: ['categoryId', 'subcategoryId'],
+        }
+      );
     });
 
     it('should handle tag filtering', async () => {
@@ -319,15 +362,18 @@ describe('TransactionService', () => {
 
       await transactionService.getUserTransactions(mockUserId, options);
 
-      expect(mockTransactionRepository.findByUserId).toHaveBeenCalledWith(mockUserId, {
-        page: 1,
-        limit: 20,
-        sort: { date: -1 },
-        filter: expect.objectContaining({
-          tags: { $in: ['food', 'transport'] },
-        }),
-        populate: ['categoryId', 'subcategoryId'],
-      });
+      expect(mockTransactionRepository.findByUserId).toHaveBeenCalledWith(
+        mockUserId,
+        {
+          page: 1,
+          limit: 20,
+          sort: { date: -1 },
+          filter: expect.objectContaining({
+            tags: { $in: ['food', 'transport'] },
+          }),
+          populate: ['categoryId', 'subcategoryId'],
+        }
+      );
     });
 
     it('should calculate total pages correctly', async () => {
@@ -335,10 +381,12 @@ describe('TransactionService', () => {
         transactions: [mockTransaction],
         total: 25,
         page: 1,
-        totalPages: 3
+        totalPages: 3,
       });
 
-      const result = await transactionService.getUserTransactions(mockUserId, { limit: 10 });
+      const result = await transactionService.getUserTransactions(mockUserId, {
+        limit: 10,
+      });
 
       expect(result.totalPages).toBe(3); // Math.ceil(25 / 10)
     });
@@ -355,9 +403,15 @@ describe('TransactionService', () => {
     it('should update transaction successfully', async () => {
       const updatedTransaction = { ...mockTransaction, ...updateData };
       mockTransactionRepository.findById.mockResolvedValue(mockTransaction);
-      mockTransactionRepository.updateById.mockResolvedValue(updatedTransaction as any);
+      mockTransactionRepository.updateById.mockResolvedValue(
+        updatedTransaction as any
+      );
 
-      const result = await transactionService.updateTransaction(mockTransactionId, updateData, mockUserId);
+      const result = await transactionService.updateTransaction(
+        mockTransactionId,
+        updateData,
+        mockUserId
+      );
 
       expect(result).toEqual(updatedTransaction);
       expect(mockTransactionRepository.updateById).toHaveBeenCalledWith(
@@ -371,7 +425,11 @@ describe('TransactionService', () => {
       mockTransactionRepository.findById.mockResolvedValue(null);
 
       await expect(
-        transactionService.updateTransaction(mockTransactionId, updateData, mockUserId)
+        transactionService.updateTransaction(
+          mockTransactionId,
+          updateData,
+          mockUserId
+        )
       ).rejects.toThrow('Transaction not found');
     });
 
@@ -381,10 +439,16 @@ describe('TransactionService', () => {
         userId: new mongoose.Types.ObjectId('507f1f77bcf86cd799439020'),
       } as unknown as ITransaction;
 
-      mockTransactionRepository.findById.mockResolvedValue(differentUserTransaction);
+      mockTransactionRepository.findById.mockResolvedValue(
+        differentUserTransaction
+      );
 
       await expect(
-        transactionService.updateTransaction(mockTransactionId, updateData, mockUserId)
+        transactionService.updateTransaction(
+          mockTransactionId,
+          updateData,
+          mockUserId
+        )
       ).rejects.toThrow('Access denied');
     });
 
@@ -393,7 +457,11 @@ describe('TransactionService', () => {
       mockTransactionRepository.updateById.mockResolvedValue(null);
 
       await expect(
-        transactionService.updateTransaction(mockTransactionId, updateData, mockUserId)
+        transactionService.updateTransaction(
+          mockTransactionId,
+          updateData,
+          mockUserId
+        )
       ).rejects.toThrow('Failed to update transaction');
     });
   });
@@ -405,10 +473,13 @@ describe('TransactionService', () => {
 
       await transactionService.deleteTransaction(mockTransactionId, mockUserId);
 
-      expect(mockTransactionRepository.updateById).toHaveBeenCalledWith(mockTransactionId, {
-        isDeleted: true,
-        deletedAt: expect.any(Date),
-      });
+      expect(mockTransactionRepository.updateById).toHaveBeenCalledWith(
+        mockTransactionId,
+        {
+          isDeleted: true,
+          deletedAt: expect.any(Date),
+        }
+      );
     });
 
     it('should throw error when transaction not found', async () => {
@@ -425,7 +496,9 @@ describe('TransactionService', () => {
         userId: new mongoose.Types.ObjectId('507f1f77bcf86cd799439020'),
       } as unknown as ITransaction;
 
-      mockTransactionRepository.findById.mockResolvedValue(differentUserTransaction);
+      mockTransactionRepository.findById.mockResolvedValue(
+        differentUserTransaction
+      );
 
       await expect(
         transactionService.deleteTransaction(mockTransactionId, mockUserId)
@@ -436,13 +509,24 @@ describe('TransactionService', () => {
   describe('getRecurringTransactions', () => {
     it('should get recurring transactions successfully', async () => {
       const mockRecurringTransactions = [
-        { ...mockTransaction, isRecurring: true, recurrencePattern: RecurrencePattern.MONTHLY },
-        { ...mockTransaction, isRecurring: true, recurrencePattern: RecurrencePattern.WEEKLY },
+        {
+          ...mockTransaction,
+          isRecurring: true,
+          recurrencePattern: RecurrencePattern.MONTHLY,
+        },
+        {
+          ...mockTransaction,
+          isRecurring: true,
+          recurrencePattern: RecurrencePattern.WEEKLY,
+        },
       ];
 
-      mockTransactionRepository.find.mockResolvedValue(mockRecurringTransactions as any);
+      mockTransactionRepository.find.mockResolvedValue(
+        mockRecurringTransactions as any
+      );
 
-      const result = await transactionService.getRecurringTransactions(mockUserId);
+      const result =
+        await transactionService.getRecurringTransactions(mockUserId);
 
       expect(result).toBeDefined();
       expect(Array.isArray(result)).toBe(true);
@@ -457,7 +541,8 @@ describe('TransactionService', () => {
     it('should handle empty recurring transactions', async () => {
       mockTransactionRepository.find.mockResolvedValue([]);
 
-      const result = await transactionService.getRecurringTransactions(mockUserId);
+      const result =
+        await transactionService.getRecurringTransactions(mockUserId);
 
       expect(result).toBeDefined();
       expect(Array.isArray(result)).toBe(true);
@@ -473,8 +558,6 @@ describe('TransactionService', () => {
       ).rejects.toThrow('Repository error');
     });
   });
-
-
 
   describe('Edge Cases and Error Handling', () => {
     it('should handle invalid ObjectId strings gracefully', async () => {
@@ -528,7 +611,7 @@ describe('TransactionService', () => {
         transactions: [],
         total: 0,
         page: 1,
-        totalPages: 0
+        totalPages: 0,
       });
 
       const result = await transactionService.getUserTransactions(mockUserId, {
@@ -545,7 +628,7 @@ describe('TransactionService', () => {
         transactions: [],
         total: 0,
         page: 1,
-        totalPages: 0
+        totalPages: 0,
       });
 
       const result = await transactionService.getUserTransactions(mockUserId, {
@@ -563,7 +646,7 @@ describe('TransactionService', () => {
         transactions: [],
         total: 0,
         page: 1,
-        totalPages: 0
+        totalPages: 0,
       });
 
       const result = await transactionService.getUserTransactions(mockUserId, {
@@ -581,7 +664,7 @@ describe('TransactionService', () => {
         transactions: [],
         total: 0,
         page: 1,
-        totalPages: 0
+        totalPages: 0,
       });
 
       const farPastDate = new Date('1900-01-01');
@@ -601,7 +684,7 @@ describe('TransactionService', () => {
         transactions: [],
         total: 0,
         page: 1,
-        totalPages: 0
+        totalPages: 0,
       });
 
       const result = await transactionService.getUserTransactions(mockUserId, {
@@ -618,7 +701,7 @@ describe('TransactionService', () => {
         transactions: [],
         total: 0,
         page: 1,
-        totalPages: 1
+        totalPages: 1,
       });
 
       const result = await transactionService.getUserTransactions(mockUserId, {
@@ -637,7 +720,7 @@ describe('TransactionService', () => {
         transactions: [],
         total: 0,
         page: 999999,
-        totalPages: 1
+        totalPages: 1,
       });
 
       const result = await transactionService.getUserTransactions(mockUserId, {
@@ -656,7 +739,7 @@ describe('TransactionService', () => {
         transactions: [],
         total: 0,
         page: 1,
-        totalPages: 0
+        totalPages: 0,
       });
 
       const result = await transactionService.getUserTransactions(mockUserId, {
@@ -672,7 +755,7 @@ describe('TransactionService', () => {
         transactions: [],
         total: 0,
         page: 1,
-        totalPages: 0
+        totalPages: 0,
       });
 
       const result = await transactionService.getUserTransactions(mockUserId, {
@@ -688,7 +771,7 @@ describe('TransactionService', () => {
         transactions: [],
         total: 0,
         page: 1,
-        totalPages: 0
+        totalPages: 0,
       });
 
       const longSearchTerm = 'a'.repeat(1000);
@@ -705,7 +788,7 @@ describe('TransactionService', () => {
         transactions: [],
         total: 0,
         page: 1,
-        totalPages: 0
+        totalPages: 0,
       });
 
       const result = await transactionService.getUserTransactions(mockUserId, {
@@ -722,7 +805,7 @@ describe('TransactionService', () => {
         transactions: [],
         total: 0,
         page: 1,
-        totalPages: 0
+        totalPages: 0,
       });
 
       const result = await transactionService.getUserTransactions(mockUserId, {
@@ -739,7 +822,7 @@ describe('TransactionService', () => {
         transactions: [],
         total: 0,
         page: 1,
-        totalPages: 0
+        totalPages: 0,
       });
 
       const result = await transactionService.getUserTransactions(mockUserId, {
@@ -921,7 +1004,7 @@ describe('TransactionService', () => {
           address: 'Test Address',
           coordinates: {
             latitude: 1000, // Invalid latitude
-            longitude: -74.0060,
+            longitude: -74.006,
           },
         },
       };
@@ -980,7 +1063,7 @@ describe('TransactionService', () => {
     it('should handle invalid exchange rate gracefully', async () => {
       const invalidExchangeData = {
         ...testTransaction,
-        originalAmount: 85.50,
+        originalAmount: 85.5,
         originalCurrency: 'EUR',
         exchangeRate: -1.15, // Negative exchange rate
       };
@@ -1004,7 +1087,7 @@ describe('TransactionService', () => {
     it('should handle invalid tax gracefully', async () => {
       const invalidTaxData = {
         ...testTransaction,
-        tax: -8.50, // Negative tax
+        tax: -8.5, // Negative tax
       };
 
       await expect(
@@ -1015,7 +1098,7 @@ describe('TransactionService', () => {
     it('should handle invalid discount gracefully', async () => {
       const invalidDiscountData = {
         ...testTransaction,
-        discount: -5.00, // Negative discount
+        discount: -5.0, // Negative discount
       };
 
       await expect(
@@ -1085,7 +1168,7 @@ describe('TransactionService', () => {
         categoryId: new mongoose.Types.ObjectId(mockCategoryId),
         accountId: new mongoose.Types.ObjectId(mockAccountId),
         type: TransactionType.EXPENSE,
-        amount: 50.00,
+        amount: 50.0,
         title: 'Bulk Transaction 1',
         currency: 'USD',
         status: TransactionStatus.COMPLETED,
@@ -1096,7 +1179,7 @@ describe('TransactionService', () => {
         categoryId: new mongoose.Types.ObjectId(mockCategoryId),
         accountId: new mongoose.Types.ObjectId(mockAccountId),
         type: TransactionType.INCOME,
-        amount: 100.00,
+        amount: 100.0,
         title: 'Bulk Transaction 2',
         currency: 'USD',
         status: TransactionStatus.COMPLETED,
@@ -1107,7 +1190,9 @@ describe('TransactionService', () => {
 
     it('should bulk create transactions successfully', async () => {
       mockTransactionRepository.create.mockResolvedValueOnce(mockTransaction);
-      mockTransactionRepository.create.mockResolvedValueOnce(mockIncomeTransaction);
+      mockTransactionRepository.create.mockResolvedValueOnce(
+        mockIncomeTransaction
+      );
 
       const result = await transactionService.bulkCreateTransactions(
         bulkTransactionData,
@@ -1122,7 +1207,9 @@ describe('TransactionService', () => {
 
     it('should handle partial failures in bulk creation', async () => {
       mockTransactionRepository.create.mockResolvedValueOnce(mockTransaction);
-      mockTransactionRepository.create.mockRejectedValueOnce(new Error('Database error'));
+      mockTransactionRepository.create.mockRejectedValueOnce(
+        new Error('Database error')
+      );
 
       const result = await transactionService.bulkCreateTransactions(
         bulkTransactionData,
@@ -1134,14 +1221,19 @@ describe('TransactionService', () => {
     });
 
     it('should handle empty bulk transaction array', async () => {
-      const result = await transactionService.bulkCreateTransactions([], mockUserId);
+      const result = await transactionService.bulkCreateTransactions(
+        [],
+        mockUserId
+      );
 
       expect(result).toHaveLength(0);
       expect(mockTransactionRepository.create).not.toHaveBeenCalled();
     });
 
     it('should handle all failures in bulk creation', async () => {
-      mockTransactionRepository.create.mockRejectedValue(new Error('Database error'));
+      mockTransactionRepository.create.mockRejectedValue(
+        new Error('Database error')
+      );
 
       const result = await transactionService.bulkCreateTransactions(
         bulkTransactionData,
@@ -1208,7 +1300,10 @@ describe('TransactionService', () => {
     });
 
     it('should get transaction statistics successfully', async () => {
-      const stats = await transactionService.getTransactionStats(mockUserId, mockStatsOptions);
+      const stats = await transactionService.getTransactionStats(
+        mockUserId,
+        mockStatsOptions
+      );
 
       expect(stats.totalTransactions).toBe(15);
       expect(stats.totalIncome).toBe(5000);
@@ -1235,7 +1330,10 @@ describe('TransactionService', () => {
         endDate: new Date('2024-12-31'),
       };
 
-      const stats = await transactionService.getTransactionStats(mockUserId, dateOnlyOptions);
+      const stats = await transactionService.getTransactionStats(
+        mockUserId,
+        dateOnlyOptions
+      );
 
       expect(stats.totalTransactions).toBe(15);
       expect(stats.totalIncome).toBe(5000);
@@ -1244,7 +1342,10 @@ describe('TransactionService', () => {
     it('should handle statistics with category filter only', async () => {
       const categoryOnlyOptions = { categoryId: mockCategoryId };
 
-      const stats = await transactionService.getTransactionStats(mockUserId, categoryOnlyOptions);
+      const stats = await transactionService.getTransactionStats(
+        mockUserId,
+        categoryOnlyOptions
+      );
 
       expect(stats.totalTransactions).toBe(15);
       expect(stats.totalIncome).toBe(5000);
@@ -1253,7 +1354,10 @@ describe('TransactionService', () => {
     it('should handle statistics with type filter only', async () => {
       const typeOnlyOptions = { type: TransactionType.EXPENSE };
 
-      const stats = await transactionService.getTransactionStats(mockUserId, typeOnlyOptions);
+      const stats = await transactionService.getTransactionStats(
+        mockUserId,
+        typeOnlyOptions
+      );
 
       expect(stats.totalTransactions).toBe(15);
       expect(stats.totalIncome).toBe(5000);
@@ -1263,7 +1367,7 @@ describe('TransactionService', () => {
       // Reset all mocks to ensure clean state
       mockTransactionRepository.count.mockReset();
       mockTransactionRepository.aggregate.mockReset();
-      
+
       mockTransactionRepository.count.mockResolvedValue(0);
       mockTransactionRepository.aggregate
         .mockResolvedValueOnce([]) // totalIncome
@@ -1274,7 +1378,10 @@ describe('TransactionService', () => {
         .mockResolvedValueOnce([]) // transactionsByCategory
         .mockResolvedValueOnce([]); // monthlyTrends
 
-      const stats = await transactionService.getTransactionStats(mockUserId, mockStatsOptions);
+      const stats = await transactionService.getTransactionStats(
+        mockUserId,
+        mockStatsOptions
+      );
 
       expect(stats.totalTransactions).toBe(0);
       expect(stats.totalIncome).toBe(0);
@@ -1289,7 +1396,10 @@ describe('TransactionService', () => {
     it('should handle zero total transactions', async () => {
       mockTransactionRepository.count.mockResolvedValue(0);
 
-      const stats = await transactionService.getTransactionStats(mockUserId, mockStatsOptions);
+      const stats = await transactionService.getTransactionStats(
+        mockUserId,
+        mockStatsOptions
+      );
 
       expect(stats.totalTransactions).toBe(0);
       expect(stats.averageTransactionAmount).toBe(0);
@@ -1298,7 +1408,10 @@ describe('TransactionService', () => {
     it('should handle statistics with start date only', async () => {
       const startDateOnlyOptions = { startDate: new Date('2024-01-01') };
 
-      const stats = await transactionService.getTransactionStats(mockUserId, startDateOnlyOptions);
+      const stats = await transactionService.getTransactionStats(
+        mockUserId,
+        startDateOnlyOptions
+      );
 
       expect(stats.totalTransactions).toBe(15);
     });
@@ -1306,7 +1419,10 @@ describe('TransactionService', () => {
     it('should handle statistics with end date only', async () => {
       const endDateOnlyOptions = { endDate: new Date('2024-12-31') };
 
-      const stats = await transactionService.getTransactionStats(mockUserId, endDateOnlyOptions);
+      const stats = await transactionService.getTransactionStats(
+        mockUserId,
+        endDateOnlyOptions
+      );
 
       expect(stats.totalTransactions).toBe(15);
     });
@@ -1314,7 +1430,10 @@ describe('TransactionService', () => {
     it('should handle statistics with start date only', async () => {
       const startDateOnlyOptions = { startDate: new Date('2024-01-01') };
 
-      const stats = await transactionService.getTransactionStats(mockUserId, startDateOnlyOptions);
+      const stats = await transactionService.getTransactionStats(
+        mockUserId,
+        startDateOnlyOptions
+      );
 
       expect(stats.totalTransactions).toBe(15);
     });
@@ -1322,7 +1441,10 @@ describe('TransactionService', () => {
     it('should handle statistics with end date only', async () => {
       const endDateOnlyOptions = { endDate: new Date('2024-12-31') };
 
-      const stats = await transactionService.getTransactionStats(mockUserId, endDateOnlyOptions);
+      const stats = await transactionService.getTransactionStats(
+        mockUserId,
+        endDateOnlyOptions
+      );
 
       expect(stats.totalTransactions).toBe(15);
     });
@@ -1337,11 +1459,17 @@ describe('TransactionService', () => {
     } as unknown as ITransaction;
 
     it('should create recurring series successfully', async () => {
-      mockTransactionRepository.createRecurringSeries.mockResolvedValue([mockTransaction]);
+      mockTransactionRepository.createRecurringSeries.mockResolvedValue([
+        mockTransaction,
+      ]);
 
-      await (transactionService as any).createRecurringSeries(recurringTransaction);
+      await (transactionService as any).createRecurringSeries(
+        recurringTransaction
+      );
 
-      expect(mockTransactionRepository.createRecurringSeries).toHaveBeenCalledWith(
+      expect(
+        mockTransactionRepository.createRecurringSeries
+      ).toHaveBeenCalledWith(
         recurringTransaction,
         RecurrencePattern.MONTHLY,
         recurringTransaction.recurrenceEndDate
@@ -1355,9 +1483,13 @@ describe('TransactionService', () => {
         recurrencePattern: RecurrencePattern.NONE,
       } as unknown as ITransaction;
 
-      await (transactionService as any).createRecurringSeries(nonRecurringTransaction);
+      await (transactionService as any).createRecurringSeries(
+        nonRecurringTransaction
+      );
 
-      expect(mockTransactionRepository.createRecurringSeries).not.toHaveBeenCalled();
+      expect(
+        mockTransactionRepository.createRecurringSeries
+      ).not.toHaveBeenCalled();
     });
 
     it('should not create series for NONE recurrence pattern', async () => {
@@ -1367,9 +1499,13 @@ describe('TransactionService', () => {
         recurrencePattern: RecurrencePattern.NONE,
       } as unknown as ITransaction;
 
-      await (transactionService as any).createRecurringSeries(nonePatternTransaction);
+      await (transactionService as any).createRecurringSeries(
+        nonePatternTransaction
+      );
 
-      expect(mockTransactionRepository.createRecurringSeries).not.toHaveBeenCalled();
+      expect(
+        mockTransactionRepository.createRecurringSeries
+      ).not.toHaveBeenCalled();
     });
 
     it('should throw error when recurrence end date is missing', async () => {
@@ -1381,12 +1517,18 @@ describe('TransactionService', () => {
       } as unknown as ITransaction;
 
       await expect(
-        (transactionService as any).createRecurringSeries(transactionWithoutEndDate)
-      ).rejects.toThrow('Recurrence end date is required for recurring transactions');
+        (transactionService as any).createRecurringSeries(
+          transactionWithoutEndDate
+        )
+      ).rejects.toThrow(
+        'Recurrence end date is required for recurring transactions'
+      );
     });
 
     it('should handle repository errors in recurring series creation', async () => {
-      mockTransactionRepository.createRecurringSeries.mockRejectedValue(new Error('Database error'));
+      mockTransactionRepository.createRecurringSeries.mockRejectedValue(
+        new Error('Database error')
+      );
 
       await expect(
         (transactionService as any).createRecurringSeries(recurringTransaction)
@@ -1402,7 +1544,9 @@ describe('TransactionService', () => {
     } as unknown as ITransaction;
 
     it('should update recurring series successfully', async () => {
-      await (transactionService as any).updateRecurringSeries(recurringTransaction);
+      await (transactionService as any).updateRecurringSeries(
+        recurringTransaction
+      );
 
       // This method currently just logs, so we just verify it doesn't throw
       expect(true).toBe(true);
@@ -1424,21 +1568,34 @@ describe('TransactionService', () => {
         { _id: TransactionType.EXPENSE, count: 10, total: 2000 },
       ];
 
-      const result = await (transactionService as any).formatTransactionsByType(mockAggregationResult);
+      const result = await (transactionService as any).formatTransactionsByType(
+        mockAggregationResult
+      );
 
       expect(result[TransactionType.INCOME]).toEqual({ count: 5, total: 5000 });
-      expect(result[TransactionType.EXPENSE]).toEqual({ count: 10, total: 2000 });
+      expect(result[TransactionType.EXPENSE]).toEqual({
+        count: 10,
+        total: 2000,
+      });
       expect(result[TransactionType.TRANSFER]).toEqual({ count: 0, total: 0 });
-      expect(result[TransactionType.ADJUSTMENT]).toEqual({ count: 0, total: 0 });
+      expect(result[TransactionType.ADJUSTMENT]).toEqual({
+        count: 0,
+        total: 0,
+      });
     });
 
     it('should handle empty aggregation result', async () => {
-      const result = await (transactionService as any).formatTransactionsByType([]);
+      const result = await (transactionService as any).formatTransactionsByType(
+        []
+      );
 
       expect(result[TransactionType.INCOME]).toEqual({ count: 0, total: 0 });
       expect(result[TransactionType.EXPENSE]).toEqual({ count: 0, total: 0 });
       expect(result[TransactionType.TRANSFER]).toEqual({ count: 0, total: 0 });
-      expect(result[TransactionType.ADJUSTMENT]).toEqual({ count: 0, total: 0 });
+      expect(result[TransactionType.ADJUSTMENT]).toEqual({
+        count: 0,
+        total: 0,
+      });
     });
 
     it('should handle partial aggregation result', async () => {
@@ -1446,12 +1603,17 @@ describe('TransactionService', () => {
         { _id: TransactionType.INCOME, count: 3, total: 3000 },
       ];
 
-      const result = await (transactionService as any).formatTransactionsByType(mockAggregationResult);
+      const result = await (transactionService as any).formatTransactionsByType(
+        mockAggregationResult
+      );
 
       expect(result[TransactionType.INCOME]).toEqual({ count: 3, total: 3000 });
       expect(result[TransactionType.EXPENSE]).toEqual({ count: 0, total: 0 });
       expect(result[TransactionType.TRANSFER]).toEqual({ count: 0, total: 0 });
-      expect(result[TransactionType.ADJUSTMENT]).toEqual({ count: 0, total: 0 });
+      expect(result[TransactionType.ADJUSTMENT]).toEqual({
+        count: 0,
+        total: 0,
+      });
     });
 
     it('should handle unknown transaction types gracefully', async () => {
@@ -1460,12 +1622,17 @@ describe('TransactionService', () => {
         { _id: TransactionType.INCOME, count: 2, total: 2000 },
       ];
 
-      const result = await (transactionService as any).formatTransactionsByType(mockAggregationResult);
+      const result = await (transactionService as any).formatTransactionsByType(
+        mockAggregationResult
+      );
 
       expect(result[TransactionType.INCOME]).toEqual({ count: 2, total: 2000 });
       expect(result[TransactionType.EXPENSE]).toEqual({ count: 0, total: 0 });
       expect(result[TransactionType.TRANSFER]).toEqual({ count: 0, total: 0 });
-      expect(result[TransactionType.ADJUSTMENT]).toEqual({ count: 0, total: 0 });
+      expect(result[TransactionType.ADJUSTMENT]).toEqual({
+        count: 0,
+        total: 0,
+      });
     });
   });
 
@@ -1479,7 +1646,10 @@ describe('TransactionService', () => {
         totalPages: 1,
       });
 
-      const result = await transactionService.getUserTransactions(mockUserId, options);
+      const result = await transactionService.getUserTransactions(
+        mockUserId,
+        options
+      );
 
       expect(result.transactions).toHaveLength(1);
       expect(result.total).toBe(1);
@@ -1494,7 +1664,10 @@ describe('TransactionService', () => {
         totalPages: 1,
       });
 
-      const result = await transactionService.getUserTransactions(mockUserId, options);
+      const result = await transactionService.getUserTransactions(
+        mockUserId,
+        options
+      );
 
       expect(result.transactions).toHaveLength(1);
       expect(result.total).toBe(1);
@@ -1509,7 +1682,10 @@ describe('TransactionService', () => {
         totalPages: 1,
       });
 
-      const result = await transactionService.getUserTransactions(mockUserId, options);
+      const result = await transactionService.getUserTransactions(
+        mockUserId,
+        options
+      );
 
       expect(result.transactions).toHaveLength(1);
       expect(result.total).toBe(1);
@@ -1524,7 +1700,10 @@ describe('TransactionService', () => {
         totalPages: 1,
       });
 
-      const result = await transactionService.getUserTransactions(mockUserId, options);
+      const result = await transactionService.getUserTransactions(
+        mockUserId,
+        options
+      );
 
       expect(result.transactions).toHaveLength(1);
       expect(result.total).toBe(1);
@@ -1539,7 +1718,10 @@ describe('TransactionService', () => {
         totalPages: 1,
       });
 
-      const result = await transactionService.getUserTransactions(mockUserId, options);
+      const result = await transactionService.getUserTransactions(
+        mockUserId,
+        options
+      );
 
       expect(result.transactions).toHaveLength(1);
       expect(result.total).toBe(1);
@@ -1554,7 +1736,10 @@ describe('TransactionService', () => {
         totalPages: 1,
       });
 
-      const result = await transactionService.getUserTransactions(mockUserId, options);
+      const result = await transactionService.getUserTransactions(
+        mockUserId,
+        options
+      );
 
       expect(result.transactions).toHaveLength(1);
       expect(result.total).toBe(1);
@@ -1569,7 +1754,10 @@ describe('TransactionService', () => {
         totalPages: 1,
       });
 
-      const result = await transactionService.getUserTransactions(mockUserId, options);
+      const result = await transactionService.getUserTransactions(
+        mockUserId,
+        options
+      );
 
       expect(result.transactions).toHaveLength(1);
       expect(result.total).toBe(1);
@@ -1584,7 +1772,10 @@ describe('TransactionService', () => {
         totalPages: 1,
       });
 
-      const result = await transactionService.getUserTransactions(mockUserId, options);
+      const result = await transactionService.getUserTransactions(
+        mockUserId,
+        options
+      );
 
       expect(result.transactions).toHaveLength(1);
       expect(result.total).toBe(1);
@@ -1599,7 +1790,10 @@ describe('TransactionService', () => {
         totalPages: 1,
       });
 
-      const result = await transactionService.getUserTransactions(mockUserId, options);
+      const result = await transactionService.getUserTransactions(
+        mockUserId,
+        options
+      );
 
       expect(result.transactions).toHaveLength(1);
       expect(result.total).toBe(1);
@@ -1614,7 +1808,10 @@ describe('TransactionService', () => {
         totalPages: 1,
       });
 
-      const result = await transactionService.getUserTransactions(mockUserId, options);
+      const result = await transactionService.getUserTransactions(
+        mockUserId,
+        options
+      );
 
       expect(result.transactions).toHaveLength(1);
       expect(result.total).toBe(1);
@@ -1629,7 +1826,10 @@ describe('TransactionService', () => {
         totalPages: 1,
       });
 
-      const result = await transactionService.getUserTransactions(mockUserId, options);
+      const result = await transactionService.getUserTransactions(
+        mockUserId,
+        options
+      );
 
       expect(result.transactions).toHaveLength(1);
       expect(result.total).toBe(1);
@@ -1644,7 +1844,10 @@ describe('TransactionService', () => {
         totalPages: 1,
       });
 
-      const result = await transactionService.getUserTransactions(mockUserId, options);
+      const result = await transactionService.getUserTransactions(
+        mockUserId,
+        options
+      );
 
       expect(result.transactions).toHaveLength(1);
       expect(result.total).toBe(1);
@@ -1659,7 +1862,10 @@ describe('TransactionService', () => {
         totalPages: 1,
       });
 
-      const result = await transactionService.getUserTransactions(mockUserId, options);
+      const result = await transactionService.getUserTransactions(
+        mockUserId,
+        options
+      );
 
       expect(result.transactions).toHaveLength(1);
       expect(result.total).toBe(1);
@@ -1674,7 +1880,10 @@ describe('TransactionService', () => {
         totalPages: 1,
       });
 
-      const result = await transactionService.getUserTransactions(mockUserId, options);
+      const result = await transactionService.getUserTransactions(
+        mockUserId,
+        options
+      );
 
       expect(result.transactions).toHaveLength(1);
       expect(result.total).toBe(1);
@@ -1689,7 +1898,10 @@ describe('TransactionService', () => {
         totalPages: 1,
       });
 
-      const result = await transactionService.getUserTransactions(mockUserId, options);
+      const result = await transactionService.getUserTransactions(
+        mockUserId,
+        options
+      );
 
       expect(result.transactions).toHaveLength(1);
       expect(result.total).toBe(1);
@@ -1704,7 +1916,10 @@ describe('TransactionService', () => {
         totalPages: 1,
       });
 
-      const result = await transactionService.getUserTransactions(mockUserId, options);
+      const result = await transactionService.getUserTransactions(
+        mockUserId,
+        options
+      );
 
       expect(result.transactions).toHaveLength(1);
       expect(result.total).toBe(1);
@@ -1787,7 +2002,9 @@ describe('TransactionService', () => {
 
     it('should handle update with category change', async () => {
       const newCategoryId = '507f1f77bcf86cd799439015';
-      const updateData = { categoryId: new mongoose.Types.ObjectId(newCategoryId) };
+      const updateData = {
+        categoryId: new mongoose.Types.ObjectId(newCategoryId),
+      };
       mockTransactionRepository.findById.mockResolvedValue(mockTransaction);
       mockTransactionRepository.updateById.mockResolvedValue({
         ...mockTransaction,
@@ -1867,14 +2084,16 @@ describe('TransactionService', () => {
         recurrencePattern: RecurrencePattern.WEEKLY,
         recurrenceEndDate: new Date('2024-12-31'),
         tags: ['custom', 'tag'],
-        attachments: [{
-          filename: 'attachment1.pdf',
-          originalName: 'attachment1.pdf',
-          mimeType: 'application/pdf',
-          size: 1024,
-          url: '/uploads/attachment1.pdf',
-          uploadedAt: new Date(),
-        }],
+        attachments: [
+          {
+            filename: 'attachment1.pdf',
+            originalName: 'attachment1.pdf',
+            mimeType: 'application/pdf',
+            size: 1024,
+            url: '/uploads/attachment1.pdf',
+            uploadedAt: new Date(),
+          },
+        ],
         source: 'import',
         timezone: 'America/New_York',
       };
@@ -1883,7 +2102,7 @@ describe('TransactionService', () => {
         ...mockTransaction,
         ...customTransactionData,
       } as unknown as ITransaction);
-      
+
       // Mock createRecurringSeries since this is a recurring transaction
       mockTransactionRepository.createRecurringSeries.mockResolvedValue([]);
 
@@ -1920,7 +2139,9 @@ describe('TransactionService', () => {
       } as unknown as ITransaction;
 
       mockTransactionRepository.create.mockResolvedValue(createdTransaction);
-      mockTransactionRepository.createRecurringSeries.mockResolvedValue([createdTransaction]);
+      mockTransactionRepository.createRecurringSeries.mockResolvedValue([
+        createdTransaction,
+      ]);
 
       const result = await transactionService.createTransaction(
         recurringTransactionData,
@@ -1929,7 +2150,9 @@ describe('TransactionService', () => {
 
       expect(result.isRecurring).toBe(true);
       expect(result.recurrencePattern).toBe(RecurrencePattern.MONTHLY);
-      expect(mockTransactionRepository.createRecurringSeries).toHaveBeenCalledWith(
+      expect(
+        mockTransactionRepository.createRecurringSeries
+      ).toHaveBeenCalledWith(
         createdTransaction,
         RecurrencePattern.MONTHLY,
         new Date('2024-12-31')
@@ -1956,7 +2179,9 @@ describe('TransactionService', () => {
         mockUserId
       );
 
-      expect(mockTransactionRepository.createRecurringSeries).not.toHaveBeenCalled();
+      expect(
+        mockTransactionRepository.createRecurringSeries
+      ).not.toHaveBeenCalled();
     });
 
     it('should not call createRecurringSeries for NONE recurrence pattern', async () => {
@@ -1979,7 +2204,9 @@ describe('TransactionService', () => {
         mockUserId
       );
 
-      expect(mockTransactionRepository.createRecurringSeries).not.toHaveBeenCalled();
+      expect(
+        mockTransactionRepository.createRecurringSeries
+      ).not.toHaveBeenCalled();
     });
   });
 });

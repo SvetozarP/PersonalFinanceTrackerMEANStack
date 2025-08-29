@@ -23,10 +23,10 @@ describe('Category Repository', () => {
   beforeEach(async () => {
     // Clear all mocks
     jest.clearAllMocks();
-    
+
     // Create the actual repository instance
     categoryRepository = new CategoryRepository();
-    
+
     // Clear any existing test data
     await Category.deleteMany({});
   });
@@ -58,7 +58,9 @@ describe('Category Repository', () => {
         level: 1,
       });
 
-      const categories = await categoryRepository.findByUserId(testUserId.toString());
+      const categories = await categoryRepository.findByUserId(
+        testUserId.toString()
+      );
 
       expect(categories).toHaveLength(2);
       expect(categories[0].name).toBe('Test Category 1');
@@ -67,8 +69,10 @@ describe('Category Repository', () => {
 
     it('should return empty array for non-existent user', async () => {
       const nonExistentUserId = new mongoose.Types.ObjectId();
-      
-      const categories = await categoryRepository.findByUserId(nonExistentUserId.toString());
+
+      const categories = await categoryRepository.findByUserId(
+        nonExistentUserId.toString()
+      );
 
       expect(categories).toHaveLength(0);
     });
@@ -94,7 +98,9 @@ describe('Category Repository', () => {
         level: 0,
       });
 
-      const categories = await categoryRepository.findByUserId(testUserId.toString());
+      const categories = await categoryRepository.findByUserId(
+        testUserId.toString()
+      );
 
       expect(categories).toHaveLength(1);
       expect(categories[0].name).toBe('Active Category');
@@ -131,7 +137,9 @@ describe('Category Repository', () => {
         path: ['Parent'],
       });
 
-      const categories = await categoryRepository.findByUserId(testUserId.toString());
+      const categories = await categoryRepository.findByUserId(
+        testUserId.toString()
+      );
 
       expect(categories).toHaveLength(3);
       expect(categories[0].level).toBe(0);
@@ -165,7 +173,9 @@ describe('Category Repository', () => {
         level: 1,
       });
 
-      const rootCategories = await categoryRepository.findRootCategories(testUserId.toString());
+      const rootCategories = await categoryRepository.findRootCategories(
+        testUserId.toString()
+      );
 
       expect(rootCategories).toHaveLength(1);
       expect(rootCategories[0].name).toBe('Root Category');
@@ -174,8 +184,10 @@ describe('Category Repository', () => {
 
     it('should return empty array for user with no root categories', async () => {
       const otherUserId = new mongoose.Types.ObjectId();
-      
-      const rootCategories = await categoryRepository.findRootCategories(otherUserId.toString());
+
+      const rootCategories = await categoryRepository.findRootCategories(
+        otherUserId.toString()
+      );
 
       expect(rootCategories).toHaveLength(0);
     });
@@ -192,7 +204,7 @@ describe('Category Repository', () => {
         path: [],
         level: 0,
       });
-      
+
       // Create child categories
       await Category.create({
         name: 'Child Category 1',
@@ -214,18 +226,30 @@ describe('Category Repository', () => {
         level: 1,
       });
 
-      const childCategories = await categoryRepository.findByParentId((parentCategory._id as mongoose.Types.ObjectId).toString(), testUserId.toString());
+      const childCategories = await categoryRepository.findByParentId(
+        (parentCategory._id as mongoose.Types.ObjectId).toString(),
+        testUserId.toString()
+      );
 
       expect(childCategories).toHaveLength(2);
       expect(childCategories[0].name).toBe('Child Category 1');
       expect(childCategories[1].name).toBe('Child Category 2');
-      expect(childCategories.every(cat => cat.parentId?.toString() === (parentCategory._id as mongoose.Types.ObjectId).toString())).toBe(true);
+      expect(
+        childCategories.every(
+          cat =>
+            cat.parentId?.toString() ===
+            (parentCategory._id as mongoose.Types.ObjectId).toString()
+        )
+      ).toBe(true);
     });
 
     it('should return empty array for non-existent parent', async () => {
       const nonExistentParentId = new mongoose.Types.ObjectId();
-      
-      const childCategories = await categoryRepository.findByParentId(nonExistentParentId.toString(), testUserId.toString());
+
+      const childCategories = await categoryRepository.findByParentId(
+        nonExistentParentId.toString(),
+        testUserId.toString()
+      );
 
       expect(childCategories).toHaveLength(0);
     });
@@ -233,7 +257,7 @@ describe('Category Repository', () => {
     it('should only return categories for the specified user', async () => {
       const parentId = new mongoose.Types.ObjectId();
       const otherUserId = new mongoose.Types.ObjectId();
-      
+
       // Create child category for other user
       await Category.create({
         name: 'Other User Child',
@@ -245,7 +269,10 @@ describe('Category Repository', () => {
         level: 1,
       });
 
-      const childCategories = await categoryRepository.findByParentId(parentId.toString(), testUserId.toString());
+      const childCategories = await categoryRepository.findByParentId(
+        parentId.toString(),
+        testUserId.toString()
+      );
 
       expect(childCategories).toHaveLength(0);
     });
@@ -262,20 +289,30 @@ describe('Category Repository', () => {
         },
       ];
 
-      jest.spyOn(categoryRepository['model'], 'getCategoryTree').mockResolvedValue(mockTree as any);
+      jest
+        .spyOn(categoryRepository['model'], 'getCategoryTree')
+        .mockResolvedValue(mockTree as any);
 
-      const tree = await categoryRepository.getCategoryTree(testUserId.toString());
+      const tree = await categoryRepository.getCategoryTree(
+        testUserId.toString()
+      );
 
       expect(tree).toEqual(mockTree);
-      expect(categoryRepository['model'].getCategoryTree).toHaveBeenCalledWith(testUserId.toString());
+      expect(categoryRepository['model'].getCategoryTree).toHaveBeenCalledWith(
+        testUserId.toString()
+      );
     });
 
     it('should handle errors when getting category tree', async () => {
       const error = new Error('Database error');
-      
-      jest.spyOn(categoryRepository['model'], 'getCategoryTree').mockRejectedValue(error);
 
-      await expect(categoryRepository.getCategoryTree(testUserId.toString())).rejects.toThrow('Database error');
+      jest
+        .spyOn(categoryRepository['model'], 'getCategoryTree')
+        .mockRejectedValue(error);
+
+      await expect(
+        categoryRepository.getCategoryTree(testUserId.toString())
+      ).rejects.toThrow('Database error');
     });
   });
 
@@ -289,20 +326,30 @@ describe('Category Repository', () => {
         fullPath: 'Parent > Child > Test Category',
       };
 
-      jest.spyOn(categoryRepository['model'], 'getCategoryPath').mockResolvedValue(mockPath);
+      jest
+        .spyOn(categoryRepository['model'], 'getCategoryPath')
+        .mockResolvedValue(mockPath);
 
-      const path = await categoryRepository.getCategoryPath(mockPath.id.toString());
+      const path = await categoryRepository.getCategoryPath(
+        mockPath.id.toString()
+      );
 
       expect(path).toEqual(mockPath);
-      expect(categoryRepository['model'].getCategoryPath).toHaveBeenCalledWith(mockPath.id.toString());
+      expect(categoryRepository['model'].getCategoryPath).toHaveBeenCalledWith(
+        mockPath.id.toString()
+      );
     });
 
     it('should handle errors when getting category path', async () => {
       const error = new Error('Database error');
-      
-      jest.spyOn(categoryRepository['model'], 'getCategoryPath').mockRejectedValue(error);
 
-      await expect(categoryRepository.getCategoryPath('test-id')).rejects.toThrow('Database error');
+      jest
+        .spyOn(categoryRepository['model'], 'getCategoryPath')
+        .mockRejectedValue(error);
+
+      await expect(
+        categoryRepository.getCategoryPath('test-id')
+      ).rejects.toThrow('Database error');
     });
   });
 
@@ -336,14 +383,20 @@ describe('Category Repository', () => {
         path: ['Parent'],
       });
 
-      const level1Categories = await categoryRepository.findByLevel(1, testUserId.toString());
+      const level1Categories = await categoryRepository.findByLevel(
+        1,
+        testUserId.toString()
+      );
 
       expect(level1Categories).toHaveLength(2);
       expect(level1Categories.every(cat => cat.level === 1)).toBe(true);
     });
 
     it('should return empty array for non-existent level', async () => {
-      const level10Categories = await categoryRepository.findByLevel(10, testUserId.toString());
+      const level10Categories = await categoryRepository.findByLevel(
+        10,
+        testUserId.toString()
+      );
 
       expect(level10Categories).toHaveLength(0);
     });
@@ -379,10 +432,15 @@ describe('Category Repository', () => {
         level: 0,
       });
 
-      const searchResults = await categoryRepository.searchByName('Test', testUserId.toString());
+      const searchResults = await categoryRepository.searchByName(
+        'Test',
+        testUserId.toString()
+      );
 
       expect(searchResults).toHaveLength(2);
-      expect(searchResults.every(cat => cat.name.toLowerCase().includes('test'))).toBe(true);
+      expect(
+        searchResults.every(cat => cat.name.toLowerCase().includes('test'))
+      ).toBe(true);
     });
 
     it('should be case insensitive', async () => {
@@ -395,14 +453,20 @@ describe('Category Repository', () => {
         level: 0,
       });
 
-      const searchResults = await categoryRepository.searchByName('test', testUserId.toString());
+      const searchResults = await categoryRepository.searchByName(
+        'test',
+        testUserId.toString()
+      );
 
       expect(searchResults).toHaveLength(1);
       expect(searchResults[0].name).toBe('Test Category');
     });
 
     it('should return empty array for no matches', async () => {
-      const searchResults = await categoryRepository.searchByName('NonExistent', testUserId.toString());
+      const searchResults = await categoryRepository.searchByName(
+        'NonExistent',
+        testUserId.toString()
+      );
 
       expect(searchResults).toHaveLength(0);
     });
@@ -412,7 +476,7 @@ describe('Category Repository', () => {
     it('should get category statistics', async () => {
       // Create a unique user ID for this test to avoid conflicts
       const statsUserId = new mongoose.Types.ObjectId();
-      
+
       // Create categories at different levels
       await Category.create({
         name: 'Root Category 1',
@@ -443,7 +507,9 @@ describe('Category Repository', () => {
         path: ['Parent'],
       });
 
-      const stats = await categoryRepository.getCategoryStats(statsUserId.toString());
+      const stats = await categoryRepository.getCategoryStats(
+        statsUserId.toString()
+      );
 
       expect(stats.totalCategories).toBe(3);
       expect(stats.rootCategories).toBe(3); // All categories are being counted as root
@@ -453,8 +519,10 @@ describe('Category Repository', () => {
 
     it('should return default values for user with no categories', async () => {
       const otherUserId = new mongoose.Types.ObjectId();
-      
-      const stats = await categoryRepository.getCategoryStats(otherUserId.toString());
+
+      const stats = await categoryRepository.getCategoryStats(
+        otherUserId.toString()
+      );
 
       expect(stats.totalCategories).toBe(0);
       expect(stats.rootCategories).toBe(0);
@@ -465,7 +533,10 @@ describe('Category Repository', () => {
 
   describe('isNameUnique', () => {
     it('should return true for unique name at root level', async () => {
-      const isUnique = await categoryRepository.isNameUnique('Unique Name', testUserId.toString());
+      const isUnique = await categoryRepository.isNameUnique(
+        'Unique Name',
+        testUserId.toString()
+      );
 
       expect(isUnique).toBe(true);
     });
@@ -482,7 +553,10 @@ describe('Category Repository', () => {
         level: 0,
       });
 
-      const isUnique = await categoryRepository.isNameUnique('Duplicate Name', testUserId.toString());
+      const isUnique = await categoryRepository.isNameUnique(
+        'Duplicate Name',
+        testUserId.toString()
+      );
 
       expect(isUnique).toBe(false);
     });
@@ -497,8 +571,12 @@ describe('Category Repository', () => {
         path: [],
         level: 0,
       });
-      
-      const isUnique = await categoryRepository.isNameUnique('Unique Name', testUserId.toString(), (parentCategory._id as mongoose.Types.ObjectId).toString());
+
+      const isUnique = await categoryRepository.isNameUnique(
+        'Unique Name',
+        testUserId.toString(),
+        (parentCategory._id as mongoose.Types.ObjectId).toString()
+      );
 
       expect(isUnique).toBe(true);
     });
@@ -513,7 +591,7 @@ describe('Category Repository', () => {
         path: [],
         level: 0,
       });
-      
+
       // Create first category under parent
       await Category.create({
         name: 'Duplicate Name',
@@ -525,7 +603,11 @@ describe('Category Repository', () => {
         level: 1,
       });
 
-      const isUnique = await categoryRepository.isNameUnique('Duplicate Name', testUserId.toString(), (parentCategory._id as mongoose.Types.ObjectId).toString());
+      const isUnique = await categoryRepository.isNameUnique(
+        'Duplicate Name',
+        testUserId.toString(),
+        (parentCategory._id as mongoose.Types.ObjectId).toString()
+      );
 
       expect(isUnique).toBe(false);
     });
@@ -549,7 +631,7 @@ describe('Category Repository', () => {
         path: [],
         level: 0,
       });
-      
+
       // Create category under first parent
       await Category.create({
         name: 'Same Name',
@@ -562,7 +644,11 @@ describe('Category Repository', () => {
       });
 
       // Should be able to create category with same name under different parent
-      const isUnique = await categoryRepository.isNameUnique('Same Name', testUserId.toString(), (parent2._id as mongoose.Types.ObjectId).toString());
+      const isUnique = await categoryRepository.isNameUnique(
+        'Same Name',
+        testUserId.toString(),
+        (parent2._id as mongoose.Types.ObjectId).toString()
+      );
 
       expect(isUnique).toBe(true);
     });
@@ -580,7 +666,9 @@ describe('Category Repository', () => {
           level: 0,
         });
 
-        const foundCategory = await categoryRepository.findById((category._id as mongoose.Types.ObjectId).toString());
+        const foundCategory = await categoryRepository.findById(
+          (category._id as mongoose.Types.ObjectId).toString()
+        );
 
         expect(foundCategory).toBeDefined();
         expect(foundCategory?.name).toBe('Test Category');
@@ -588,8 +676,10 @@ describe('Category Repository', () => {
 
       it('should return null for non-existent ID', async () => {
         const nonExistentId = new mongoose.Types.ObjectId();
-        
-        const foundCategory = await categoryRepository.findById(nonExistentId.toString());
+
+        const foundCategory = await categoryRepository.findById(
+          nonExistentId.toString()
+        );
 
         expect(foundCategory).toBeNull();
       });
@@ -626,7 +716,10 @@ describe('Category Repository', () => {
         });
 
         const updateData = { name: 'Updated Name' };
-        const updatedCategory = await categoryRepository.updateById((category._id as mongoose.Types.ObjectId).toString(), updateData);
+        const updatedCategory = await categoryRepository.updateById(
+          (category._id as mongoose.Types.ObjectId).toString(),
+          updateData
+        );
 
         expect(updatedCategory).toBeDefined();
         expect(updatedCategory?.name).toBe('Updated Name');
@@ -634,8 +727,11 @@ describe('Category Repository', () => {
 
       it('should return null for non-existent ID', async () => {
         const nonExistentId = new mongoose.Types.ObjectId();
-        
-        const updatedCategory = await categoryRepository.updateById(nonExistentId.toString(), { name: 'Updated' });
+
+        const updatedCategory = await categoryRepository.updateById(
+          nonExistentId.toString(),
+          { name: 'Updated' }
+        );
 
         expect(updatedCategory).toBeNull();
       });
@@ -652,7 +748,9 @@ describe('Category Repository', () => {
           level: 0,
         });
 
-        const deletedCategory = await categoryRepository.deleteById((category._id as mongoose.Types.ObjectId).toString());
+        const deletedCategory = await categoryRepository.deleteById(
+          (category._id as mongoose.Types.ObjectId).toString()
+        );
 
         expect(deletedCategory).toBeDefined();
         expect(deletedCategory?.name).toBe('Test Category');
@@ -660,8 +758,10 @@ describe('Category Repository', () => {
 
       it('should return null for non-existent ID', async () => {
         const nonExistentId = new mongoose.Types.ObjectId();
-        
-        const deletedCategory = await categoryRepository.deleteById(nonExistentId.toString());
+
+        const deletedCategory = await categoryRepository.deleteById(
+          nonExistentId.toString()
+        );
 
         expect(deletedCategory).toBeNull();
       });
@@ -711,14 +811,18 @@ describe('Category Repository', () => {
           level: 0,
         });
 
-        const category = await categoryRepository.findOne({ name: 'Test Category' });
+        const category = await categoryRepository.findOne({
+          name: 'Test Category',
+        });
 
         expect(category).toBeDefined();
         expect(category?.name).toBe('Test Category');
       });
 
       it('should return null for no matches', async () => {
-        const category = await categoryRepository.findOne({ name: 'Non-existent' });
+        const category = await categoryRepository.findOne({
+          name: 'Non-existent',
+        });
 
         expect(category).toBeNull();
       });
@@ -765,7 +869,7 @@ describe('Category Repository', () => {
 
       it('should return false for non-existent category', async () => {
         const nonExistentId = new mongoose.Types.ObjectId();
-        
+
         const exists = await categoryRepository.exists({ _id: nonExistentId });
 
         expect(exists).toBe(false);
@@ -821,7 +925,9 @@ describe('Category Repository', () => {
           level: 0,
         });
 
-        const result = await categoryRepository.deleteMany({ userId: testUserId });
+        const result = await categoryRepository.deleteMany({
+          userId: testUserId,
+        });
 
         expect(result.deletedCount).toBe(2);
       });
@@ -848,8 +954,12 @@ describe('Category Repository', () => {
         });
 
         const result = await categoryRepository.aggregate([
-          { $match: { userId: new mongoose.Types.ObjectId(testUserId.toString()) } },
-          { $group: { _id: null, total: { $sum: 1 } } }
+          {
+            $match: {
+              userId: new mongoose.Types.ObjectId(testUserId.toString()),
+            },
+          },
+          { $group: { _id: null, total: { $sum: 1 } } },
         ]);
 
         expect(result).toHaveLength(1);
@@ -862,13 +972,15 @@ describe('Category Repository', () => {
     it('should handle database connection errors gracefully', async () => {
       // Mock the model to throw an error
       const mockFind = jest.fn().mockReturnValue({
-        sort: jest.fn().mockRejectedValue(new Error('Connection failed'))
+        sort: jest.fn().mockRejectedValue(new Error('Connection failed')),
       });
       const originalFind = categoryRepository['model'].find;
-      
+
       categoryRepository['model'].find = mockFind;
 
-      await expect(categoryRepository.findByUserId(testUserId.toString())).rejects.toThrow('Connection failed');
+      await expect(
+        categoryRepository.findByUserId(testUserId.toString())
+      ).rejects.toThrow('Connection failed');
 
       // Restore the original method
       categoryRepository['model'].find = originalFind;
@@ -876,7 +988,7 @@ describe('Category Repository', () => {
 
     it('should handle validation errors gracefully', async () => {
       const invalidData = { name: '' } as any;
-      
+
       await expect(categoryRepository.create(invalidData)).rejects.toThrow();
     });
   });

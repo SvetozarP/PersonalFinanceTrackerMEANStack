@@ -108,48 +108,53 @@ categorySchema.virtual('parent', {
 });
 
 // Pre-save middleware to validate uniqueness and update path and level
-categorySchema.pre('save', async function (this: ICategory, next: (error?: Error) => void) {
-  try {
-    // Check uniqueness before saving
-    const CategoryModel = this.constructor as mongoose.Model<ICategory>;
-    const existingCategory = await CategoryModel.findOne({
-      userId: this.userId,
-      parentId: this.parentId,
-      name: this.name,
-      _id: { $ne: this._id } // Exclude current document when updating
-    });
+categorySchema.pre(
+  'save',
+  async function (this: ICategory, next: (error?: Error) => void) {
+    try {
+      // Check uniqueness before saving
+      const CategoryModel = this.constructor as mongoose.Model<ICategory>;
+      const existingCategory = await CategoryModel.findOne({
+        userId: this.userId,
+        parentId: this.parentId,
+        name: this.name,
+        _id: { $ne: this._id }, // Exclude current document when updating
+      });
 
-    if (existingCategory) {
-      const error = new Error('Category name must be unique within the same parent and user');
-      (error as any).name = 'ValidationError';
-      return next(error);
-    }
+      if (existingCategory) {
+        const error = new Error(
+          'Category name must be unique within the same parent and user'
+        );
+        (error as any).name = 'ValidationError';
+        return next(error);
+      }
 
-    // Update path and level if parentId changed
-    if (this.isModified('parentId')) {
-      if (this.parentId) {
-        // Get parent category to build path
-        const parent = await CategoryModel.findById(this.parentId);
-        if (parent) {
-          this.path = [...parent.path, parent.name];
-          this.level = parent.level + 1;
+      // Update path and level if parentId changed
+      if (this.isModified('parentId')) {
+        if (this.parentId) {
+          // Get parent category to build path
+          const parent = await CategoryModel.findById(this.parentId);
+          if (parent) {
+            this.path = [...parent.path, parent.name];
+            this.level = parent.level + 1;
+          } else {
+            // Invalid parent, reset to root
+            this.parentId = undefined;
+            this.path = [];
+            this.level = 0;
+          }
         } else {
-          // Invalid parent, reset to root
-          this.parentId = undefined;
+          // Root directory
           this.path = [];
           this.level = 0;
         }
-      } else {
-        // Root directory
-        this.path = [];
-        this.level = 0;
       }
+      next();
+    } catch (error) {
+      next(error as Error);
     }
-    next();
-  } catch (error) {
-    next(error as Error);
   }
-});
+);
 
 // Pre-deleteOne middleware to handle children when category is deleted
 categorySchema.pre(
@@ -158,7 +163,7 @@ categorySchema.pre(
   async function (this: any, next: (error?: Error) => void) {
     try {
       let categoryId: mongoose.Types.ObjectId;
-      
+
       if (this._id) {
         // Document-level deletion
         categoryId = this._id;

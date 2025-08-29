@@ -1,4 +1,4 @@
-import { 
+import {
   Category,
   categoryValidation,
   CategoryRepository,
@@ -10,7 +10,7 @@ import {
   TransactionService,
   TransactionController,
   FinancialService,
-  FinancialController
+  FinancialController,
 } from '../../../modules/financial';
 
 describe('Financial Module Index', () => {
@@ -75,7 +75,7 @@ describe('Financial Module Index', () => {
         'categoryValidation',
         'CategoryRepository',
         'CategoryService',
-        'CategoryController'
+        'CategoryController',
       ];
 
       categoryExports.forEach(exportName => {
@@ -86,10 +86,10 @@ describe('Financial Module Index', () => {
     it('should export all required transaction components', () => {
       const transactionExports = [
         'Transaction',
-        'transactionValidation', 
+        'transactionValidation',
         'TransactionRepository',
         'TransactionService',
-        'TransactionController'
+        'TransactionController',
       ];
 
       transactionExports.forEach(exportName => {
@@ -98,10 +98,7 @@ describe('Financial Module Index', () => {
     });
 
     it('should export all required financial components', () => {
-      const financialExports = [
-        'FinancialService',
-        'FinancialController'
-      ];
+      const financialExports = ['FinancialService', 'FinancialController'];
 
       financialExports.forEach(exportName => {
         expect(require('../../../modules/financial')[exportName]).toBeDefined();
@@ -113,24 +110,29 @@ describe('Financial Module Index', () => {
     it('should maintain proper module organization', () => {
       // Test that the index file properly organizes exports by module
       const financialModule = require('../../../modules/financial');
-      
+
       // Check that all exports are present
       expect(Object.keys(financialModule).length).toBeGreaterThan(0);
-      
+
       // Verify that exports are properly categorized
-      const hasCategoryExports = ['Category', 'CategoryService', 'CategoryController'].some(
-        exportName => financialModule[exportName]
-      );
+      const hasCategoryExports = [
+        'Category',
+        'CategoryService',
+        'CategoryController',
+      ].some(exportName => financialModule[exportName]);
       expect(hasCategoryExports).toBe(true);
-      
-      const hasTransactionExports = ['Transaction', 'TransactionService', 'TransactionController'].some(
-        exportName => financialModule[exportName]
-      );
+
+      const hasTransactionExports = [
+        'Transaction',
+        'TransactionService',
+        'TransactionController',
+      ].some(exportName => financialModule[exportName]);
       expect(hasTransactionExports).toBe(true);
-      
-      const hasFinancialExports = ['FinancialService', 'FinancialController'].some(
-        exportName => financialModule[exportName]
-      );
+
+      const hasFinancialExports = [
+        'FinancialService',
+        'FinancialController',
+      ].some(exportName => financialModule[exportName]);
       expect(hasFinancialExports).toBe(true);
     });
   });

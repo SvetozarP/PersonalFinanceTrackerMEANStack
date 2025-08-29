@@ -2,6 +2,9 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { FinancialController } from './financial.controller';
 import { authenticateToken } from '../auth/auth.middleware';
 
+// Import budget routes
+import budgetRoutes from './budgets/routes/budget.routes';
+
 const router = Router();
 const financialController = new FinancialController();
 
@@ -71,5 +74,8 @@ router.post('/export', asyncHandler(financialController.exportFinancialData));
  * @query   { period? }
  */
 router.get('/summary', asyncHandler(financialController.getFinancialSummary));
+
+// Mount budget routes under /budgets
+router.use('/budgets', budgetRoutes);
 
 export default router;

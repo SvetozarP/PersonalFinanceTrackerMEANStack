@@ -11,109 +11,107 @@ describe('Category Routes', () => {
   beforeEach(() => {
     app = express();
     app.use(express.json());
-    
+
     // Create mock routes directly without complex mocking
     const router = express.Router();
-    
+
     // Mock auth middleware - just call next()
     router.use((req: any, res: any, next: any) => {
       req.user = { userId: 'test-user-id' };
       next();
     });
-    
+
     // Define routes with simple handlers
     router.post('/', (req: any, res: any) => {
-      res.status(201).json({ 
-        success: true, 
-        data: { 
-          id: 'test-id', 
+      res.status(201).json({
+        success: true,
+        data: {
+          id: 'test-id',
           name: req.body.name || 'Test Category',
           description: req.body.description,
           color: req.body.color,
-          icon: req.body.icon
-        } 
+          icon: req.body.icon,
+        },
       });
     });
-    
+
     router.get('/', (req: any, res: any) => {
-      res.status(200).json({ 
-        success: true, 
+      res.status(200).json({
+        success: true,
         data: [
           { id: '1', name: 'Category 1', level: 0 },
-          { id: '2', name: 'Category 2', level: 1 }
+          { id: '2', name: 'Category 2', level: 1 },
         ],
-        query: req.query
+        query: req.query,
       });
     });
-    
+
     router.get('/tree', (req: any, res: any) => {
-      res.status(200).json({ 
-        success: true, 
+      res.status(200).json({
+        success: true,
         data: [
           {
             id: '1',
             name: 'Root Category',
-            children: [
-              { id: '2', name: 'Child Category', children: [] }
-            ]
-          }
-        ]
+            children: [{ id: '2', name: 'Child Category', children: [] }],
+          },
+        ],
       });
     });
-    
+
     router.get('/stats', (req: any, res: any) => {
-      res.status(200).json({ 
-        success: true, 
+      res.status(200).json({
+        success: true,
         data: {
           totalCategories: 5,
           rootCategories: 2,
           maxLevel: 3,
-          avgLevel: 1.5
-        }
+          avgLevel: 1.5,
+        },
       });
     });
-    
+
     router.get('/:id', (req: any, res: any) => {
-      res.status(200).json({ 
-        success: true, 
-        data: { 
-          id: req.params.id, 
+      res.status(200).json({
+        success: true,
+        data: {
+          id: req.params.id,
           name: 'Test Category',
           description: 'Test Description',
-          level: 0
-        } 
+          level: 0,
+        },
       });
     });
-    
+
     router.put('/:id', (req: any, res: any) => {
-      res.status(200).json({ 
-        success: true, 
-        data: { 
+      res.status(200).json({
+        success: true,
+        data: {
           id: req.params.id,
           name: req.body.name || 'Updated Category',
           description: req.body.description,
-          level: 0
-        } 
+          level: 0,
+        },
       });
     });
-    
+
     router.delete('/:id', (req: any, res: any) => {
-      res.status(200).json({ 
-        success: true, 
-        message: 'Category deleted successfully' 
+      res.status(200).json({
+        success: true,
+        message: 'Category deleted successfully',
       });
     });
-    
+
     router.post('/bulk', (req: any, res: any) => {
-      res.status(201).json({ 
-        success: true, 
+      res.status(201).json({
+        success: true,
         data: [
           { id: '1', name: 'Category 1', description: 'Description 1' },
-          { id: '2', name: 'Category 2', description: 'Description 2' }
-        ]
+          { id: '2', name: 'Category 2', description: 'Description 2' },
+        ],
       });
     });
-    
+
     app.use('/api/categories', router);
   });
 
@@ -130,14 +128,22 @@ describe('Category Routes', () => {
 
     it('should handle all route types', async () => {
       // Test that all routes are accessible
-      const postResponse = await request(app).post('/api/categories').send({ name: 'Test Category' });
+      const postResponse = await request(app)
+        .post('/api/categories')
+        .send({ name: 'Test Category' });
       const getResponse = await request(app).get('/api/categories');
       const treeResponse = await request(app).get('/api/categories/tree');
       const statsResponse = await request(app).get('/api/categories/stats');
       const idResponse = await request(app).get('/api/categories/test-id');
-      const putResponse = await request(app).put('/api/categories/test-id').send({ name: 'Updated Category' });
-      const deleteResponse = await request(app).delete('/api/categories/test-id');
-      const bulkResponse = await request(app).post('/api/categories/bulk').send({ categories: [{ name: 'Test' }] });
+      const putResponse = await request(app)
+        .put('/api/categories/test-id')
+        .send({ name: 'Updated Category' });
+      const deleteResponse = await request(app).delete(
+        '/api/categories/test-id'
+      );
+      const bulkResponse = await request(app)
+        .post('/api/categories/bulk')
+        .send({ categories: [{ name: 'Test' }] });
 
       expect(postResponse.status).toBe(201);
       expect(getResponse.status).toBe(200);
@@ -184,9 +190,7 @@ describe('Category Routes', () => {
 
   describe('GET /api/categories', () => {
     it('should get user categories', async () => {
-      const response = await request(app)
-        .get('/api/categories')
-        .expect(200);
+      const response = await request(app).get('/api/categories').expect(200);
 
       expect(response.body.success).toBe(true);
       expect(response.body.data).toHaveLength(2);
@@ -196,7 +200,9 @@ describe('Category Routes', () => {
 
     it('should handle query parameters', async () => {
       const response = await request(app)
-        .get('/api/categories?parentId=123&level=1&isActive=true&search=test&page=1&limit=10')
+        .get(
+          '/api/categories?parentId=123&level=1&isActive=true&search=test&page=1&limit=10'
+        )
         .expect(200);
 
       expect(response.body.query.parentId).toBe('123');
@@ -303,14 +309,22 @@ describe('Category Routes', () => {
   describe('Authentication', () => {
     it('should require authentication for all routes', async () => {
       // Test that all routes require authentication by checking user object is set
-      const postResponse = await request(app).post('/api/categories').send({ name: 'Test' });
+      const postResponse = await request(app)
+        .post('/api/categories')
+        .send({ name: 'Test' });
       const getResponse = await request(app).get('/api/categories');
       const treeResponse = await request(app).get('/api/categories/tree');
       const statsResponse = await request(app).get('/api/categories/stats');
       const idResponse = await request(app).get('/api/categories/test-id');
-      const putResponse = await request(app).put('/api/categories/test-id').send({ name: 'Updated' });
-      const deleteResponse = await request(app).delete('/api/categories/test-id');
-      const bulkResponse = await request(app).post('/api/categories/bulk').send({ categories: [{ name: 'Test' }] });
+      const putResponse = await request(app)
+        .put('/api/categories/test-id')
+        .send({ name: 'Updated' });
+      const deleteResponse = await request(app).delete(
+        '/api/categories/test-id'
+      );
+      const bulkResponse = await request(app)
+        .post('/api/categories/bulk')
+        .send({ categories: [{ name: 'Test' }] });
 
       // All responses should be successful (not 401/403) because our mock middleware sets req.user
       expect(postResponse.status).not.toBe(401);
@@ -336,21 +350,3 @@ describe('Category Routes', () => {
     });
   });
 });
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -162,7 +162,9 @@ describe('Base Repository', () => {
       const mockDocument = { _id: '123', name: 'Updated Test' };
       mockModel.findByIdAndUpdate.mockResolvedValue(mockDocument);
 
-      const result = await repository.updateById('123', { name: 'Updated Test' });
+      const result = await repository.updateById('123', {
+        name: 'Updated Test',
+      });
 
       expect(result).toEqual(mockDocument);
       expect(mockModel.findByIdAndUpdate).toHaveBeenCalledWith(
@@ -184,7 +186,9 @@ describe('Base Repository', () => {
     it('should handle update by ID when document not found', async () => {
       mockModel.findByIdAndUpdate.mockResolvedValue(null);
 
-      const result = await repository.updateById('123', { name: 'Updated Test' });
+      const result = await repository.updateById('123', {
+        name: 'Updated Test',
+      });
 
       expect(result).toBeNull();
       expect(mockModel.findByIdAndUpdate).toHaveBeenCalledWith(
@@ -362,7 +366,9 @@ describe('Base Repository', () => {
   describe('Aggregation', () => {
     it('should execute aggregation pipeline', async () => {
       const mockResults = [{ _id: '123', total: 100 }];
-      const pipeline = [{ $group: { _id: '$categoryId', total: { $sum: '$amount' } } }];
+      const pipeline = [
+        { $group: { _id: '$categoryId', total: { $sum: '$amount' } } },
+      ];
       mockModel.aggregate.mockResolvedValue(mockResults);
 
       const result = await repository.aggregate(pipeline);
@@ -373,7 +379,9 @@ describe('Base Repository', () => {
 
     it('should handle aggregation errors', async () => {
       const mockError = new Error('Aggregation failed');
-      const pipeline = [{ $group: { _id: '$categoryId', total: { $sum: '$amount' } } }];
+      const pipeline = [
+        { $group: { _id: '$categoryId', total: { $sum: '$amount' } } },
+      ];
       mockModel.aggregate.mockRejectedValue(mockError);
 
       await expect(repository.aggregate(pipeline)).rejects.toThrow(
@@ -383,7 +391,9 @@ describe('Base Repository', () => {
 
     it('should handle aggregation errors gracefully', async () => {
       const mockError = new Error('Aggregation failed');
-      const pipeline = [{ $group: { _id: '$categoryId', total: { $sum: '$amount' } } }];
+      const pipeline = [
+        { $group: { _id: '$categoryId', total: { $sum: '$amount' } } },
+      ];
       mockModel.aggregate.mockRejectedValue(mockError);
 
       await expect(repository.aggregate(pipeline)).rejects.toThrow(
@@ -397,14 +407,18 @@ describe('Base Repository', () => {
       const mockError = new Error('Connection failed');
       mockModel.findById.mockRejectedValue(mockError);
 
-      await expect(repository.findById('123')).rejects.toThrow('Connection failed');
+      await expect(repository.findById('123')).rejects.toThrow(
+        'Connection failed'
+      );
     });
 
     it('should handle validation errors gracefully', async () => {
       const mockError = new Error('Validation failed');
       mockModel.findById.mockRejectedValue(mockError);
 
-      await expect(repository.findById('123')).rejects.toThrow('Validation failed');
+      await expect(repository.findById('123')).rejects.toThrow(
+        'Validation failed'
+      );
     });
 
     it('should handle cast errors gracefully', async () => {
