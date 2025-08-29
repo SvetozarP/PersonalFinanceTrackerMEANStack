@@ -29,6 +29,10 @@ describe('Category Service', () => {
     jest.clearAllMocks();
     mockCategoryRepository =
       new MockedCategoryRepository() as jest.Mocked<CategoryRepository>;
+    
+    // Add missing methods to the mock
+    (mockCategoryRepository as any).findWithPagination = jest.fn();
+    
     categoryService = new CategoryService();
     (categoryService as any).categoryRepository = mockCategoryRepository;
 
@@ -42,6 +46,12 @@ describe('Category Service', () => {
     mockCategoryRepository.count.mockResolvedValue(0);
     mockCategoryRepository.getCategoryTree.mockResolvedValue([]);
     mockCategoryRepository.aggregate.mockResolvedValue([]);
+    mockCategoryRepository.findWithPagination.mockResolvedValue({
+      documents: [],
+      total: 0,
+      page: 1,
+      totalPages: 0,
+    });
   });
 
   describe('createCategory', () => {
@@ -627,8 +637,12 @@ describe('Category Service', () => {
         { _id: new mongoose.Types.ObjectId(), name: 'Category 2' },
       ] as any;
 
-      mockCategoryRepository.count.mockResolvedValue(2);
-      mockCategoryRepository.find.mockResolvedValue(mockCategories);
+      mockCategoryRepository.findWithPagination.mockResolvedValue({
+        documents: mockCategories,
+        total: 2,
+        page: 1,
+        totalPages: 1,
+      });
 
       const result = await categoryService.getUserCategories(mockUserId);
 
@@ -643,8 +657,12 @@ describe('Category Service', () => {
         { _id: new mongoose.Types.ObjectId(), name: 'Category 1' },
       ] as any;
 
-      mockCategoryRepository.count.mockResolvedValue(25);
-      mockCategoryRepository.find.mockResolvedValue(mockCategories);
+      mockCategoryRepository.findWithPagination.mockResolvedValue({
+        documents: mockCategories,
+        total: 25,
+        page: 2,
+        totalPages: 3,
+      });
 
       const result = await categoryService.getUserCategories(mockUserId, {
         page: 2,
@@ -660,19 +678,27 @@ describe('Category Service', () => {
         { _id: new mongoose.Types.ObjectId(), name: 'Root Category' },
       ] as any;
 
-      mockCategoryRepository.count.mockResolvedValue(1);
-      mockCategoryRepository.find.mockResolvedValue(mockCategories);
+      mockCategoryRepository.findWithPagination.mockResolvedValue({
+        documents: mockCategories,
+        total: 1,
+        page: 1,
+        totalPages: 1,
+      });
 
       const result = await categoryService.getUserCategories(mockUserId, {
         parentId: '',
       });
 
       expect(result.categories).toEqual(mockCategories);
-      expect(mockCategoryRepository.count).toHaveBeenCalledWith(
+      expect(mockCategoryRepository.findWithPagination).toHaveBeenCalledWith(
         expect.objectContaining({
           userId: new mongoose.Types.ObjectId(mockUserId),
           parentId: null,
-        })
+        }),
+        1,
+        20,
+        { level: 1, name: 1 },
+        undefined
       );
     });
 
@@ -681,18 +707,26 @@ describe('Category Service', () => {
         { _id: new mongoose.Types.ObjectId(), name: 'Any Category' },
       ] as any;
 
-      mockCategoryRepository.count.mockResolvedValue(1);
-      mockCategoryRepository.find.mockResolvedValue(mockCategories);
+      mockCategoryRepository.findWithPagination.mockResolvedValue({
+        documents: mockCategories,
+        total: 1,
+        page: 1,
+        totalPages: 1,
+      });
 
       const result = await categoryService.getUserCategories(mockUserId, {
         parentId: undefined,
       });
 
       expect(result.categories).toEqual(mockCategories);
-      expect(mockCategoryRepository.count).toHaveBeenCalledWith(
+      expect(mockCategoryRepository.findWithPagination).toHaveBeenCalledWith(
         expect.objectContaining({
           userId: new mongoose.Types.ObjectId(mockUserId),
-        })
+        }),
+        1,
+        20,
+        { level: 1, name: 1 },
+        undefined
       );
     });
 
@@ -701,16 +735,24 @@ describe('Category Service', () => {
         { _id: new mongoose.Types.ObjectId(), name: 'Level 1 Category' },
       ] as any;
 
-      mockCategoryRepository.count.mockResolvedValue(1);
-      mockCategoryRepository.find.mockResolvedValue(mockCategories);
+      mockCategoryRepository.findWithPagination.mockResolvedValue({
+        documents: mockCategories,
+        total: 1,
+        page: 1,
+        totalPages: 1,
+      });
 
       const result = await categoryService.getUserCategories(mockUserId, {
         level: 1,
       });
 
       expect(result.categories).toEqual(mockCategories);
-      expect(mockCategoryRepository.count).toHaveBeenCalledWith(
-        expect.objectContaining({ level: 1 })
+      expect(mockCategoryRepository.findWithPagination).toHaveBeenCalledWith(
+        expect.objectContaining({ level: 1 }),
+        1,
+        20,
+        { level: 1, name: 1 },
+        undefined
       );
     });
 
@@ -719,16 +761,24 @@ describe('Category Service', () => {
         { _id: new mongoose.Types.ObjectId(), name: 'Active Category' },
       ] as any;
 
-      mockCategoryRepository.count.mockResolvedValue(1);
-      mockCategoryRepository.find.mockResolvedValue(mockCategories);
+      mockCategoryRepository.findWithPagination.mockResolvedValue({
+        documents: mockCategories,
+        total: 1,
+        page: 1,
+        totalPages: 1,
+      });
 
       const result = await categoryService.getUserCategories(mockUserId, {
         isActive: true,
       });
 
       expect(result.categories).toEqual(mockCategories);
-      expect(mockCategoryRepository.count).toHaveBeenCalledWith(
-        expect.objectContaining({ isActive: true })
+      expect(mockCategoryRepository.findWithPagination).toHaveBeenCalledWith(
+        expect.objectContaining({ isActive: true }),
+        1,
+        20,
+        { level: 1, name: 1 },
+        undefined
       );
     });
 
@@ -737,21 +787,29 @@ describe('Category Service', () => {
         { _id: new mongoose.Types.ObjectId(), name: 'Food Category' },
       ] as any;
 
-      mockCategoryRepository.count.mockResolvedValue(1);
-      mockCategoryRepository.find.mockResolvedValue(mockCategories);
+      mockCategoryRepository.findWithPagination.mockResolvedValue({
+        documents: mockCategories,
+        total: 1,
+        page: 1,
+        totalPages: 1,
+      });
 
       const result = await categoryService.getUserCategories(mockUserId, {
         search: 'food',
       });
 
       expect(result.categories).toEqual(mockCategories);
-      expect(mockCategoryRepository.count).toHaveBeenCalledWith(
+      expect(mockCategoryRepository.findWithPagination).toHaveBeenCalledWith(
         expect.objectContaining({
           $or: [
             { name: { $regex: 'food', $options: 'i' } },
             { description: { $regex: 'food', $options: 'i' } },
           ],
-        })
+        }),
+        1,
+        20,
+        { level: 1, name: 1 },
+        undefined
       );
     });
 
@@ -764,8 +822,12 @@ describe('Category Service', () => {
         },
       ] as any;
 
-      mockCategoryRepository.count.mockResolvedValue(1);
-      mockCategoryRepository.find.mockResolvedValue(mockCategories);
+      mockCategoryRepository.findWithPagination.mockResolvedValue({
+        documents: mockCategories,
+        total: 1,
+        page: 1,
+        totalPages: 1,
+      });
 
       const result = await categoryService.getUserCategories(mockUserId, {
         search: 'food',
@@ -779,8 +841,12 @@ describe('Category Service', () => {
         { _id: new mongoose.Types.ObjectId(), name: 'FOOD Category' },
       ] as any;
 
-      mockCategoryRepository.count.mockResolvedValue(1);
-      mockCategoryRepository.find.mockResolvedValue(mockCategories);
+      mockCategoryRepository.findWithPagination.mockResolvedValue({
+        documents: mockCategories,
+        total: 1,
+        page: 1,
+        totalPages: 1,
+      });
 
       const result = await categoryService.getUserCategories(mockUserId, {
         search: 'food',
@@ -791,7 +857,7 @@ describe('Category Service', () => {
 
     it('should handle repository errors during retrieval', async () => {
       const mockError = new Error('Database error');
-      mockCategoryRepository.count.mockRejectedValue(mockError);
+      mockCategoryRepository.findWithPagination.mockRejectedValue(mockError);
 
       await expect(
         categoryService.getUserCategories(mockUserId)
@@ -799,9 +865,8 @@ describe('Category Service', () => {
     });
 
     it('should handle find repository errors during retrieval', async () => {
-      mockCategoryRepository.count.mockResolvedValue(1);
       const mockError = new Error('Find error');
-      mockCategoryRepository.find.mockRejectedValue(mockError);
+      mockCategoryRepository.findWithPagination.mockRejectedValue(mockError);
 
       await expect(
         categoryService.getUserCategories(mockUserId)
@@ -810,8 +875,12 @@ describe('Category Service', () => {
 
     it('should handle edge case pagination values', async () => {
       // Test with page 1, limit 1
-      mockCategoryRepository.count.mockResolvedValue(1);
-      mockCategoryRepository.find.mockResolvedValue([{} as any]);
+      mockCategoryRepository.findWithPagination.mockResolvedValue({
+        documents: [{} as any],
+        total: 1,
+        page: 1,
+        totalPages: 1,
+      });
 
       const result1 = await categoryService.getUserCategories(mockUserId, {
         page: 1,
@@ -821,8 +890,12 @@ describe('Category Service', () => {
       expect(result1.totalPages).toBe(1);
 
       // Test with page 1, limit 10, total 25
-      mockCategoryRepository.count.mockResolvedValue(25);
-      mockCategoryRepository.find.mockResolvedValue(Array(10).fill({} as any));
+      mockCategoryRepository.findWithPagination.mockResolvedValue({
+        documents: Array(10).fill({} as any),
+        total: 25,
+        page: 1,
+        totalPages: 3,
+      });
 
       const result2 = await categoryService.getUserCategories(mockUserId, {
         page: 1,
@@ -833,8 +906,12 @@ describe('Category Service', () => {
     });
 
     it('should handle zero total count', async () => {
-      mockCategoryRepository.count.mockResolvedValue(0);
-      mockCategoryRepository.find.mockResolvedValue([]);
+      mockCategoryRepository.findWithPagination.mockResolvedValue({
+        documents: [],
+        total: 0,
+        page: 1,
+        totalPages: 0,
+      });
 
       const result = await categoryService.getUserCategories(mockUserId);
 
@@ -844,8 +921,12 @@ describe('Category Service', () => {
     });
 
     it('should handle single page results', async () => {
-      mockCategoryRepository.count.mockResolvedValue(5);
-      mockCategoryRepository.find.mockResolvedValue(Array(5).fill({} as any));
+      mockCategoryRepository.findWithPagination.mockResolvedValue({
+        documents: Array(5).fill({} as any),
+        total: 5,
+        page: 1,
+        totalPages: 1,
+      });
 
       const result = await categoryService.getUserCategories(mockUserId, {
         page: 1,
@@ -856,8 +937,12 @@ describe('Category Service', () => {
     });
 
     it('should handle multiple page results', async () => {
-      mockCategoryRepository.count.mockResolvedValue(25);
-      mockCategoryRepository.find.mockResolvedValue(Array(10).fill({} as any));
+      mockCategoryRepository.findWithPagination.mockResolvedValue({
+        documents: Array(10).fill({} as any),
+        total: 25,
+        page: 1,
+        totalPages: 3,
+      });
 
       const result = await categoryService.getUserCategories(mockUserId, {
         page: 1,
@@ -868,8 +953,12 @@ describe('Category Service', () => {
     });
 
     it('should handle last page with remaining items', async () => {
-      mockCategoryRepository.count.mockResolvedValue(25);
-      mockCategoryRepository.find.mockResolvedValue(Array(5).fill({} as any));
+      mockCategoryRepository.findWithPagination.mockResolvedValue({
+        documents: Array(5).fill({} as any),
+        total: 25,
+        page: 3,
+        totalPages: 3,
+      });
 
       const result = await categoryService.getUserCategories(mockUserId, {
         page: 3,

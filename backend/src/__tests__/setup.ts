@@ -4,6 +4,7 @@ import mongoose from 'mongoose';
 // Import models to ensure they are registered
 import '../modules/financial/categories/models/category.model';
 import '../modules/financial/transactions/models/transaction.model';
+import '../modules/financial/budgets/models/budget.model';
 import '../modules/users/user.model';
 
 let mongod: MongoMemoryServer;

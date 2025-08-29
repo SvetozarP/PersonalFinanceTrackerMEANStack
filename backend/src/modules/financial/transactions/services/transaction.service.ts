@@ -290,7 +290,7 @@ export class TransactionService {
         updateData.recurrencePattern !== undefined
       ) {
         if (updatedTransaction) {
-          this.updateRecurringSeries(updatedTransaction);
+          await this.updateRecurringSeries(updatedTransaction);
         }
       }
 
@@ -663,7 +663,7 @@ export class TransactionService {
   /**
    * Update recurring transaction series
    */
-  private updateRecurringSeries(transaction: ITransaction): void {
+  private async updateRecurringSeries(transaction: ITransaction): Promise<void> {
     try {
       // This would involve updating all related recurring transactions
       // Implementation depends on your specific requirements
