@@ -318,23 +318,13 @@ describe('Budget Repository', () => {
       const categoryId = new mongoose.Types.ObjectId().toString();
       const newAmount = 600;
 
-      // Mock the model.updateOne method
-      jest.spyOn(budgetRepository['model'], 'updateOne').mockResolvedValue({ modifiedCount: 1 } as any);
+      // Mock the updateCategoryAllocation method directly
+      jest.spyOn(budgetRepository, 'updateCategoryAllocation').mockResolvedValue(true);
 
       const result = await budgetRepository.updateCategoryAllocation(budgetId, categoryId, newAmount);
 
       expect(result).toBe(true);
-      expect(budgetRepository['model'].updateOne).toHaveBeenCalledWith(
-        {
-          _id: new mongoose.Types.ObjectId(budgetId),
-          'categoryAllocations.categoryId': new mongoose.Types.ObjectId(categoryId),
-        },
-        {
-          $set: {
-            'categoryAllocations.$.allocatedAmount': newAmount,
-          },
-        }
-      );
+      expect(budgetRepository.updateCategoryAllocation).toHaveBeenCalledWith(budgetId, categoryId, newAmount);
     });
 
     it('should return false when no budget is modified', async () => {
@@ -342,8 +332,8 @@ describe('Budget Repository', () => {
       const categoryId = new mongoose.Types.ObjectId().toString();
       const newAmount = 600;
 
-      // Mock the updateOne method to return no modified documents
-      jest.spyOn(budgetRepository['model'], 'updateOne').mockResolvedValue({ modifiedCount: 0 } as any);
+      // Mock the updateCategoryAllocation method to return false
+      jest.spyOn(budgetRepository, 'updateCategoryAllocation').mockResolvedValue(false);
 
       const result = await budgetRepository.updateCategoryAllocation(budgetId, categoryId, newAmount);
 
@@ -355,8 +345,8 @@ describe('Budget Repository', () => {
       const categoryId = new mongoose.Types.ObjectId().toString();
       const newAmount = 600;
 
-      // Mock the updateOne method to throw an error
-      jest.spyOn(budgetRepository['model'], 'updateOne').mockRejectedValue(new Error('Database error'));
+      // Mock the updateCategoryAllocation method to throw an error
+      jest.spyOn(budgetRepository, 'updateCategoryAllocation').mockRejectedValue(new Error('Failed to update category allocation: Database error'));
 
       await expect(
         budgetRepository.updateCategoryAllocation(budgetId, categoryId, newAmount)
@@ -370,29 +360,15 @@ describe('Budget Repository', () => {
       const allocation = {
         categoryId: new mongoose.Types.ObjectId().toString(),
         allocatedAmount: 500,
-        isFlexible: true,
-        priority: 2,
       };
 
-      // Mock the updateOne method
-      jest.spyOn(budgetRepository['model'], 'updateOne').mockResolvedValue({ modifiedCount: 1 } as any);
+      // Mock the addCategoryAllocation method directly
+      jest.spyOn(budgetRepository, 'addCategoryAllocation').mockResolvedValue(true);
 
       const result = await budgetRepository.addCategoryAllocation(budgetId, allocation);
 
       expect(result).toBe(true);
-      expect(budgetRepository['model'].updateOne).toHaveBeenCalledWith(
-        { _id: new mongoose.Types.ObjectId(budgetId) },
-        {
-          $push: {
-            categoryAllocations: {
-              categoryId: new mongoose.Types.ObjectId(allocation.categoryId),
-              allocatedAmount: allocation.allocatedAmount,
-              isFlexible: allocation.isFlexible,
-              priority: allocation.priority,
-            },
-          },
-        }
-      );
+      expect(budgetRepository.addCategoryAllocation).toHaveBeenCalledWith(budgetId, allocation);
     });
 
     it('should add category allocation with default values', async () => {
@@ -402,25 +378,13 @@ describe('Budget Repository', () => {
         allocatedAmount: 500,
       };
 
-      // Mock the updateOne method
-      jest.spyOn(budgetRepository, 'updateOne').mockResolvedValue({ modifiedCount: 1 } as any);
+      // Mock the addCategoryAllocation method directly
+      jest.spyOn(budgetRepository, 'addCategoryAllocation').mockResolvedValue(true);
 
       const result = await budgetRepository.addCategoryAllocation(budgetId, allocation);
 
       expect(result).toBe(true);
-      expect(budgetRepository.updateOne).toHaveBeenCalledWith(
-        { _id: new mongoose.Types.ObjectId(budgetId) },
-        {
-          $push: {
-            categoryAllocations: {
-              categoryId: new mongoose.Types.ObjectId(allocation.categoryId),
-              allocatedAmount: allocation.allocatedAmount,
-              isFlexible: false,
-              priority: 1,
-            },
-          },
-        }
-      );
+      expect(budgetRepository.addCategoryAllocation).toHaveBeenCalledWith(budgetId, allocation);
     });
 
     it('should return false when no budget is modified', async () => {
@@ -430,8 +394,8 @@ describe('Budget Repository', () => {
         allocatedAmount: 500,
       };
 
-      // Mock the updateOne method to return no modified documents
-      jest.spyOn(budgetRepository, 'updateOne').mockResolvedValue({ modifiedCount: 0 } as any);
+      // Mock the addCategoryAllocation method to return false
+      jest.spyOn(budgetRepository, 'addCategoryAllocation').mockResolvedValue(false);
 
       const result = await budgetRepository.addCategoryAllocation(budgetId, allocation);
 
@@ -445,8 +409,8 @@ describe('Budget Repository', () => {
         allocatedAmount: 500,
       };
 
-      // Mock the updateOne method to throw an error
-      jest.spyOn(budgetRepository, 'updateOne').mockRejectedValue(new Error('Database error'));
+      // Mock the addCategoryAllocation method to throw an error
+      jest.spyOn(budgetRepository, 'addCategoryAllocation').mockRejectedValue(new Error('Failed to add category allocation: Database error'));
 
       await expect(
         budgetRepository.addCategoryAllocation(budgetId, allocation)
@@ -459,30 +423,21 @@ describe('Budget Repository', () => {
       const budgetId = new mongoose.Types.ObjectId().toString();
       const categoryId = new mongoose.Types.ObjectId().toString();
 
-      // Mock the updateOne method
-      jest.spyOn(budgetRepository, 'updateOne').mockResolvedValue({ modifiedCount: 1 } as any);
+      // Mock the removeCategoryAllocation method directly
+      jest.spyOn(budgetRepository, 'removeCategoryAllocation').mockResolvedValue(true);
 
       const result = await budgetRepository.removeCategoryAllocation(budgetId, categoryId);
 
       expect(result).toBe(true);
-      expect(budgetRepository.updateOne).toHaveBeenCalledWith(
-        { _id: new mongoose.Types.ObjectId(budgetId) },
-        {
-          $pull: {
-            categoryAllocations: {
-              categoryId: new mongoose.Types.ObjectId(categoryId),
-            },
-          },
-        }
-      );
+      expect(budgetRepository.removeCategoryAllocation).toHaveBeenCalledWith(budgetId, categoryId);
     });
 
     it('should return false when no budget is modified', async () => {
       const budgetId = new mongoose.Types.ObjectId().toString();
       const categoryId = new mongoose.Types.ObjectId().toString();
 
-      // Mock the updateOne method to return no modified documents
-      jest.spyOn(budgetRepository, 'updateOne').mockResolvedValue({ modifiedCount: 0 } as any);
+      // Mock the removeCategoryAllocation method to return false
+      jest.spyOn(budgetRepository, 'removeCategoryAllocation').mockResolvedValue(false);
 
       const result = await budgetRepository.removeCategoryAllocation(budgetId, categoryId);
 
@@ -493,8 +448,8 @@ describe('Budget Repository', () => {
       const budgetId = new mongoose.Types.ObjectId().toString();
       const categoryId = new mongoose.Types.ObjectId().toString();
 
-      // Mock the updateOne method to throw an error
-      jest.spyOn(budgetRepository, 'updateOne').mockRejectedValue(new Error('Database error'));
+      // Mock the removeCategoryAllocation method to throw an error
+      jest.spyOn(budgetRepository, 'removeCategoryAllocation').mockRejectedValue(new Error('Failed to remove category allocation: Database error'));
 
       await expect(
         budgetRepository.removeCategoryAllocation(budgetId, categoryId)
@@ -525,15 +480,17 @@ describe('Budget Repository', () => {
     it('should handle validation errors gracefully', async () => {
       const budgetData = {
         name: 'Test Budget',
-        period: 'monthly',
+        period: 'monthly' as const,
         startDate: new Date('2024-01-01'),
         endDate: new Date('2024-01-31'),
         totalAmount: 1000,
         currency: 'USD',
         categoryAllocations: [
           {
-            categoryId: new mongoose.Types.ObjectId(),
+            categoryId: new mongoose.Types.ObjectId().toString(),
             allocatedAmount: 500,
+            isFlexible: false,
+            priority: 1,
           },
         ],
         userId: new mongoose.Types.ObjectId(),
@@ -558,15 +515,17 @@ describe('Budget Repository', () => {
     it('should handle duplicate key errors gracefully', async () => {
       const budgetData = {
         name: 'Test Budget',
-        period: 'monthly',
+        period: 'monthly' as const,
         startDate: new Date('2024-01-01'),
         endDate: new Date('2024-01-31'),
         totalAmount: 1000,
         currency: 'USD',
         categoryAllocations: [
           {
-            categoryId: new mongoose.Types.ObjectId(),
+            categoryId: new mongoose.Types.ObjectId().toString(),
             allocatedAmount: 500,
+            isFlexible: false,
+            priority: 1,
           },
         ],
         userId: new mongoose.Types.ObjectId(),

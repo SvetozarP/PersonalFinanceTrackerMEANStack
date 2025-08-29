@@ -30,6 +30,7 @@ describe('Budget Service', () => {
       count: jest.fn(),
       aggregate: jest.fn(),
       findBudgetsWithFilters: jest.fn(),
+      findWithPagination: jest.fn(),
       getBudgetSummary: jest.fn(),
       findActiveBudgetsInRange: jest.fn(),
       getMonthlyBudgetStats: jest.fn(),
@@ -578,8 +579,8 @@ describe('Budget Service', () => {
         limit: 999999,
       };
 
-      mockBudgetRepository.findWithPagination.mockResolvedValue({
-        documents: [],
+      mockBudgetRepository.findBudgetsWithFilters.mockResolvedValue({
+        budgets: [],
         total: 0,
         page: 999999,
         totalPages: 0,
@@ -596,8 +597,8 @@ describe('Budget Service', () => {
         search: '',
       };
 
-      mockBudgetRepository.findWithPagination.mockResolvedValue({
-        documents: [],
+      mockBudgetRepository.findBudgetsWithFilters.mockResolvedValue({
+        budgets: [],
         total: 0,
         page: 1,
         totalPages: 0,
@@ -613,8 +614,8 @@ describe('Budget Service', () => {
         search: '   ',
       };
 
-      mockBudgetRepository.findWithPagination.mockResolvedValue({
-        documents: [],
+      mockBudgetRepository.findBudgetsWithFilters.mockResolvedValue({
+        budgets: [],
         total: 0,
         page: 1,
         totalPages: 0,
@@ -631,8 +632,8 @@ describe('Budget Service', () => {
         search: longSearchTerm,
       };
 
-      mockBudgetRepository.findWithPagination.mockResolvedValue({
-        documents: [],
+      mockBudgetRepository.findBudgetsWithFilters.mockResolvedValue({
+        budgets: [],
         total: 0,
         page: 1,
         totalPages: 0,
@@ -649,8 +650,8 @@ describe('Budget Service', () => {
         sortOrder: 'desc',
       };
 
-      mockBudgetRepository.findWithPagination.mockResolvedValue({
-        documents: [],
+      mockBudgetRepository.findBudgetsWithFilters.mockResolvedValue({
+        budgets: [],
         total: 0,
         page: 1,
         totalPages: 0,
@@ -667,8 +668,8 @@ describe('Budget Service', () => {
         sortOrder: 'asc',
       };
 
-      mockBudgetRepository.findWithPagination.mockResolvedValue({
-        documents: [],
+      mockBudgetRepository.findBudgetsWithFilters.mockResolvedValue({
+        budgets: [],
         total: 0,
         page: 1,
         totalPages: 0,
@@ -685,8 +686,8 @@ describe('Budget Service', () => {
         sortOrder: 'invalid',
       };
 
-      mockBudgetRepository.findWithPagination.mockResolvedValue({
-        documents: [],
+      mockBudgetRepository.findBudgetsWithFilters.mockResolvedValue({
+        budgets: [],
         total: 0,
         page: 1,
         totalPages: 0,
@@ -735,8 +736,16 @@ describe('Budget Service', () => {
       const userId = new mongoose.Types.ObjectId().toString();
       const budgetDataWithZeroAmount = {
         name: 'Test Budget',
-        period: 'monthly',
+        period: 'monthly' as const,
         totalAmount: 0,
+        startDate: new Date('2024-01-01'),
+        endDate: new Date('2024-01-31'),
+        categoryAllocations: [
+          {
+            categoryId: new mongoose.Types.ObjectId().toString(),
+            allocatedAmount: 0,
+          },
+        ],
       };
 
       await expect(budgetService.createBudget(userId, budgetDataWithZeroAmount)).rejects.toThrow();
@@ -746,8 +755,16 @@ describe('Budget Service', () => {
       const userId = new mongoose.Types.ObjectId().toString();
       const budgetDataWithSmallAmount = {
         name: 'Test Budget',
-        period: 'monthly',
+        period: 'monthly' as const,
         totalAmount: 0.001,
+        startDate: new Date('2024-01-01'),
+        endDate: new Date('2024-01-31'),
+        categoryAllocations: [
+          {
+            categoryId: new mongoose.Types.ObjectId().toString(),
+            allocatedAmount: 0.001,
+          },
+        ],
       };
 
       await expect(budgetService.createBudget(userId, budgetDataWithSmallAmount)).rejects.toThrow();
@@ -757,8 +774,16 @@ describe('Budget Service', () => {
       const userId = new mongoose.Types.ObjectId().toString();
       const budgetDataWithLargeAmount = {
         name: 'Test Budget',
-        period: 'monthly',
+        period: 'monthly' as const,
         totalAmount: 999999999999,
+        startDate: new Date('2024-01-01'),
+        endDate: new Date('2024-01-31'),
+        categoryAllocations: [
+          {
+            categoryId: new mongoose.Types.ObjectId().toString(),
+            allocatedAmount: 999999999999,
+          },
+        ],
       };
 
       await expect(budgetService.createBudget(userId, budgetDataWithLargeAmount)).rejects.toThrow();
@@ -768,9 +793,17 @@ describe('Budget Service', () => {
       const userId = new mongoose.Types.ObjectId().toString();
       const budgetDataWithInvalidCurrency = {
         name: 'Test Budget',
-        period: 'monthly',
+        period: 'monthly' as const,
         totalAmount: 1000,
         currency: 'INVALID',
+        startDate: new Date('2024-01-01'),
+        endDate: new Date('2024-01-31'),
+        categoryAllocations: [
+          {
+            categoryId: new mongoose.Types.ObjectId().toString(),
+            allocatedAmount: 1000,
+          },
+        ],
       };
 
       await expect(budgetService.createBudget(userId, budgetDataWithInvalidCurrency)).rejects.toThrow();
@@ -780,8 +813,16 @@ describe('Budget Service', () => {
       const userId = new mongoose.Types.ObjectId().toString();
       const budgetDataWithInvalidPeriod = {
         name: 'Test Budget',
-        period: 'invalid-period',
+        period: 'invalid-period' as any,
         totalAmount: 1000,
+        startDate: new Date('2024-01-01'),
+        endDate: new Date('2024-01-31'),
+        categoryAllocations: [
+          {
+            categoryId: new mongoose.Types.ObjectId().toString(),
+            allocatedAmount: 1000,
+          },
+        ],
       };
 
       await expect(budgetService.createBudget(userId, budgetDataWithInvalidPeriod)).rejects.toThrow();
@@ -791,9 +832,17 @@ describe('Budget Service', () => {
       const userId = new mongoose.Types.ObjectId().toString();
       const budgetDataWithInvalidStatus = {
         name: 'Test Budget',
-        period: 'monthly',
+        period: 'monthly' as const,
         totalAmount: 1000,
-        status: 'invalid-status',
+        status: 'invalid-status' as any,
+        startDate: new Date('2024-01-01'),
+        endDate: new Date('2024-01-31'),
+        categoryAllocations: [
+          {
+            categoryId: new mongoose.Types.ObjectId().toString(),
+            allocatedAmount: 1000,
+          },
+        ],
       };
 
       await expect(budgetService.createBudget(userId, budgetDataWithInvalidStatus)).rejects.toThrow();
@@ -805,10 +854,16 @@ describe('Budget Service', () => {
       futureDate.setFullYear(futureDate.getFullYear() + 1);
       const budgetDataWithFutureDate = {
         name: 'Test Budget',
-        period: 'monthly',
+        period: 'monthly' as const,
         totalAmount: 1000,
         startDate: futureDate,
         endDate: new Date(futureDate.getTime() + 30 * 24 * 60 * 60 * 1000),
+        categoryAllocations: [
+          {
+            categoryId: new mongoose.Types.ObjectId().toString(),
+            allocatedAmount: 1000,
+          },
+        ],
       };
 
       await expect(budgetService.createBudget(userId, budgetDataWithFutureDate)).rejects.toThrow();
@@ -819,10 +874,16 @@ describe('Budget Service', () => {
       const oldDate = new Date('1900-01-01');
       const budgetDataWithOldDate = {
         name: 'Test Budget',
-        period: 'monthly',
+        period: 'monthly' as const,
         totalAmount: 1000,
         startDate: oldDate,
         endDate: new Date(oldDate.getTime() + 30 * 24 * 60 * 60 * 1000),
+        categoryAllocations: [
+          {
+            categoryId: new mongoose.Types.ObjectId().toString(),
+            allocatedAmount: 1000,
+          },
+        ],
       };
 
       await expect(budgetService.createBudget(userId, budgetDataWithOldDate)).rejects.toThrow();
@@ -832,10 +893,16 @@ describe('Budget Service', () => {
       const userId = new mongoose.Types.ObjectId().toString();
       const budgetDataWithInvalidDateRange = {
         name: 'Test Budget',
-        period: 'monthly',
+        period: 'monthly' as const,
         totalAmount: 1000,
         startDate: new Date('2024-01-31'),
         endDate: new Date('2024-01-01'), // End before start
+        categoryAllocations: [
+          {
+            categoryId: new mongoose.Types.ObjectId().toString(),
+            allocatedAmount: 1000,
+          },
+        ],
       };
 
       await expect(budgetService.createBudget(userId, budgetDataWithInvalidDateRange)).rejects.toThrow();
