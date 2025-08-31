@@ -102,6 +102,17 @@ const startServer = async () => {
       console.error('❌ Failed to import category routes:', error);
     }
 
+    // Add analytics routes import and mounting
+    try {
+      const analyticsRoutes = await import(
+        './modules/financial/analytics/routes/analytics.routes'
+      );
+      app.use('/api/analytics', analyticsRoutes.default);
+      console.log('✅ Analytics routes mounted at /api/analytics');
+    } catch (error) {
+      console.error('❌ Failed to import analytics routes:', error);
+    }
+
     console.log('Routes mounting completed');
 
     // 404 handler - Register AFTER routes are mounted
