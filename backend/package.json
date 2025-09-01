@@ -1,7 +1,7 @@
 {
   "name": "finance-tracker-backend",
   "version": "1.0.0",
-  "type": "module",
+
   "description": "Backend API for Personal Finance Tracker",
   "main": "dist/app.js",
   "scripts": {
