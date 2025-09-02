@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import { logger } from '../shared/services/logger.service';
 import { config } from './environment';
+import { databaseOptimizationService } from '../shared/services/database-optimization.service';
 
 export class DatabaseConnection {
   private static instance: DatabaseConnection;
@@ -33,6 +34,14 @@ export class DatabaseConnection {
 
       this.isConnected = true;
       logger.info('✅ MongoDB connected successfully');
+
+      // Run database optimization after connection
+      try {
+        await databaseOptimizationService.optimizePerformance();
+        logger.info('✅ Database optimization completed');
+      } catch (error) {
+        logger.warn('Database optimization failed, continuing with startup', { error: String(error) });
+      }
 
       // Handle connection events
       mongoose.connection.on('error', error => {

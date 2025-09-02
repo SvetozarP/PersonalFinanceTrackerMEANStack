@@ -160,6 +160,21 @@ budgetSchema.index({ userId: 1, startDate: 1, endDate: 1 });
 budgetSchema.index({ userId: 1, period: 1 });
 budgetSchema.index({ 'categoryAllocations.categoryId': 1 });
 
+// Enhanced compound indexes for analytics and complex queries
+budgetSchema.index({ userId: 1, status: 1, startDate: 1, endDate: 1 });
+budgetSchema.index({ userId: 1, period: 1, status: 1 });
+budgetSchema.index({ userId: 1, isActive: 1, status: 1 });
+budgetSchema.index({ userId: 1, startDate: -1, endDate: -1 });
+budgetSchema.index({ userId: 1, totalAmount: -1, status: 1 });
+
+// Indexes for category allocation queries
+budgetSchema.index({ userId: 1, 'categoryAllocations.categoryId': 1, status: 1 });
+budgetSchema.index({ userId: 1, 'categoryAllocations.categoryId': 1, startDate: 1, endDate: 1 });
+
+// Indexes for date range queries (common in analytics)
+budgetSchema.index({ userId: 1, startDate: 1, endDate: 1, status: 1 });
+budgetSchema.index({ userId: 1, endDate: 1, status: 1 }); // For upcoming deadlines
+
 // Virtual for budget duration in days
 budgetSchema.virtual('durationDays').get(function () {
   if (this.startDate && this.endDate) {

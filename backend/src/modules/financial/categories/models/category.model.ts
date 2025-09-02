@@ -74,6 +74,16 @@ categorySchema.index({ parentId: 1, path: 1 });
 categorySchema.index({ userId: 1, level: 1 });
 categorySchema.index({ userId: 1, parentId: 1 });
 
+// Enhanced compound indexes for better performance
+categorySchema.index({ userId: 1, isActive: 1, level: 1 });
+categorySchema.index({ userId: 1, isActive: 1, parentId: 1 });
+categorySchema.index({ userId: 1, isSystem: 1, isActive: 1 });
+categorySchema.index({ userId: 1, name: 1, isActive: 1 });
+
+// Indexes for path-based queries (hierarchical navigation)
+categorySchema.index({ userId: 1, path: 1, isActive: 1 });
+categorySchema.index({ userId: 1, level: 1, isActive: 1, name: 1 });
+
 // Virtual for full path
 categorySchema.virtual('fullPath').get(function () {
   const pathArray = [...this.path];

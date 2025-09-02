@@ -315,6 +315,29 @@ transactionSchema.index({ userId: 1, isRecurring: 1, nextOccurrence: 1 });
 transactionSchema.index({ userId: 1, tags: 1, date: -1 });
 transactionSchema.index({ userId: 1, merchantName: 1, date: -1 });
 
+// Enhanced compound indexes for analytics and complex queries
+transactionSchema.index({ userId: 1, date: -1, type: 1, status: 1 });
+transactionSchema.index({ userId: 1, date: -1, categoryId: 1, type: 1 });
+transactionSchema.index({ userId: 1, accountId: 1, type: 1, date: -1 });
+transactionSchema.index({ userId: 1, categoryId: 1, type: 1, amount: -1 });
+transactionSchema.index({ userId: 1, date: -1, amount: -1 });
+transactionSchema.index({ userId: 1, paymentMethod: 1, date: -1 });
+transactionSchema.index({ userId: 1, currency: 1, date: -1 });
+
+// Indexes for aggregation pipelines
+transactionSchema.index({ userId: 1, isDeleted: 1, date: -1 });
+transactionSchema.index({ userId: 1, isDeleted: 1, type: 1, date: -1 });
+transactionSchema.index({ userId: 1, isDeleted: 1, categoryId: 1, type: 1 });
+
+// Indexes for recurring transactions
+transactionSchema.index({ userId: 1, isRecurring: 1, status: 1, nextOccurrence: 1 });
+transactionSchema.index({ userId: 1, recurrencePattern: 1, categoryId: 1 });
+
+// Indexes for search and filtering
+transactionSchema.index({ userId: 1, amount: 1, date: -1 });
+transactionSchema.index({ userId: 1, externalId: 1 });
+transactionSchema.index({ userId: 1, source: 1, date: -1 });
+
 // Text index for search functionality
 transactionSchema.index({
   title: 'text',

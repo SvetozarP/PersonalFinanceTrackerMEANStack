@@ -9,6 +9,13 @@ import { config } from './config/environment';
 // Import database connection
 import { databaseConnection } from './config/database';
 
+// Import performance middleware
+import { 
+  performanceMiddleware, 
+  databasePerformanceMiddleware, 
+  memoryMonitoringMiddleware 
+} from './shared/middleware/performance.middleware';
+
 // Import routes
 import authRoutes from './modules/auth/auth.routes';
 
@@ -24,6 +31,12 @@ app.use(
   })
 );
 app.use(morgan('combined'));
+
+// Performance monitoring middleware
+app.use(performanceMiddleware);
+app.use(databasePerformanceMiddleware);
+app.use(memoryMonitoringMiddleware);
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
