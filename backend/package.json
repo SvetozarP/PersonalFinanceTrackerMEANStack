@@ -17,7 +17,8 @@
     "format": "prettier --write src/**/*.{ts,js,json}",
     "format:check": "prettier --check src/**/*.{ts,js,json}",
     "type-check": "tsc --noEmit",
-    "optimize-db": "ts-node src/scripts/optimize-database.ts"
+    "optimize-db": "ts-node src/scripts/optimize-database.ts",
+    "validate-performance": "ts-node src/scripts/validate-performance.ts"
   },
   "keywords": [
     "finance",

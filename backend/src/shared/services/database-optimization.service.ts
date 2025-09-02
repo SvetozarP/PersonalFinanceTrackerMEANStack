@@ -174,15 +174,20 @@ export class DatabaseOptimizationService {
       }
 
       for (const criticalIndex of criticalIndexes) {
-        const collection = db.collection(criticalIndex.collection);
-        const indexes = await collection.indexes();
-        
-        const indexExists = indexes.some(index => 
-          this.compareIndexKeys(index.key, criticalIndex.index)
-        );
+        try {
+          const collection = db.collection(criticalIndex.collection);
+          const indexes = await collection.indexes();
+          
+          const indexExists = indexes.some(index => 
+            this.compareIndexKeys(index.key, criticalIndex.index)
+          );
 
-        if (!indexExists) {
-          missing.push(`${criticalIndex.collection}: ${JSON.stringify(criticalIndex.index)}`);
+          if (!indexExists) {
+            missing.push(`${criticalIndex.collection}: ${JSON.stringify(criticalIndex.index)}`);
+          }
+        } catch (error) {
+          // If collection doesn't exist, consider the index missing
+          missing.push(`${criticalIndex.collection}: ${JSON.stringify(criticalIndex.index)} (collection not found)`);
         }
       }
 
@@ -216,12 +221,34 @@ export class DatabaseOptimizationService {
 
       for (const missingIndex of missingIndexes) {
         const [collectionName, indexStr] = missingIndex.split(': ');
-        const indexKey = JSON.parse(indexStr);
+        if (!collectionName || !indexStr) {
+          logger.warn('Skipping malformed missing index', { missingIndex });
+          continue;
+        }
         
-        const collection = db.collection(collectionName);
-        await collection.createIndex(indexKey, { background: true });
+        let indexKey;
+        try {
+          indexKey = JSON.parse(indexStr);
+        } catch (error) {
+          logger.warn('Skipping invalid index JSON', { missingIndex, error: String(error) });
+          continue;
+        }
         
-        logger.info(`Created index for ${collectionName}`, { index: indexKey });
+                const collection = db.collection(collectionName);
+        try {
+          await collection.createIndex(indexKey, { background: true });
+          logger.info(`Created index for ${collectionName}`, { index: indexKey });
+        } catch (error) {
+          // Index might already exist, check if it's a duplicate name error
+          if (error instanceof Error && error.message.includes('same name')) {
+            logger.info(`Index already exists for ${collectionName}`, { index: indexKey });
+          } else {
+            logger.warn(`Failed to create index for ${collectionName}`, { 
+              index: indexKey, 
+              error: error instanceof Error ? error.message : String(error) 
+            });
+          }
+        }
       }
 
       logger.info('All missing indexes created successfully');
@@ -244,38 +271,67 @@ export class DatabaseOptimizationService {
         throw new Error('Database connection not established');
       }
       
-      // Get database stats
-      const dbStats = await db.stats();
-      
       // Get collection stats
       const collections = await db.listCollections().toArray();
       const collectionStats: any = {};
 
       for (const collection of collections) {
-        const stats = await (db.collection(collection.name) as any).stats();
-        collectionStats[collection.name] = {
-          count: stats.count,
-          size: stats.size,
-          avgObjSize: stats.avgObjSize,
-          storageSize: stats.storageSize,
-          totalIndexSize: stats.totalIndexSize,
-          indexSizes: stats.indexSizes
-        };
+        try {
+          // Use the admin command to get collection stats
+          const stats = await db.admin().command({ collStats: collection.name });
+          collectionStats[collection.name] = {
+            count: stats.count || 0,
+            size: stats.size || 0,
+            avgObjSize: stats.avgObjSize || 0,
+            storageSize: stats.storageSize || 0,
+            totalIndexSize: stats.totalIndexSize || 0,
+            indexSizes: stats.indexSizes || {}
+          };
+        } catch (error) {
+          // If collection doesn't exist or stats fail, use default values
+          collectionStats[collection.name] = {
+            count: 0,
+            size: 0,
+            avgObjSize: 0,
+            storageSize: 0,
+            totalIndexSize: 0,
+            indexSizes: {}
+          };
+        }
       }
 
-      const metrics = {
-        database: {
-          collections: dbStats.collections,
-          dataSize: dbStats.dataSize,
-          storageSize: dbStats.storageSize,
-          totalIndexSize: dbStats.totalIndexSize,
-          indexCount: dbStats.indexes
-        },
-        collections: collectionStats
-      };
+      try {
+        // Get database stats
+        const dbStats = await db.admin().command({ dbStats: 1 });
+        const metrics = {
+          database: {
+            collections: dbStats.collections || collections.length,
+            dataSize: dbStats.dataSize || 0,
+            storageSize: dbStats.storageSize || 0,
+            totalIndexSize: dbStats.totalIndexSize || 0,
+            indexCount: dbStats.indexes || 0
+          },
+          collections: collectionStats
+        };
 
-      logger.info('Database metrics retrieved', metrics);
-      return metrics;
+        logger.info('Database metrics retrieved', metrics);
+        return metrics;
+      } catch (error) {
+        // Fallback if dbStats fails
+        const metrics = {
+          database: {
+            collections: collections.length,
+            dataSize: 0,
+            storageSize: 0,
+            totalIndexSize: 0,
+            indexCount: 0
+          },
+          collections: collectionStats
+        };
+
+        logger.info('Database metrics retrieved (fallback)', metrics);
+        return metrics;
+      }
     } catch (error) {
       logger.error('Error getting database metrics', {
         error: String(error)
