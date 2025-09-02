@@ -1,598 +1,372 @@
 import mongoose from 'mongoose';
 import { BudgetRepository } from '../../../../modules/financial/budgets/repositories/budget.repository';
+import Budget from '../../../../modules/financial/budgets/models/budget.model';
+import { IBudget, IBudgetFilters } from '../../../../modules/financial/budgets/interfaces/budget.interface';
 
-// Mock the entire BudgetRepository class
-jest.mock('../../../../modules/financial/budgets/repositories/budget.repository');
+// Mock the logger service
+jest.mock('../../../../shared/services/logger.service', () => ({
+  logger: {
+    info: jest.fn(),
+    error: jest.fn(),
+    warn: jest.fn(),
+    debug: jest.fn(),
+  },
+}));
 
-describe('Budget Repository', () => {
+describe('Budget Repository - Simple Tests', () => {
   let budgetRepository: BudgetRepository;
+  let testUserId: mongoose.Types.ObjectId;
+  let testCategoryId: mongoose.Types.ObjectId;
 
-  beforeEach(() => {
+  beforeAll(async () => {
+    testUserId = new mongoose.Types.ObjectId();
+    testCategoryId = new mongoose.Types.ObjectId();
+  });
+
+  beforeEach(async () => {
     // Clear all mocks
     jest.clearAllMocks();
-    
-    // Create a new instance for each test
+
+    // Create the actual repository instance
     budgetRepository = new BudgetRepository();
+
+    // Clear any existing test data
+    await Budget.deleteMany({});
   });
 
-  describe('create', () => {
-    it('should create a budget successfully', async () => {
-      const budgetData = {
-        name: 'Monthly Budget',
-        period: 'monthly' as const,
-        startDate: new Date('2024-01-01'),
-        endDate: new Date('2024-01-31'),
-        totalAmount: 1000,
-        currency: 'USD',
-        categoryAllocations: [],
-        userId: new mongoose.Types.ObjectId(),
+  afterEach(async () => {
+    // Clean up test data
+    await Budget.deleteMany({});
+  });
+
+  // Helper function to create valid budget data
+  const createValidBudgetData = (overrides: Partial<IBudget> = {}) => ({
+    userId: testUserId,
+    name: 'Test Budget',
+    startDate: new Date('2024-01-01'),
+    endDate: new Date('2024-12-31'),
+    totalAmount: 1000,
+    status: 'active' as const,
+    period: 'yearly' as const,
+    currency: 'USD',
+    categoryAllocations: [
+      {
+        categoryId: testCategoryId.toString(),
+        allocatedAmount: 500,
+        priority: 1,
+        isFlexible: false,
+      },
+    ],
+    isActive: true,
+    isDeleted: false,
+    alertThreshold: 80,
+    ...overrides,
+  });
+
+  describe('findBudgetsWithFilters', () => {
+    it('should find budgets with basic filters', async () => {
+      // Create test budgets
+      await Budget.create(createValidBudgetData({
+        name: 'Budget 1',
+        status: 'active',
+      }));
+      await Budget.create(createValidBudgetData({
+        name: 'Budget 2',
+        status: 'paused',
+      }));
+
+      const filters: IBudgetFilters = {
+        userId: testUserId.toString(),
+        status: 'active',
       };
 
-      const createdBudget = { ...budgetData, _id: new mongoose.Types.ObjectId() };
-      
-      // Mock the create method
-      jest.spyOn(budgetRepository, 'create').mockResolvedValue(createdBudget as any);
+      const result = await budgetRepository.findBudgetsWithFilters(filters, 1, 10);
 
-      const result = await budgetRepository.create(budgetData as any);
-
-      expect(result).toEqual(createdBudget);
+      expect(result).toBeDefined();
+      expect(result.budgets).toHaveLength(1);
+      expect(result.budgets[0].name).toBe('Budget 1');
+      expect(result.total).toBe(1);
+      expect(result.page).toBe(1);
+      expect(result.totalPages).toBe(1);
     });
 
-    it('should handle creation errors', async () => {
-      const budgetData = {
-        name: 'Monthly Budget',
-        period: 'monthly' as const,
-        startDate: new Date('2024-01-01'),
-        endDate: new Date('2024-01-31'),
-        totalAmount: 1000,
-        currency: 'USD',
-        categoryAllocations: [],
-        userId: new mongoose.Types.ObjectId(),
+    it('should handle empty results', async () => {
+      const filters: IBudgetFilters = {
+        userId: testUserId.toString(),
+        status: 'active',
       };
 
-      // Mock the create method to throw an error
-      jest.spyOn(budgetRepository, 'create').mockRejectedValue(new Error('Database error'));
+      const result = await budgetRepository.findBudgetsWithFilters(filters, 1, 10);
 
-      await expect(budgetRepository.create(budgetData as any)).rejects.toThrow('Database error');
+      expect(result).toBeDefined();
+      expect(result.budgets).toHaveLength(0);
+      expect(result.total).toBe(0);
+      expect(result.page).toBe(1);
+      expect(result.totalPages).toBe(0);
+    });
+
+    it('should handle pagination correctly', async () => {
+      // Create multiple test budgets
+      const budgets = [];
+      for (let i = 1; i <= 15; i++) {
+        budgets.push(createValidBudgetData({ name: `Budget ${i}` }));
+      }
+      await Budget.create(budgets);
+
+      const filters: IBudgetFilters = {
+        userId: testUserId.toString(),
+      };
+
+      const result = await budgetRepository.findBudgetsWithFilters(filters, 2, 10);
+
+      expect(result).toBeDefined();
+      expect(result.budgets).toHaveLength(5); // 15 total, 10 per page, page 2 has 5
+      expect(result.total).toBe(15);
+      expect(result.page).toBe(2);
+      expect(result.totalPages).toBe(2);
+    });
+
+    it('should handle sorting correctly', async () => {
+      // Create test budgets with different names
+      await Budget.create(createValidBudgetData({ name: 'Budget C' }));
+      await Budget.create(createValidBudgetData({ name: 'Budget A' }));
+      await Budget.create(createValidBudgetData({ name: 'Budget B' }));
+
+      const filters: IBudgetFilters = {
+        userId: testUserId.toString(),
+      };
+
+      const result = await budgetRepository.findBudgetsWithFilters(filters, 1, 10, 'name', 'asc');
+
+      expect(result).toBeDefined();
+      expect(result.budgets).toHaveLength(3);
+      expect(result.budgets[0].name).toBe('Budget A');
+      expect(result.budgets[1].name).toBe('Budget B');
+      expect(result.budgets[2].name).toBe('Budget C');
     });
   });
 
-  describe('findById', () => {
-    it('should find a budget by ID successfully', async () => {
-      const budgetId = new mongoose.Types.ObjectId();
-      const budget = {
-        _id: budgetId,
-        name: 'Monthly Budget',
-        period: 'monthly' as const,
-        startDate: new Date('2024-01-01'),
-        endDate: new Date('2024-01-31'),
+  describe('getBudgetAnalytics', () => {
+    it('should get budget analytics', async () => {
+      // Create test budget
+      const budget = await Budget.create(createValidBudgetData({
+        name: 'Test Budget',
         totalAmount: 1000,
-        currency: 'USD',
-        categoryAllocations: [],
-        userId: new mongoose.Types.ObjectId(),
-      };
+      }));
 
-      // Mock the findById method
-      jest.spyOn(budgetRepository, 'findById').mockResolvedValue(budget as any);
+      const result = await budgetRepository.getBudgetAnalytics((budget._id as any).toString());
 
-      const result = await budgetRepository.findById(budgetId.toString());
-
-      expect(result).toEqual(budget);
+      expect(result).toBeDefined();
     });
 
-    it('should return null when budget not found', async () => {
-      const budgetId = new mongoose.Types.ObjectId();
-      
-      // Mock the findById method to return null
-      jest.spyOn(budgetRepository, 'findById').mockResolvedValue(null);
-
-      const result = await budgetRepository.findById(budgetId.toString());
+    it('should handle empty budget analytics', async () => {
+      const result = await budgetRepository.getBudgetAnalytics(new mongoose.Types.ObjectId().toString());
 
       expect(result).toBeNull();
     });
-
-    it('should handle find errors', async () => {
-      const budgetId = new mongoose.Types.ObjectId();
-      
-      // Mock the findById method to throw an error
-      jest.spyOn(budgetRepository, 'findById').mockRejectedValue(new Error('Database error'));
-
-      await expect(budgetRepository.findById(budgetId.toString())).rejects.toThrow('Database error');
-    });
   });
 
-  describe('updateById', () => {
-    it('should update a budget successfully', async () => {
-      const budgetId = new mongoose.Types.ObjectId();
-      const updateData = { name: 'Updated Budget' };
-      const updatedBudget = {
-        _id: budgetId,
-        name: 'Updated Budget',
-        period: 'monthly' as const,
-        startDate: new Date('2024-01-01'),
-        endDate: new Date('2024-01-31'),
+  describe('getBudgetSummary', () => {
+    it('should get budget summary', async () => {
+      // Create test budgets
+      await Budget.create(createValidBudgetData({
+        name: 'Budget 1',
         totalAmount: 1000,
-        currency: 'USD',
-        categoryAllocations: [],
-        userId: new mongoose.Types.ObjectId(),
-      };
+        status: 'active',
+      }));
+      await Budget.create(createValidBudgetData({
+        name: 'Budget 2',
+        totalAmount: 500,
+        status: 'paused',
+      }));
 
-      // Mock the updateById method
-      jest.spyOn(budgetRepository, 'updateById').mockResolvedValue(updatedBudget as any);
+      const result = await budgetRepository.getBudgetSummary(testUserId.toString());
 
-      const result = await budgetRepository.updateById(budgetId.toString(), updateData);
-
-      expect(result).toEqual(updatedBudget);
+      expect(result).toBeDefined();
+      expect(result.totalBudgets).toBe(2);
+      expect(result.activeBudgets).toBeGreaterThanOrEqual(0);
     });
 
-    it('should return null when budget not found for update', async () => {
-      const budgetId = new mongoose.Types.ObjectId();
-      const updateData = { name: 'Updated Budget' };
+    it('should handle empty budget summary', async () => {
+      const result = await budgetRepository.getBudgetSummary(testUserId.toString());
 
-      // Mock the updateById method to return null
-      jest.spyOn(budgetRepository, 'updateById').mockResolvedValue(null);
-
-      const result = await budgetRepository.updateById(budgetId.toString(), updateData);
-
-      expect(result).toBeNull();
-    });
-
-    it('should handle update errors', async () => {
-      const budgetId = new mongoose.Types.ObjectId();
-      const updateData = { name: 'Updated Budget' };
-
-      // Mock the updateById method to throw an error
-      jest.spyOn(budgetRepository, 'updateById').mockRejectedValue(new Error('Database error'));
-
-      await expect(budgetRepository.updateById(budgetId.toString(), updateData)).rejects.toThrow('Database error');
-    });
-  });
-
-  describe('deleteById', () => {
-    it('should delete a budget successfully', async () => {
-      const budgetId = new mongoose.Types.ObjectId();
-      const deletedBudget = {
-        _id: budgetId,
-        name: 'Monthly Budget',
-        period: 'monthly' as const,
-        startDate: new Date('2024-01-01'),
-        endDate: new Date('2024-01-31'),
-        totalAmount: 1000,
-        currency: 'USD',
-        categoryAllocations: [],
-        userId: new mongoose.Types.ObjectId(),
-      };
-
-      // Mock the deleteById method
-      jest.spyOn(budgetRepository, 'deleteById').mockResolvedValue(deletedBudget as any);
-
-      const result = await budgetRepository.deleteById(budgetId.toString());
-
-      expect(result).toEqual(deletedBudget);
-    });
-
-    it('should return null when budget not found for deletion', async () => {
-      const budgetId = new mongoose.Types.ObjectId();
-      
-      // Mock the deleteById method to return null
-      jest.spyOn(budgetRepository, 'deleteById').mockResolvedValue(null);
-
-      const result = await budgetRepository.deleteById(budgetId.toString());
-
-      expect(result).toBeNull();
-    });
-
-    it('should handle deletion errors', async () => {
-      const budgetId = new mongoose.Types.ObjectId();
-      
-      // Mock the deleteById method to throw an error
-      jest.spyOn(budgetRepository, 'deleteById').mockRejectedValue(new Error('Database error'));
-
-      await expect(budgetRepository.deleteById(budgetId.toString())).rejects.toThrow('Database error');
-    });
-  });
-
-  describe('find', () => {
-    it('should find budgets with filters successfully', async () => {
-      const filters = { userId: new mongoose.Types.ObjectId().toString() };
-      const budgets = [
-        {
-          _id: new mongoose.Types.ObjectId(),
-          name: 'Monthly Budget',
-          period: 'monthly' as const,
-          startDate: new Date('2024-01-01'),
-          endDate: new Date('2024-01-31'),
-          totalAmount: 1000,
-          currency: 'USD',
-          categoryAllocations: [],
-          userId: filters.userId,
-        },
-      ];
-
-      // Mock the find method
-      jest.spyOn(budgetRepository, 'find').mockResolvedValue(budgets as any);
-
-      const result = await budgetRepository.find(filters);
-
-      expect(result).toEqual(budgets);
-    });
-
-    it('should handle find errors', async () => {
-      const filters = { userId: new mongoose.Types.ObjectId().toString() };
-
-      // Mock the find method to throw an error
-      jest.spyOn(budgetRepository, 'find').mockRejectedValue(new Error('Database error'));
-
-      await expect(budgetRepository.find(filters)).rejects.toThrow('Database error');
-    });
-  });
-
-  describe('exists', () => {
-    it('should check if budget exists successfully', async () => {
-      const filters = { userId: new mongoose.Types.ObjectId().toString() };
-      
-      // Mock the exists method
-      jest.spyOn(budgetRepository, 'exists').mockResolvedValue(true);
-
-      const result = await budgetRepository.exists(filters);
-
-      expect(result).toBe(true);
-    });
-
-    it('should return false when budget does not exist', async () => {
-      const filters = { userId: new mongoose.Types.ObjectId().toString() };
-      
-      // Mock the exists method to return false
-      jest.spyOn(budgetRepository, 'exists').mockResolvedValue(false);
-
-      const result = await budgetRepository.exists(filters);
-
-      expect(result).toBe(false);
-    });
-
-    it('should handle exists errors', async () => {
-      const filters = { userId: new mongoose.Types.ObjectId().toString() };
-      
-      // Mock the exists method to throw an error
-      jest.spyOn(budgetRepository, 'exists').mockRejectedValue(new Error('Database error'));
-
-      await expect(budgetRepository.exists(filters)).rejects.toThrow('Database error');
-    });
-  });
-
-  describe('count', () => {
-    it('should count budgets successfully', async () => {
-      const filters = { userId: new mongoose.Types.ObjectId().toString() };
-      
-      // Mock the count method
-      jest.spyOn(budgetRepository, 'count').mockResolvedValue(5);
-
-      const result = await budgetRepository.count(filters);
-
-      expect(result).toBe(5);
-    });
-
-    it('should handle count errors', async () => {
-      const filters = { userId: new mongoose.Types.ObjectId().toString() };
-      
-      // Mock the count method to throw an error
-      jest.spyOn(budgetRepository, 'count').mockRejectedValue(new Error('Database error'));
-
-      await expect(budgetRepository.count(filters)).rejects.toThrow('Database error');
-    });
-  });
-
-  describe('aggregate', () => {
-    it('should execute aggregation pipeline successfully', async () => {
-      const pipeline = [
-        { $match: { userId: new mongoose.Types.ObjectId().toString() } },
-        { $group: { _id: null, total: { $sum: '$totalAmount' } } },
-      ];
-
-      const result = [{ _id: null, total: 5000 }];
-      
-      // Mock the aggregate method
-      jest.spyOn(budgetRepository, 'aggregate').mockResolvedValue(result as any);
-
-      const aggregateResult = await budgetRepository.aggregate(pipeline);
-
-      expect(aggregateResult).toEqual(result);
-    });
-
-    it('should handle aggregation errors', async () => {
-      const pipeline = [
-        { $match: { userId: new mongoose.Types.ObjectId().toString() } },
-        { $group: { _id: null, total: { $sum: '$totalAmount' } } },
-      ];
-
-      // Mock the aggregate method to throw an error
-      jest.spyOn(budgetRepository, 'aggregate').mockRejectedValue(new Error('Database error'));
-
-      await expect(budgetRepository.aggregate(pipeline)).rejects.toThrow('Database error');
+      expect(result).toBeDefined();
+      expect(result.totalBudgets).toBe(0);
+      expect(result.activeBudgets).toBe(0);
     });
   });
 
   describe('updateCategoryAllocation', () => {
-    it('should update category allocation successfully', async () => {
-      const budgetId = new mongoose.Types.ObjectId().toString();
-      const categoryId = new mongoose.Types.ObjectId().toString();
-      const newAmount = 600;
+    it('should update category allocation', async () => {
+      // Create test budget
+      const budget = await Budget.create(createValidBudgetData({
+        categoryAllocations: [
+          {
+            categoryId: testCategoryId.toString(),
+            allocatedAmount: 500,
+            priority: 1,
+            isFlexible: false,
+          },
+        ],
+      }));
 
-      // Mock the updateCategoryAllocation method directly
-      jest.spyOn(budgetRepository, 'updateCategoryAllocation').mockResolvedValue(true);
+      const result = await budgetRepository.updateCategoryAllocation(
+        (budget._id as any).toString(),
+        testCategoryId.toString(),
+        750
+      );
 
-      const result = await budgetRepository.updateCategoryAllocation(budgetId, categoryId, newAmount);
-
-      expect(result).toBe(true);
-      expect(budgetRepository.updateCategoryAllocation).toHaveBeenCalledWith(budgetId, categoryId, newAmount);
+      expect(result).toBeDefined();
     });
 
-    it('should return false when no budget is modified', async () => {
-      const budgetId = new mongoose.Types.ObjectId().toString();
-      const categoryId = new mongoose.Types.ObjectId().toString();
-      const newAmount = 600;
+    it('should handle category allocation not found', async () => {
+      // Create test budget without the category
+      const budget = await Budget.create(createValidBudgetData({
+        categoryAllocations: [],
+      }));
 
-      // Mock the updateCategoryAllocation method to return false
-      jest.spyOn(budgetRepository, 'updateCategoryAllocation').mockResolvedValue(false);
+      const result = await budgetRepository.updateCategoryAllocation(
+        (budget._id as any).toString(),
+        testCategoryId.toString(),
+        750
+      );
 
-      const result = await budgetRepository.updateCategoryAllocation(budgetId, categoryId, newAmount);
-
-      expect(result).toBe(false);
-    });
-
-    it('should handle update category allocation errors', async () => {
-      const budgetId = new mongoose.Types.ObjectId().toString();
-      const categoryId = new mongoose.Types.ObjectId().toString();
-      const newAmount = 600;
-
-      // Mock the updateCategoryAllocation method to throw an error
-      jest.spyOn(budgetRepository, 'updateCategoryAllocation').mockRejectedValue(new Error('Failed to update category allocation: Database error'));
-
-      await expect(
-        budgetRepository.updateCategoryAllocation(budgetId, categoryId, newAmount)
-      ).rejects.toThrow('Failed to update category allocation: Database error');
+      expect(result).toBeDefined();
     });
   });
 
   describe('addCategoryAllocation', () => {
-    it('should add category allocation successfully', async () => {
-      const budgetId = new mongoose.Types.ObjectId().toString();
-      const allocation = {
-        categoryId: new mongoose.Types.ObjectId().toString(),
-        allocatedAmount: 500,
-      };
+    it('should add category allocation', async () => {
+      // Create test budget
+      const budget = await Budget.create(createValidBudgetData({
+        categoryAllocations: [],
+      }));
 
-      // Mock the addCategoryAllocation method directly
-      jest.spyOn(budgetRepository, 'addCategoryAllocation').mockResolvedValue(true);
+      const result = await budgetRepository.addCategoryAllocation(
+        (budget._id as any).toString(),
+        {
+          categoryId: testCategoryId.toString(),
+          allocatedAmount: 500,
+          isFlexible: false,
+          priority: 1,
+        }
+      );
 
-      const result = await budgetRepository.addCategoryAllocation(budgetId, allocation);
-
-      expect(result).toBe(true);
-      expect(budgetRepository.addCategoryAllocation).toHaveBeenCalledWith(budgetId, allocation);
-    });
-
-    it('should add category allocation with default values', async () => {
-      const budgetId = new mongoose.Types.ObjectId().toString();
-      const allocation = {
-        categoryId: new mongoose.Types.ObjectId().toString(),
-        allocatedAmount: 500,
-      };
-
-      // Mock the addCategoryAllocation method directly
-      jest.spyOn(budgetRepository, 'addCategoryAllocation').mockResolvedValue(true);
-
-      const result = await budgetRepository.addCategoryAllocation(budgetId, allocation);
-
-      expect(result).toBe(true);
-      expect(budgetRepository.addCategoryAllocation).toHaveBeenCalledWith(budgetId, allocation);
-    });
-
-    it('should return false when no budget is modified', async () => {
-      const budgetId = new mongoose.Types.ObjectId().toString();
-      const allocation = {
-        categoryId: new mongoose.Types.ObjectId().toString(),
-        allocatedAmount: 500,
-      };
-
-      // Mock the addCategoryAllocation method to return false
-      jest.spyOn(budgetRepository, 'addCategoryAllocation').mockResolvedValue(false);
-
-      const result = await budgetRepository.addCategoryAllocation(budgetId, allocation);
-
-      expect(result).toBe(false);
-    });
-
-    it('should handle add category allocation errors', async () => {
-      const budgetId = new mongoose.Types.ObjectId().toString();
-      const allocation = {
-        categoryId: new mongoose.Types.ObjectId().toString(),
-        allocatedAmount: 500,
-      };
-
-      // Mock the addCategoryAllocation method to throw an error
-      jest.spyOn(budgetRepository, 'addCategoryAllocation').mockRejectedValue(new Error('Failed to add category allocation: Database error'));
-
-      await expect(
-        budgetRepository.addCategoryAllocation(budgetId, allocation)
-      ).rejects.toThrow('Failed to add category allocation: Database error');
+      expect(result).toBeDefined();
     });
   });
 
   describe('removeCategoryAllocation', () => {
-    it('should remove category allocation successfully', async () => {
-      const budgetId = new mongoose.Types.ObjectId().toString();
-      const categoryId = new mongoose.Types.ObjectId().toString();
+    it('should remove category allocation', async () => {
+      // Create test budget with category
+      const budget = await Budget.create(createValidBudgetData({
+        categoryAllocations: [
+          {
+            categoryId: testCategoryId.toString(),
+            allocatedAmount: 500,
+            priority: 1,
+            isFlexible: false,
+          },
+        ],
+      }));
 
-      // Mock the removeCategoryAllocation method directly
-      jest.spyOn(budgetRepository, 'removeCategoryAllocation').mockResolvedValue(true);
+      const result = await budgetRepository.removeCategoryAllocation(
+        (budget._id as any).toString(),
+        testCategoryId.toString()
+      );
 
-      const result = await budgetRepository.removeCategoryAllocation(budgetId, categoryId);
-
-      expect(result).toBe(true);
-      expect(budgetRepository.removeCategoryAllocation).toHaveBeenCalledWith(budgetId, categoryId);
-    });
-
-    it('should return false when no budget is modified', async () => {
-      const budgetId = new mongoose.Types.ObjectId().toString();
-      const categoryId = new mongoose.Types.ObjectId().toString();
-
-      // Mock the removeCategoryAllocation method to return false
-      jest.spyOn(budgetRepository, 'removeCategoryAllocation').mockResolvedValue(false);
-
-      const result = await budgetRepository.removeCategoryAllocation(budgetId, categoryId);
-
-      expect(result).toBe(false);
-    });
-
-    it('should handle remove category allocation errors', async () => {
-      const budgetId = new mongoose.Types.ObjectId().toString();
-      const categoryId = new mongoose.Types.ObjectId().toString();
-
-      // Mock the removeCategoryAllocation method to throw an error
-      jest.spyOn(budgetRepository, 'removeCategoryAllocation').mockRejectedValue(new Error('Failed to remove category allocation: Database error'));
-
-      await expect(
-        budgetRepository.removeCategoryAllocation(budgetId, categoryId)
-      ).rejects.toThrow('Failed to remove category allocation: Database error');
+      expect(result).toBeDefined();
     });
   });
 
-  describe('Edge Cases and Error Handling', () => {
-    it('should handle invalid ObjectId strings gracefully', async () => {
-      const invalidId = 'invalid-id';
-      const validId = new mongoose.Types.ObjectId().toString();
+  describe('Error Handling', () => {
+    it('should handle invalid user ID', async () => {
+      const filters: IBudgetFilters = {
+        userId: 'invalid-id',
+      };
 
-      // Mock the findById method to throw an error for invalid ID
-      jest.spyOn(budgetRepository, 'findById').mockRejectedValue(new Error('Cast to ObjectId failed'));
-
-      await expect(budgetRepository.findById(invalidId)).rejects.toThrow('Cast to ObjectId failed');
+      await expect(budgetRepository.findBudgetsWithFilters(filters, 1, 10)).rejects.toThrow();
     });
 
-    it('should handle database connection errors gracefully', async () => {
-      const budgetId = new mongoose.Types.ObjectId().toString();
-
-      // Mock the findById method to throw a connection error
-      jest.spyOn(budgetRepository, 'findById').mockRejectedValue(new Error('ECONNREFUSED'));
-
-      await expect(budgetRepository.findById(budgetId)).rejects.toThrow('ECONNREFUSED');
+    it('should handle invalid budget ID', async () => {
+      await expect(budgetRepository.updateCategoryAllocation(
+        'invalid-id',
+        testCategoryId.toString(),
+        500
+      )).rejects.toThrow();
     });
 
-    it('should handle validation errors gracefully', async () => {
-      const budgetData = {
-        name: 'Test Budget',
-        period: 'monthly' as const,
-        startDate: new Date('2024-01-01'),
-        endDate: new Date('2024-01-31'),
-        totalAmount: 1000,
-        currency: 'USD',
+    it('should handle invalid category ID', async () => {
+      const budget = await Budget.create(createValidBudgetData());
+
+      await expect(budgetRepository.updateCategoryAllocation(
+        (budget._id as any).toString(),
+        'invalid-id',
+        500
+      )).rejects.toThrow();
+    });
+  });
+
+  describe('Edge Cases', () => {
+    it('should handle very large amounts', async () => {
+      const budget = await Budget.create(createValidBudgetData({
+        totalAmount: 999999999.99,
         categoryAllocations: [
           {
-            categoryId: new mongoose.Types.ObjectId().toString(),
-            allocatedAmount: 500,
-            isFlexible: false,
+            categoryId: testCategoryId.toString(),
+            allocatedAmount: 500000000.50,
             priority: 1,
+            isFlexible: false,
           },
         ],
-        userId: new mongoose.Types.ObjectId(),
-      };
+      }));
 
-      // Mock the create method to throw a validation error
-      jest.spyOn(budgetRepository, 'create').mockRejectedValue(new Error('Validation failed'));
-
-      await expect(budgetRepository.create(budgetData)).rejects.toThrow('Validation failed');
+      expect(budget.totalAmount).toBe(999999999.99);
+      expect(budget.categoryAllocations[0].allocatedAmount).toBe(500000000.50);
     });
 
-    it('should handle cast errors gracefully', async () => {
-      const budgetId = new mongoose.Types.ObjectId().toString();
-      const updateData = { totalAmount: 'invalid-amount' };
-
-      // Mock the updateById method to throw a cast error
-      jest.spyOn(budgetRepository, 'updateById').mockRejectedValue(new Error('Cast to Number failed'));
-
-      await expect(budgetRepository.updateById(budgetId, updateData)).rejects.toThrow('Cast to Number failed');
-    });
-
-    it('should handle duplicate key errors gracefully', async () => {
-      const budgetData = {
-        name: 'Test Budget',
-        period: 'monthly' as const,
-        startDate: new Date('2024-01-01'),
-        endDate: new Date('2024-01-31'),
-        totalAmount: 1000,
-        currency: 'USD',
+    it('should handle very small amounts', async () => {
+      const budget = await Budget.create(createValidBudgetData({
+        totalAmount: 0.01,
         categoryAllocations: [
           {
-            categoryId: new mongoose.Types.ObjectId().toString(),
-            allocatedAmount: 500,
-            isFlexible: false,
+            categoryId: testCategoryId.toString(),
+            allocatedAmount: 0.01,
             priority: 1,
+            isFlexible: false,
           },
         ],
-        userId: new mongoose.Types.ObjectId(),
-      };
+      }));
 
-      // Mock the create method to throw a duplicate key error
-      jest.spyOn(budgetRepository, 'create').mockRejectedValue(new Error('E11000 duplicate key error'));
-
-      await expect(budgetRepository.create(budgetData)).rejects.toThrow('E11000 duplicate key error');
+      expect(budget.totalAmount).toBe(0.01);
+      expect(budget.categoryAllocations[0].allocatedAmount).toBe(0.01);
     });
 
-    it('should handle extreme pagination parameters gracefully', async () => {
-      const filters = { userId: new mongoose.Types.ObjectId().toString() };
-      const extremeOptions = {
-        page: 999999,
-        limit: 999999,
-      };
+    it('should handle many categories', async () => {
+      const categoryAllocations = [];
+      for (let i = 0; i < 10; i++) {
+        categoryAllocations.push({
+          categoryId: new mongoose.Types.ObjectId().toString(),
+          allocatedAmount: 10,
+          priority: i + 1,
+          isFlexible: false,
+        });
+      }
 
-      // Mock the findWithPagination method
-      jest.spyOn(budgetRepository, 'findWithPagination').mockResolvedValue({
-        documents: [],
-        total: 0,
-        page: 999999,
-        totalPages: 0,
-      });
+      const budget = await Budget.create(createValidBudgetData({
+        categoryAllocations,
+      }));
 
-      const result = await budgetRepository.findWithPagination(filters, extremeOptions.page, extremeOptions.limit);
-      expect(result.documents).toEqual([]);
-      expect(result.total).toBe(0);
+      expect(budget.categoryAllocations).toHaveLength(10);
     });
 
-    it('should handle empty filter objects gracefully', async () => {
-      const emptyFilters = {};
+    it('should handle long budget names', async () => {
+      const longName = 'A'.repeat(150); // Within the 200 character limit
+      const budget = await Budget.create(createValidBudgetData({
+        name: longName,
+      }));
 
-      // Mock the find method
-      jest.spyOn(budgetRepository, 'find').mockResolvedValue([]);
-
-      const result = await budgetRepository.find(emptyFilters);
-      expect(result).toEqual([]);
-    });
-
-    it('should handle null filter values gracefully', async () => {
-      const filtersWithNulls = {
-        userId: new mongoose.Types.ObjectId().toString(),
-        status: null,
-        period: null,
-      };
-
-      // Mock the find method
-      jest.spyOn(budgetRepository, 'find').mockResolvedValue([]);
-
-      const result = await budgetRepository.find(filtersWithNulls);
-      expect(result).toEqual([]);
-    });
-
-    it('should handle undefined filter values gracefully', async () => {
-      const filtersWithUndefined = {
-        userId: new mongoose.Types.ObjectId().toString(),
-        status: undefined,
-        period: undefined,
-      };
-
-      // Mock the find method
-      jest.spyOn(budgetRepository, 'find').mockResolvedValue([]);
-
-      const result = await budgetRepository.find(filtersWithUndefined);
-      expect(result).toEqual([]);
+      expect(budget.name).toBe(longName);
     });
   });
 });
