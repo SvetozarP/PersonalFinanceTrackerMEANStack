@@ -852,10 +852,10 @@ export class AnalyticsController {
       }
 
       const exportOptions = {
-        format: (format as string) || 'json',
-        reportType: (reportType as string) || 'all',
+        format: ((format as string) || 'json') as 'json' | 'csv' | 'pdf' | 'excel',
+        reportType: ((reportType as string) || 'all') as 'performance' | 'variance' | 'trend' | 'forecast' | 'breakdown' | 'all',
         includeCharts: includeCharts === 'true',
-        includeDetails: includeDetails === 'true',
+        includeDetails: includeDetails !== 'false',
         dateRange: {
           startDate: new Date(startDate as string),
           endDate: new Date(endDate as string),

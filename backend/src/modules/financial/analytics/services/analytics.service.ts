@@ -77,7 +77,7 @@ export class AnalyticsService {
       
       logger.info('Budget analytics completed', { 
         userId, 
-        budgetId, 
+ 
         utilization: analytics.utilizationPercentage,
         status: analytics.status 
       });
@@ -531,7 +531,7 @@ export class AnalyticsService {
       const transactions = await this.transactionService.getUserTransactions(userId, {
         startDate,
         endDate,
-        budgetId,
+
         limit: 1000
       });
 
@@ -688,7 +688,7 @@ export class AnalyticsService {
       const transactions = await this.transactionService.getUserTransactions(userId, {
         startDate,
         endDate,
-        budgetId,
+
         limit: 1000
       });
 
@@ -719,7 +719,7 @@ export class AnalyticsService {
       for (const budget of budgets) {
         if (!budget) continue;
         
-        const budgetAlerts = await this.checkBudgetAlerts(userId, budget._id.toString());
+        const budgetAlerts = await this.checkBudgetAlerts(userId, (budget as any)._id?.toString() || budgetId);
         alerts.push(...budgetAlerts);
       }
       
@@ -749,7 +749,7 @@ export class AnalyticsService {
         for (const budgetId of options.budgetIds || []) {
           reportData[budgetId] = await this.getBudgetPerformanceReport(
             userId, 
-            budgetId, 
+            budgetId,
             options.dateRange.startDate, 
             options.dateRange.endDate
           );
@@ -760,7 +760,7 @@ export class AnalyticsService {
         for (const budgetId of options.budgetIds || []) {
           reportData[budgetId] = await this.getBudgetVarianceAnalysis(
             userId, 
-            budgetId, 
+            budgetId,
             options.dateRange.startDate, 
             options.dateRange.endDate
           );
@@ -927,8 +927,8 @@ export class AnalyticsService {
         actualAmount: cat.spentAmount,
         variance,
         variancePercentage,
-        varianceType: variance < 0 ? 'favorable' : 'unfavorable',
-        impact: Math.abs(variancePercentage) > 20 ? 'high' : Math.abs(variancePercentage) > 10 ? 'medium' : 'low',
+        varianceType: (variance < 0 ? 'favorable' : 'unfavorable') as 'favorable' | 'unfavorable',
+        impact: (Math.abs(variancePercentage) > 20 ? 'high' : Math.abs(variancePercentage) > 10 ? 'medium' : 'low') as 'high' | 'medium' | 'low',
         rootCause: this.identifyVarianceRootCause(cat, variance)
       };
     });
@@ -1053,7 +1053,7 @@ export class AnalyticsService {
       if (analytics.utilizationPercentage > 90) {
         alerts.push({
           id: `alert-${budgetId}-utilization-${now.getTime()}`,
-          budgetId,
+          budgetId: budgetId,
           budgetName: analytics.budgetName,
           type: 'threshold',
           severity: analytics.utilizationPercentage > 100 ? 'critical' : 'warning',
@@ -1075,7 +1075,7 @@ export class AnalyticsService {
         if (category.utilizationPercentage > 100) {
           alerts.push({
             id: `alert-${budgetId}-category-${category.categoryId}-${now.getTime()}`,
-            budgetId,
+            budgetId: budgetId,
             budgetName: analytics.budgetName,
             type: 'variance',
             severity: 'critical',

@@ -87,7 +87,7 @@ describe('Performance Benchmark Tests', () => {
       for (let i = 0; i < transactionCount; i++) {
         transactions.push({
           title: `Benchmark Transaction ${i}`,
-          amount: Math.random() * 1000,
+          amount: Math.random() * 1000 + 0.01, // Ensure amount is always > 0
           type: i % 2 === 0 ? 'income' : 'expense',
           categoryId: testCategoryId,
           userId: testUserId,
@@ -117,7 +117,7 @@ describe('Performance Benchmark Tests', () => {
       for (let i = 0; i < 500; i++) {
         transactions.push({
           title: `Query Test Transaction ${i}`,
-          amount: Math.random() * 1000,
+          amount: Math.random() * 1000 + 0.01, // Ensure amount is always > 0
           type: 'expense',
           categoryId: testCategoryId,
           userId: testUserId,
@@ -148,7 +148,7 @@ describe('Performance Benchmark Tests', () => {
       for (let i = 0; i < 1000; i++) {
         transactions.push({
           title: `Date Range Test Transaction ${i}`,
-          amount: Math.random() * 1000,
+          amount: Math.random() * 1000 + 0.01, // Ensure amount is always > 0
           type: 'expense',
           categoryId: testCategoryId,
           userId: testUserId,
@@ -183,7 +183,7 @@ describe('Performance Benchmark Tests', () => {
       for (let i = 0; i < 2000; i++) {
         transactions.push({
           title: `Aggregation Test Transaction ${i}`,
-          amount: Math.random() * 1000,
+          amount: Math.random() * 1000 + 0.01, // Ensure amount is always > 0
           type: i % 3 === 0 ? 'income' : 'expense',
           categoryId: testCategoryId,
           userId: testUserId,
@@ -238,7 +238,7 @@ describe('Performance Benchmark Tests', () => {
         transactions.push({
           title: `${term} transaction ${i}`,
           description: `This is a ${term} related transaction for benchmarking`,
-          amount: Math.random() * 1000,
+          amount: Math.random() * 1000 + 0.01, // Ensure amount is always > 0
           type: 'expense',
           categoryId: testCategoryId,
           userId: testUserId,
@@ -431,7 +431,7 @@ describe('Performance Benchmark Tests', () => {
       for (let i = 0; i < 1000; i++) {
         transactions.push({
           title: `Concurrent Test Transaction ${i}`,
-          amount: Math.random() * 1000,
+          amount: Math.random() * 1000 + 0.01, // Ensure amount is always > 0
           type: i % 2 === 0 ? 'income' : 'expense',
           categoryId: testCategoryId,
           userId: testUserId,
@@ -476,7 +476,7 @@ describe('Performance Benchmark Tests', () => {
         for (let j = 0; j < 100; j++) {
           transactions.push({
             title: `Concurrent Write Transaction ${i}-${j}`,
-            amount: Math.random() * 1000,
+            amount: Math.random() * 1000 + 0.01, // Ensure amount is always > 0
             type: 'expense',
             categoryId: testCategoryId,
             userId: testUserId,
@@ -507,7 +507,7 @@ describe('Performance Benchmark Tests', () => {
       for (let i = 0; i < 5000; i++) {
         transactions.push({
           title: `Memory Test Transaction ${i}`,
-          amount: Math.random() * 1000,
+          amount: Math.random() * 1000 + 0.01, // Ensure amount is always > 0
           type: 'expense',
           categoryId: testCategoryId,
           userId: testUserId,
