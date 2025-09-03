@@ -35,3 +35,4 @@ describe('Scripts Coverage Tests', () => {
     expect(typeof validateScript.validatePerformance).toBe('function');
   });
 });
+

@@ -211,6 +211,139 @@ router.get(
   }
 );
 
+// ==================== BUDGET REPORTING ROUTES ====================
+
+/**
+ * @route   GET /api/analytics/budgets/:budgetId/performance
+ * @desc    Get comprehensive budget performance report
+ * @access  Private
+ * @param   budgetId - Budget ID
+ * @query   startDate, endDate
+ */
+router.get(
+  '/budgets/:budgetId/performance',
+  validateRequest(Joi.object({
+    startDate: Joi.date().iso().optional(),
+    endDate: Joi.date().iso().min(Joi.ref('startDate')).optional(),
+  }), 'query'),
+  analyticsController.getBudgetPerformanceReport
+);
+
+/**
+ * @route   GET /api/analytics/budgets/:budgetId/vs-actual
+ * @desc    Get budget vs actual spending comparison report
+ * @access  Private
+ * @param   budgetId - Budget ID
+ * @query   startDate, endDate
+ */
+router.get(
+  '/budgets/:budgetId/vs-actual',
+  validateRequest(Joi.object({
+    startDate: Joi.date().iso().optional(),
+    endDate: Joi.date().iso().min(Joi.ref('startDate')).optional(),
+  }), 'query'),
+  analyticsController.getBudgetVsActualReport
+);
+
+/**
+ * @route   GET /api/analytics/budgets/:budgetId/trends
+ * @desc    Get budget trend analysis over time
+ * @access  Private
+ * @param   budgetId - Budget ID
+ * @query   startDate, endDate
+ */
+router.get(
+  '/budgets/:budgetId/trends',
+  validateRequest(Joi.object({
+    startDate: Joi.date().iso().optional(),
+    endDate: Joi.date().iso().min(Joi.ref('startDate')).optional(),
+  }), 'query'),
+  analyticsController.getBudgetTrendAnalysis
+);
+
+/**
+ * @route   GET /api/analytics/budgets/:budgetId/variance
+ * @desc    Get budget variance analysis
+ * @access  Private
+ * @param   budgetId - Budget ID
+ * @query   startDate, endDate
+ */
+router.get(
+  '/budgets/:budgetId/variance',
+  validateRequest(Joi.object({
+    startDate: Joi.date().iso().optional(),
+    endDate: Joi.date().iso().min(Joi.ref('startDate')).optional(),
+  }), 'query'),
+  analyticsController.getBudgetVarianceAnalysis
+);
+
+/**
+ * @route   GET /api/analytics/budgets/:budgetId/forecast
+ * @desc    Get budget forecasting and projections
+ * @access  Private
+ * @param   budgetId - Budget ID
+ * @query   forecastStartDate, forecastEndDate
+ */
+router.get(
+  '/budgets/:budgetId/forecast',
+  validateRequest(Joi.object({
+    forecastStartDate: Joi.date().iso().optional(),
+    forecastEndDate: Joi.date().iso().min(Joi.ref('forecastStartDate')).optional(),
+  }), 'query'),
+  analyticsController.getBudgetForecast
+);
+
+/**
+ * @route   GET /api/analytics/budgets/:budgetId/breakdown
+ * @desc    Get budget category breakdown report
+ * @access  Private
+ * @param   budgetId - Budget ID
+ * @query   startDate, endDate
+ */
+router.get(
+  '/budgets/:budgetId/breakdown',
+  validateRequest(Joi.object({
+    startDate: Joi.date().iso().optional(),
+    endDate: Joi.date().iso().min(Joi.ref('startDate')).optional(),
+  }), 'query'),
+  analyticsController.getBudgetCategoryBreakdown
+);
+
+/**
+ * @route   GET /api/analytics/budgets/alerts
+ * @desc    Get budget alerts and notifications
+ * @access  Private
+ * @query   budgetId (optional)
+ */
+router.get(
+  '/budgets/alerts',
+  validateRequest(Joi.object({
+    budgetId: Joi.string().optional(),
+  }), 'query'),
+  analyticsController.getBudgetAlerts
+);
+
+/**
+ * @route   GET /api/analytics/budgets/export
+ * @desc    Export budget reports in various formats
+ * @access  Private
+ * @query   startDate, endDate, format, reportType, includeCharts, includeDetails, budgetIds, categories
+ */
+router.get(
+  '/budgets/export',
+  validateRequest(Joi.object({
+    startDate: Joi.date().iso().required(),
+    endDate: Joi.date().iso().min(Joi.ref('startDate')).required(),
+    format: Joi.string().valid('json', 'csv', 'pdf', 'excel').default('json'),
+    reportType: Joi.string().valid('performance', 'variance', 'trend', 'forecast', 'breakdown', 'all').default('all'),
+    includeCharts: Joi.boolean().default(false),
+    includeDetails: Joi.boolean().default(true),
+    budgetIds: Joi.string().optional(),
+    categories: Joi.string().optional(),
+  }), 'query'),
+  analyticsController.exportBudgetReport
+);
+
 /**
  * @route   GET /api/analytics/health
  * @desc    Health check endpoint for analytics service

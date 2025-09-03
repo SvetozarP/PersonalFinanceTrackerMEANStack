@@ -401,4 +401,496 @@ export class AnalyticsController {
       });
     }
   };
+
+  // ==================== BUDGET REPORTING ENDPOINTS ====================
+
+  /**
+   * Get comprehensive budget performance report
+   * GET /api/analytics/budgets/:budgetId/performance
+   */
+  getBudgetPerformanceReport = async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<void> => {
+    try {
+      const userId = req.user?.userId;
+      if (!userId) {
+        res.status(401).json({
+          success: false,
+          message: 'Authentication required',
+        });
+        return;
+      }
+
+      const { budgetId } = req.params;
+      const { startDate, endDate } = req.query;
+
+      if (!budgetId) {
+        res.status(400).json({
+          success: false,
+          message: 'Budget ID is required',
+        });
+        return;
+      }
+
+      // Set default date range to current month if not provided
+      const now = new Date();
+      const defaultStartDate = startDate ? new Date(startDate as string) : new Date(now.getFullYear(), now.getMonth(), 1);
+      const defaultEndDate = endDate ? new Date(endDate as string) : new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+      const report = await this.analyticsService.getBudgetPerformanceReport(
+        userId,
+        budgetId,
+        defaultStartDate,
+        defaultEndDate
+      );
+
+      res.status(200).json({
+        success: true,
+        data: report,
+      });
+
+      logger.info('Budget performance report accessed via API', { userId, budgetId, dateRange: { start: defaultStartDate, end: defaultEndDate } });
+    } catch (error) {
+      logger.error('Error in getBudgetPerformanceReport controller', {
+        error: String(error),
+        userId: req.user?.userId,
+        budgetId: req.params.budgetId,
+      });
+
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+      });
+    }
+  };
+
+  /**
+   * Get budget vs actual spending comparison report
+   * GET /api/analytics/budgets/:budgetId/vs-actual
+   */
+  getBudgetVsActualReport = async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<void> => {
+    try {
+      const userId = req.user?.userId;
+      if (!userId) {
+        res.status(401).json({
+          success: false,
+          message: 'Authentication required',
+        });
+        return;
+      }
+
+      const { budgetId } = req.params;
+      const { startDate, endDate } = req.query;
+
+      if (!budgetId) {
+        res.status(400).json({
+          success: false,
+          message: 'Budget ID is required',
+        });
+        return;
+      }
+
+      // Set default date range to current month if not provided
+      const now = new Date();
+      const defaultStartDate = startDate ? new Date(startDate as string) : new Date(now.getFullYear(), now.getMonth(), 1);
+      const defaultEndDate = endDate ? new Date(endDate as string) : new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+      const report = await this.analyticsService.getBudgetVsActualReport(
+        userId,
+        budgetId,
+        defaultStartDate,
+        defaultEndDate
+      );
+
+      res.status(200).json({
+        success: true,
+        data: report,
+      });
+
+      logger.info('Budget vs actual report accessed via API', { userId, budgetId, dateRange: { start: defaultStartDate, end: defaultEndDate } });
+    } catch (error) {
+      logger.error('Error in getBudgetVsActualReport controller', {
+        error: String(error),
+        userId: req.user?.userId,
+        budgetId: req.params.budgetId,
+      });
+
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+      });
+    }
+  };
+
+  /**
+   * Get budget trend analysis over time
+   * GET /api/analytics/budgets/:budgetId/trends
+   */
+  getBudgetTrendAnalysis = async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<void> => {
+    try {
+      const userId = req.user?.userId;
+      if (!userId) {
+        res.status(401).json({
+          success: false,
+          message: 'Authentication required',
+        });
+        return;
+      }
+
+      const { budgetId } = req.params;
+      const { startDate, endDate } = req.query;
+
+      if (!budgetId) {
+        res.status(400).json({
+          success: false,
+          message: 'Budget ID is required',
+        });
+        return;
+      }
+
+      // Set default date range to last 6 months if not provided
+      const now = new Date();
+      const defaultStartDate = startDate ? new Date(startDate as string) : new Date(now.getFullYear(), now.getMonth() - 6, 1);
+      const defaultEndDate = endDate ? new Date(endDate as string) : new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+      const analysis = await this.analyticsService.getBudgetTrendAnalysis(
+        userId,
+        budgetId,
+        defaultStartDate,
+        defaultEndDate
+      );
+
+      res.status(200).json({
+        success: true,
+        data: analysis,
+      });
+
+      logger.info('Budget trend analysis accessed via API', { userId, budgetId, dateRange: { start: defaultStartDate, end: defaultEndDate } });
+    } catch (error) {
+      logger.error('Error in getBudgetTrendAnalysis controller', {
+        error: String(error),
+        userId: req.user?.userId,
+        budgetId: req.params.budgetId,
+      });
+
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+      });
+    }
+  };
+
+  /**
+   * Get budget variance analysis
+   * GET /api/analytics/budgets/:budgetId/variance
+   */
+  getBudgetVarianceAnalysis = async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<void> => {
+    try {
+      const userId = req.user?.userId;
+      if (!userId) {
+        res.status(401).json({
+          success: false,
+          message: 'Authentication required',
+        });
+        return;
+      }
+
+      const { budgetId } = req.params;
+      const { startDate, endDate } = req.query;
+
+      if (!budgetId) {
+        res.status(400).json({
+          success: false,
+          message: 'Budget ID is required',
+        });
+        return;
+      }
+
+      // Set default date range to current month if not provided
+      const now = new Date();
+      const defaultStartDate = startDate ? new Date(startDate as string) : new Date(now.getFullYear(), now.getMonth(), 1);
+      const defaultEndDate = endDate ? new Date(endDate as string) : new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+      const analysis = await this.analyticsService.getBudgetVarianceAnalysis(
+        userId,
+        budgetId,
+        defaultStartDate,
+        defaultEndDate
+      );
+
+      res.status(200).json({
+        success: true,
+        data: analysis,
+      });
+
+      logger.info('Budget variance analysis accessed via API', { userId, budgetId, dateRange: { start: defaultStartDate, end: defaultEndDate } });
+    } catch (error) {
+      logger.error('Error in getBudgetVarianceAnalysis controller', {
+        error: String(error),
+        userId: req.user?.userId,
+        budgetId: req.params.budgetId,
+      });
+
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+      });
+    }
+  };
+
+  /**
+   * Get budget forecasting and projections
+   * GET /api/analytics/budgets/:budgetId/forecast
+   */
+  getBudgetForecast = async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<void> => {
+    try {
+      const userId = req.user?.userId;
+      if (!userId) {
+        res.status(401).json({
+          success: false,
+          message: 'Authentication required',
+        });
+        return;
+      }
+
+      const { budgetId } = req.params;
+      const { forecastStartDate, forecastEndDate } = req.query;
+
+      if (!budgetId) {
+        res.status(400).json({
+          success: false,
+          message: 'Budget ID is required',
+        });
+        return;
+      }
+
+      // Set default forecast period to next month if not provided
+      const now = new Date();
+      const defaultForecastStartDate = forecastStartDate ? new Date(forecastStartDate as string) : new Date(now.getFullYear(), now.getMonth() + 1, 1);
+      const defaultForecastEndDate = forecastEndDate ? new Date(forecastEndDate as string) : new Date(now.getFullYear(), now.getMonth() + 2, 0);
+
+      const forecast = await this.analyticsService.getBudgetForecast(
+        userId,
+        budgetId,
+        defaultForecastStartDate,
+        defaultForecastEndDate
+      );
+
+      res.status(200).json({
+        success: true,
+        data: forecast,
+      });
+
+      logger.info('Budget forecast accessed via API', { userId, budgetId, forecastPeriod: { start: defaultForecastStartDate, end: defaultForecastEndDate } });
+    } catch (error) {
+      logger.error('Error in getBudgetForecast controller', {
+        error: String(error),
+        userId: req.user?.userId,
+        budgetId: req.params.budgetId,
+      });
+
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+      });
+    }
+  };
+
+  /**
+   * Get budget category breakdown report
+   * GET /api/analytics/budgets/:budgetId/breakdown
+   */
+  getBudgetCategoryBreakdown = async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<void> => {
+    try {
+      const userId = req.user?.userId;
+      if (!userId) {
+        res.status(401).json({
+          success: false,
+          message: 'Authentication required',
+        });
+        return;
+      }
+
+      const { budgetId } = req.params;
+      const { startDate, endDate } = req.query;
+
+      if (!budgetId) {
+        res.status(400).json({
+          success: false,
+          message: 'Budget ID is required',
+        });
+        return;
+      }
+
+      // Set default date range to current month if not provided
+      const now = new Date();
+      const defaultStartDate = startDate ? new Date(startDate as string) : new Date(now.getFullYear(), now.getMonth(), 1);
+      const defaultEndDate = endDate ? new Date(endDate as string) : new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+      const breakdown = await this.analyticsService.getBudgetCategoryBreakdown(
+        userId,
+        budgetId,
+        defaultStartDate,
+        defaultEndDate
+      );
+
+      res.status(200).json({
+        success: true,
+        data: breakdown,
+      });
+
+      logger.info('Budget category breakdown accessed via API', { userId, budgetId, dateRange: { start: defaultStartDate, end: defaultEndDate } });
+    } catch (error) {
+      logger.error('Error in getBudgetCategoryBreakdown controller', {
+        error: String(error),
+        userId: req.user?.userId,
+        budgetId: req.params.budgetId,
+      });
+
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+      });
+    }
+  };
+
+  /**
+   * Get budget alerts and notifications
+   * GET /api/analytics/budgets/alerts
+   */
+  getBudgetAlerts = async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<void> => {
+    try {
+      const userId = req.user?.userId;
+      if (!userId) {
+        res.status(401).json({
+          success: false,
+          message: 'Authentication required',
+        });
+        return;
+      }
+
+      const { budgetId } = req.query;
+
+      const alerts = await this.analyticsService.getBudgetAlerts(
+        userId,
+        budgetId as string
+      );
+
+      res.status(200).json({
+        success: true,
+        data: alerts,
+      });
+
+      logger.info('Budget alerts accessed via API', { userId, budgetId, alertCount: alerts.length });
+    } catch (error) {
+      logger.error('Error in getBudgetAlerts controller', {
+        error: String(error),
+        userId: req.user?.userId,
+      });
+
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+      });
+    }
+  };
+
+  /**
+   * Export budget reports in various formats
+   * GET /api/analytics/budgets/export
+   */
+  exportBudgetReport = async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<void> => {
+    try {
+      const userId = req.user?.userId;
+      if (!userId) {
+        res.status(401).json({
+          success: false,
+          message: 'Authentication required',
+        });
+        return;
+      }
+
+      const { 
+        startDate, 
+        endDate, 
+        format, 
+        reportType, 
+        includeCharts, 
+        includeDetails, 
+        budgetIds, 
+        categories 
+      } = req.query;
+
+      if (!startDate || !endDate) {
+        res.status(400).json({
+          success: false,
+          message: 'Start date and end date are required',
+        });
+        return;
+      }
+
+      const exportOptions = {
+        format: (format as string) || 'json',
+        reportType: (reportType as string) || 'all',
+        includeCharts: includeCharts === 'true',
+        includeDetails: includeDetails === 'true',
+        dateRange: {
+          startDate: new Date(startDate as string),
+          endDate: new Date(endDate as string),
+        },
+        budgetIds: budgetIds ? (budgetIds as string).split(',') : undefined,
+        categories: categories ? (categories as string).split(',') : undefined,
+      };
+
+      const exportResult = await this.analyticsService.exportBudgetReport(
+        userId,
+        exportOptions
+      );
+
+      // Set appropriate headers for file download
+      res.setHeader('Content-Type', exportResult.format);
+      res.setHeader('Content-Disposition', `attachment; filename="${exportResult.filename}"`);
+
+      res.status(200).send(exportResult.data);
+
+      logger.info('Budget report exported via API', { 
+        userId, 
+        format: exportOptions.format, 
+        reportType: exportOptions.reportType,
+        filename: exportResult.filename 
+      });
+    } catch (error) {
+      logger.error('Error in exportBudgetReport controller', {
+        error: String(error),
+        userId: req.user?.userId,
+      });
+
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+      });
+    }
+  };
 }

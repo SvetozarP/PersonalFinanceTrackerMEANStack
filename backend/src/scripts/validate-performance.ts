@@ -198,3 +198,4 @@ if (require.main === module) {
 }
 
 export { validatePerformance };
+
