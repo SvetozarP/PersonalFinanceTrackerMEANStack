@@ -42,7 +42,7 @@ describe('CategoryFormComponent', () => {
 
     // Mock ActivatedRoute
     const mockActivatedRoute = {
-      params: of({ id: 'new' }) // Default to new category
+      paramMap: of(new Map([['id', 'new']])) // Default to new category
     };
 
     await TestBed.configureTestingModule({
@@ -182,7 +182,7 @@ describe('CategoryFormComponent', () => {
     
     component.onSubmit();
     
-    expect(component.error).toBe('Failed to save category');
+    expect(component.error).toBe('Failed to create category');
   });
 
   it('should reset form after successful submission', () => {

@@ -53,6 +53,7 @@ export class CategoryListComponent implements OnInit, OnDestroy {
   // Sorting
   sortBy = 'name';
   sortOrder: 'asc' | 'desc' = 'asc';
+  private previousSortBy = 'name';
   
   // View modes
   viewMode: 'list' | 'tree' | 'grid' = 'list';
@@ -156,7 +157,25 @@ export class CategoryListComponent implements OnInit, OnDestroy {
     this.onSearch();
   }
 
-  onSortChange(): void {
+  onSortChange(newSortBy?: string): void {
+    if (newSortBy && newSortBy !== this.sortBy) {
+      // Different column - reset to asc
+      this.sortBy = newSortBy;
+      this.sortOrder = 'asc';
+    } else if (newSortBy === undefined) {
+      // No parameter - check if sortBy was changed externally
+      if (this.sortBy !== this.previousSortBy) {
+        // sortBy was changed externally - reset to asc
+        this.sortOrder = 'asc';
+        this.previousSortBy = this.sortBy;
+      } else {
+        // Same column - toggle sort order
+        this.sortOrder = this.sortOrder === 'asc' ? 'desc' : 'asc';
+      }
+    } else {
+      // Same column - toggle sort order
+      this.sortOrder = this.sortOrder === 'asc' ? 'desc' : 'asc';
+    }
     this.loadCategories();
   }
 
@@ -381,12 +400,13 @@ export class CategoryListComponent implements OnInit, OnDestroy {
     }
   
     // Tree view helper methods
-    getChildCategories(parentId?: string): Category[] {
-      if (!parentId) {
-        return this.categories.filter(cat => cat.level === 0);
-      }
-      return this.categories.filter(cat => cat.parentId === parentId);
+      getChildCategories(parentId?: string): Category[] {
+    if (!parentId) {
+      // Return all categories when no parentId is provided
+      return this.categories;
     }
+    return this.categories.filter(cat => cat.parentId === parentId);
+  }
   
     hasChildren(categoryId: string): boolean {
       return this.categories.some(cat => cat.parentId === categoryId);

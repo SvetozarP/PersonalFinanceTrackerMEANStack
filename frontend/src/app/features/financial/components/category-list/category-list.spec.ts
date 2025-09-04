@@ -131,14 +131,15 @@ describe('CategoryListComponent', () => {
 
   it('should handle sorting', () => {
     // Test same column sort order change
-    component.onSort('name');
+    component.onSortChange();
     expect(component.sortOrder).toBe('desc');
 
-    component.onSort('name');
+    component.onSortChange();
     expect(component.sortOrder).toBe('asc');
 
     // Test different column
-    component.onSort('level');
+    component.sortBy = 'level';
+    component.onSortChange();
     expect(component.sortBy).toBe('level');
     expect(component.sortOrder).toBe('asc');
   });
@@ -243,11 +244,17 @@ describe('CategoryListComponent', () => {
   });
 
   it('should get category status class', () => {
-    const activeClass = component.getCategoryStatusClass(true);
-    const inactiveClass = component.getCategoryStatusClass(false);
+    const activeCategory = { ...mockCategories[0], isActive: true, isSystem: false };
+    const inactiveCategory = { ...mockCategories[0], isActive: false, isSystem: false };
+    const systemCategory = { ...mockCategories[0], isActive: true, isSystem: true };
 
-    expect(activeClass).toBe('status-active');
-    expect(inactiveClass).toBe('status-inactive');
+    const activeClass = component.getCategoryStatusClass(activeCategory);
+    const inactiveClass = component.getCategoryStatusClass(inactiveCategory);
+    const systemClass = component.getCategoryStatusClass(systemCategory);
+
+    expect(activeClass).toBe('active');
+    expect(inactiveClass).toBe('inactive');
+    expect(systemClass).toBe('system');
   });
 
   it('should get category type class', () => {

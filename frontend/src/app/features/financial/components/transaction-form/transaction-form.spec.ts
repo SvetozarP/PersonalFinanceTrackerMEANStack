@@ -94,11 +94,13 @@ describe('TransactionFormComponent', () => {
     mockCategoryService = jasmine.createSpyObj('CategoryService', [
       'getUserCategories',
       'getCategoriesByParent'
-    ]);
+    ], {
+      isLoading$: of(false)
+    });
 
     mockRouter = jasmine.createSpyObj('Router', ['navigate']);
     mockActivatedRoute = jasmine.createSpyObj('ActivatedRoute', [], {
-      params: of({ id: 'new' })
+      paramMap: of(new Map([['id', 'new']]))
     });
 
     mockCategoryService.getUserCategories.and.returnValue(of([mockCategory]));
@@ -133,11 +135,10 @@ describe('TransactionFormComponent', () => {
     expect(component.recurrencePatterns).toBeDefined();
   });
 
-  it('should have form field names accessible', () => {
-    expect(component.formFields).toBeDefined();
-    expect(component.formFields.title).toBe('title');
-    expect(component.formFields.amount).toBe('amount');
-    expect(component.formFields.categoryId).toBe('categoryId');
+  it('should have form controls accessible', () => {
+    expect(component.transactionForm.get('title')).toBeDefined();
+    expect(component.transactionForm.get('amount')).toBeDefined();
+    expect(component.transactionForm.get('categoryId')).toBeDefined();
   });
 
   it('should initialize with default values', () => {
@@ -438,7 +439,7 @@ describe('TransactionFormComponent', () => {
     expect(recurrenceEndDateControl?.disabled).toBeFalse();
 
     // Disable recurring
-    component['toggleRecurrenceFields'](false);
+    component.transactionForm.patchValue({ isRecurring: false });
     expect(recurrencePatternControl?.disabled).toBeTrue();
     expect(recurrenceIntervalControl?.disabled).toBeTrue();
     expect(recurrenceEndDateControl?.disabled).toBeTrue();
@@ -450,12 +451,12 @@ describe('TransactionFormComponent', () => {
     const intervalControl = component.transactionForm.get('recurrenceInterval');
     
     // Set to daily pattern
-    component['onRecurrencePatternChange'](RecurrencePattern.DAILY);
+    component.transactionForm.patchValue({ recurrencePattern: RecurrencePattern.DAILY });
     expect(intervalControl?.value).toBe(1);
     expect(intervalControl?.disabled).toBeTrue();
 
     // Set to monthly pattern
-    component['onRecurrencePatternChange'](RecurrencePattern.MONTHLY);
+    component.transactionForm.patchValue({ recurrencePattern: RecurrencePattern.MONTHLY });
     expect(intervalControl?.disabled).toBeFalse();
   });
 

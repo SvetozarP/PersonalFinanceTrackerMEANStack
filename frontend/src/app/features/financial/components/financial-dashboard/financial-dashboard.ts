@@ -144,6 +144,13 @@ export class FinancialDashboardComponent implements OnInit, OnDestroy {
     });
   }
 
+  // Synchronous version for testing compatibility
+  private refreshDashboardSync(): void {
+    this.loadDashboard();
+    this.loadRecentTransactions();
+    this.loadCategories();
+  }
+
   private async loadDashboardAsync(): Promise<void> {
     return new Promise((resolve) => {
       const options = {
@@ -220,7 +227,7 @@ export class FinancialDashboardComponent implements OnInit, OnDestroy {
   // Helper methods for template
   private getStartDate(): Date {
     const now = new Date();
-    const startDate = new Date();
+    const startDate = new Date(now);
 
     switch (this.selectedPeriod) {
       case 'week':

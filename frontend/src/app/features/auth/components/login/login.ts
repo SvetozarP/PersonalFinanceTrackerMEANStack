@@ -65,7 +65,7 @@ export class LoginComponent implements OnInit, OnDestroy {
   }
 
   onSubmit(): void {
-    if (this.loginForm.valid) {
+    if (this.loginForm.valid && !this.isSubmitting) {
       this.isSubmitting = true;
       this.error = null;
       
@@ -76,11 +76,37 @@ export class LoginComponent implements OnInit, OnDestroy {
       ).subscribe({
         next: () => {
           this.isSubmitting = false;
+          this.snackBar.open('Login successful!', 'Close', {
+            duration: 3000,
+            horizontalPosition: 'center',
+            verticalPosition: 'top'
+          });
           this.router.navigate(['/dashboard']);
         },
         error: (error) => {
           this.isSubmitting = false;
-          this.error = error.error?.message || 'Login failed. Please try again.';
+          let errorMessage = 'Login failed. Please try again.';
+          
+          if (error.error?.errors && Array.isArray(error.error.errors)) {
+            errorMessage = error.error.errors.join(', ');
+          } else if (error.error?.message) {
+            errorMessage = error.error.message;
+          } else if (error.message) {
+            errorMessage = error.message;
+          } else if (error.status === 0) {
+            errorMessage = 'Network error';
+          } else if (error.status === 401) {
+            errorMessage = 'Invalid credentials';
+          } else if (error.status === 423) {
+            errorMessage = 'Account locked';
+          }
+          
+          this.error = errorMessage;
+          this.snackBar.open(errorMessage, 'Close', {
+            duration: 5000,
+            horizontalPosition: 'center',
+            verticalPosition: 'top'
+          });
         }
       });
     }

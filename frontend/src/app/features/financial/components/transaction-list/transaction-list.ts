@@ -372,11 +372,11 @@ export class TransactionListComponent implements OnInit, OnDestroy {
   // Status badge class method
   getStatusBadgeClass(status: TransactionStatus): string {
     switch (status) {
-      case TransactionStatus.COMPLETED: return 'status-completed';
-      case TransactionStatus.PENDING: return 'status-pending';
-      case TransactionStatus.FAILED: return 'status-failed';
-      case TransactionStatus.CANCELLED: return 'status-cancelled';
-      default: return 'status-unknown';
+      case TransactionStatus.COMPLETED: return 'badge-success';
+      case TransactionStatus.PENDING: return 'badge-warning';
+      case TransactionStatus.FAILED: return 'badge-danger';
+      case TransactionStatus.CANCELLED: return 'badge-danger';
+      default: return 'badge-secondary';
     }
   }
 

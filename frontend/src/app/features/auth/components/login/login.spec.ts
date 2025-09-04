@@ -90,7 +90,7 @@ describe('LoginComponent', () => {
     });
 
     it('should set initial loading state to false', () => {
-      expect(component.isLoading).toBe(false);
+      expect(component.isFormLoading).toBe(false);
     });
 
     it('should set initial password visibility to hidden', () => {
@@ -173,11 +173,11 @@ describe('LoginComponent', () => {
       component.onSubmit();
       
       // Check that loading state was set to true
-      expect(component.isLoading).toBe(true);
+      expect(component.isSubmitting).toBe(true);
       
       // Wait for completion
       setTimeout(() => {
-        expect(component.isLoading).toBe(false);
+        expect(component.isSubmitting).toBe(false);
         done();
       }, 150);
     });
@@ -276,7 +276,7 @@ describe('LoginComponent', () => {
       
       component.onSubmit();
       
-      expect(component.isLoading).toBe(false);
+      expect(component.isSubmitting).toBe(false);
     });
   });
 

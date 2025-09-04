@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, inject, Output, EventEmitter } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, Output, EventEmitter, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators, FormArray } from '@angular/forms';
 import { Subject, takeUntil } from 'rxjs';
@@ -33,6 +33,7 @@ export class BudgetWizardComponent implements OnInit, OnDestroy {
   private budgetService = inject(BudgetService);
   private categoryService = inject(CategoryService);
   private fb = inject(FormBuilder);
+  private cdr = inject(ChangeDetectorRef);
 
   // Wizard state
   currentStep = 1;
@@ -152,12 +153,8 @@ export class BudgetWizardComponent implements OnInit, OnDestroy {
       this.updatePeriodDates(period);
     });
 
-    // Update total amount when allocations change
-    this.categoryAllocationForm.get('allocations')?.valueChanges.pipe(
-      takeUntil(this.destroy$)
-    ).subscribe(() => {
-      this.updateTotalAmount();
-    });
+    // Note: We don't automatically update total amount when allocations change
+    // The total amount should be set by the user, and allocations should be distributed within that total
 
     // Update rollover amount when allowRollover changes
     this.settingsForm.get('allowRollover')?.valueChanges.pipe(
@@ -295,7 +292,7 @@ export class BudgetWizardComponent implements OnInit, OnDestroy {
   }
 
   // Category allocation methods
-  private initializeCategoryAllocations(): void {
+  public initializeCategoryAllocations(): void {
     const allocationsArray = this.getAllocationsArray();
     allocationsArray.clear();
 
@@ -342,6 +339,10 @@ export class BudgetWizardComponent implements OnInit, OnDestroy {
     const totalAmount = this.basicInfoForm.get('totalAmount')?.value || 0;
     const allocationsArray = this.getAllocationsArray();
 
+    if (allocationsArray.length === 0) {
+      return;
+    }
+
     allocationsArray.controls.forEach(control => {
       const categoryId = control.get('categoryId')?.value;
       const historicalData = this.historicalSpending.find(h => h.categoryId === categoryId);
@@ -353,11 +354,19 @@ export class BudgetWizardComponent implements OnInit, OnDestroy {
         });
       }
     });
+    
+    // Trigger change detection
+    this.cdr.detectChanges();
   }
 
   distributeEvenly(): void {
     const totalAmount = this.basicInfoForm.get('totalAmount')?.value || 0;
     const allocationsArray = this.getAllocationsArray();
+    
+    if (allocationsArray.length === 0) {
+      return;
+    }
+    
     const evenAmount = Math.round((totalAmount / allocationsArray.length) * 100) / 100;
 
     allocationsArray.controls.forEach(control => {
@@ -365,6 +374,9 @@ export class BudgetWizardComponent implements OnInit, OnDestroy {
         allocatedAmount: evenAmount
       });
     });
+    
+    // Trigger change detection
+    this.cdr.detectChanges();
   }
 
   clearAllocations(): void {
@@ -446,10 +458,11 @@ export class BudgetWizardComponent implements OnInit, OnDestroy {
   validateAllSteps(): boolean {
     return this.basicInfoForm.valid && 
            this.categoryAllocationForm.valid && 
-           this.settingsForm.valid;
+           this.settingsForm.valid &&
+           this.getAllocationsArray().length > 0;
   }
 
-  private resetWizard(): void {
+  public resetWizard(): void {
     this.currentStep = 1;
     this.isSubmitting = false;
     this.basicInfoForm.reset({
@@ -497,14 +510,18 @@ export class BudgetWizardComponent implements OnInit, OnDestroy {
 
   getTotalAllocated(): number {
     const allocationsArray = this.getAllocationsArray();
-    return allocationsArray.controls.reduce((sum, control) => {
-      return sum + (control.get('allocatedAmount')?.value || 0);
+    const total = allocationsArray.controls.reduce((sum, control) => {
+      const amount = control.get('allocatedAmount')?.value || 0;
+      return sum + amount;
     }, 0);
+    return total;
   }
 
   getRemainingAmount(): number {
     const totalAmount = this.basicInfoForm.get('totalAmount')?.value || 0;
-    return Math.round((totalAmount - this.getTotalAllocated()) * 100) / 100;
+    const totalAllocated = this.getTotalAllocated();
+    const remaining = totalAmount - totalAllocated;
+    return Math.round(remaining * 100) / 100;
   }
 
   isAllocationValid(): boolean {

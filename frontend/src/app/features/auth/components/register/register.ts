@@ -136,6 +136,7 @@ export class RegisterComponent implements OnInit, OnDestroy {
   onSubmit(): void {
     if (this.registerForm.valid && !this.isSubmitting) {
       this.isSubmitting = true;
+      this.isLoading = true;
       this.error = null;
       
       // Only send the fields the backend expects
@@ -151,6 +152,7 @@ export class RegisterComponent implements OnInit, OnDestroy {
       ).subscribe({
         next: (response) => {
           this.isSubmitting = false;
+          this.isLoading = false;
           
           this.snackBar.open('Account created successfully!', 'Close', {
             duration: 3000,
@@ -161,6 +163,7 @@ export class RegisterComponent implements OnInit, OnDestroy {
         },
         error: (error) => {
           this.isSubmitting = false;
+          this.isLoading = false;
           
           console.error('Registration error:', error);
           
@@ -180,6 +183,11 @@ export class RegisterComponent implements OnInit, OnDestroy {
           }
           
           this.error = errorMessage;
+          this.snackBar.open(errorMessage, 'Close', {
+            duration: 5000,
+            horizontalPosition: 'center',
+            verticalPosition: 'top'
+          });
         }
       });
     } else {

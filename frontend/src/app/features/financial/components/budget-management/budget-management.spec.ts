@@ -1,12 +1,14 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ReactiveFormsModule, FormsModule } from '@angular/forms';
 import { RouterTestingModule } from '@angular/router/testing';
+import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { of } from 'rxjs';
 
 import { BudgetManagementComponent } from './budget-management';
 import { FinancialService } from '../../../../core/services/financial.service';
 import { TransactionService } from '../../../../core/services/transaction.service';
 import { CategoryService } from '../../../../core/services/category.service';
+import { BudgetService } from '../../../../core/services/budget.service';
 import { Category, Transaction, TransactionType, PaginatedResponse } from '../../../../core/models/financial.model';
 
 describe('BudgetManagementComponent', () => {
@@ -15,6 +17,7 @@ describe('BudgetManagementComponent', () => {
   let mockFinancialService: jasmine.SpyObj<FinancialService>;
   let mockTransactionService: jasmine.SpyObj<TransactionService>;
   let mockCategoryService: jasmine.SpyObj<CategoryService>;
+  let mockBudgetService: jasmine.SpyObj<BudgetService>;
 
   const mockCategories: Category[] = [
     {
@@ -71,6 +74,7 @@ describe('BudgetManagementComponent', () => {
     mockFinancialService = jasmine.createSpyObj('FinancialService', ['getFinancialDashboard']);
     mockTransactionService = jasmine.createSpyObj('TransactionService', ['getUserTransactions']);
     mockCategoryService = jasmine.createSpyObj('CategoryService', ['getUserCategories']);
+    mockBudgetService = jasmine.createSpyObj('BudgetService', ['getBudgets', 'getBudgetSummary', 'createBudget', 'updateBudget', 'deleteBudget']);
 
     // Setup default return values
     mockCategoryService.getUserCategories.and.returnValue(of(mockCategories));
@@ -83,18 +87,78 @@ describe('BudgetManagementComponent', () => {
         totalPages: 1
       }
     }));
+    mockBudgetService.getBudgets.and.returnValue(of({ 
+      budgets: [], 
+      total: 0, 
+      page: 1, 
+      totalPages: 0 
+    }));
+    mockBudgetService.getBudgetSummary.and.returnValue(of({
+      totalBudgetAmount: 0,
+      totalSpentAmount: 0,
+      totalRemainingAmount: 0,
+      activeBudgetCount: 0,
+      overBudgetCount: 0,
+      upcomingDeadlines: []
+    }));
+    mockBudgetService.createBudget.and.returnValue(of({
+      _id: 'new-budget',
+      name: 'New Budget',
+      description: 'Test Budget',
+      period: 'monthly',
+      startDate: new Date('2024-01-01'),
+      endDate: new Date('2024-12-31'),
+      totalAmount: 500,
+      currency: 'USD',
+      categoryAllocations: [],
+      status: 'active',
+      alertThreshold: 80,
+      userId: 'user1',
+      isActive: true,
+      autoAdjust: false,
+      allowRollover: false,
+      rolloverAmount: 0,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    }));
+    mockBudgetService.updateBudget.and.returnValue(of({
+      _id: '1',
+      name: 'Monthly Household Budget',
+      description: 'Monthly budget for household expenses',
+      period: 'monthly',
+      startDate: new Date(2024, 0, 1),
+      endDate: new Date(2024, 11, 31),
+      totalAmount: 600,
+      currency: 'USD',
+      categoryAllocations: [
+        { categoryId: '1', allocatedAmount: 500, isFlexible: false, priority: 1 },
+        { categoryId: '2', allocatedAmount: 300, isFlexible: false, priority: 2 },
+        { categoryId: '3', allocatedAmount: 200, isFlexible: true, priority: 3 }
+      ],
+      status: 'active',
+      alertThreshold: 80,
+      userId: 'user1',
+      isActive: true,
+      autoAdjust: false,
+      allowRollover: false,
+      rolloverAmount: 0,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    }));
 
     await TestBed.configureTestingModule({
       imports: [
         BudgetManagementComponent,
         ReactiveFormsModule,
         FormsModule,
-        RouterTestingModule
+        RouterTestingModule,
+        HttpClientTestingModule
       ],
       providers: [
         { provide: FinancialService, useValue: mockFinancialService },
         { provide: TransactionService, useValue: mockTransactionService },
-        { provide: CategoryService, useValue: mockCategoryService }
+        { provide: CategoryService, useValue: mockCategoryService },
+        { provide: BudgetService, useValue: mockBudgetService }
       ]
     })
     .compileComponents();
@@ -141,10 +205,10 @@ describe('BudgetManagementComponent', () => {
 
   it('should create mock budgets', () => {
     const mockBudgets = component['createMockBudgets']();
-    expect(mockBudgets.length).toBe(3);
-    expect(mockBudgets[0].categoryName).toBe('Food & Dining');
-    expect(mockBudgets[1].categoryName).toBe('Transportation');
-    expect(mockBudgets[2].categoryName).toBe('Entertainment');
+    expect(mockBudgets.length).toBe(1);
+    expect(mockBudgets[0].name).toBe('Monthly Household Budget');
+    expect(mockBudgets[0].totalAmount).toBe(2000);
+    expect(mockBudgets[0].categoryAllocations.length).toBe(3);
   });
 
   it('should calculate budget progress correctly', () => {
@@ -155,9 +219,9 @@ describe('BudgetManagementComponent', () => {
     component['calculateBudgetProgress']();
     
     expect(component.budgetProgress.length).toBe(3);
-    expect(component.totalBudget).toBe(1000); // 500 + 300 + 200
+    expect(component.totalBudget).toBe(2000); // From mock budget totalAmount
     expect(component.totalSpent).toBe(150); // Only one transaction
-    expect(component.totalRemaining).toBe(850);
+    expect(component.totalRemaining).toBe(1850); // 2000 - 150
   });
 
   it('should handle period change', () => {
@@ -229,11 +293,14 @@ describe('BudgetManagementComponent', () => {
     const mockCategory = mockCategories[0];
     component.categories = mockCategories;
     component.budgetForm.patchValue({
+      name: 'Test Budget',
+      description: 'Test Description',
       categoryId: '1',
       amount: 500,
       period: 'monthly',
       startDate: '2024-01-01',
-      endDate: '2024-12-31'
+      endDate: '2024-12-31',
+      currency: 'USD'
     });
 
     const initialBudgetCount = component.budgets.length;
@@ -262,7 +329,7 @@ describe('BudgetManagementComponent', () => {
     component.editBudget(mockBudget);
     
     expect(component.editingBudgetId).toBe(mockBudget._id);
-    expect(component.editBudgetForm.get('amount')?.value).toBe(mockBudget.amount);
+    expect(component.editBudgetForm.get('totalAmount')?.value).toBe(mockBudget.totalAmount);
   });
 
   it('should cancel edit correctly', () => {
@@ -279,16 +346,18 @@ describe('BudgetManagementComponent', () => {
     component.editingBudgetId = mockBudget._id;
     
     component.editBudgetForm.patchValue({
-      categoryId: '1',
-      amount: 600,
+      name: 'Updated Budget',
+      description: 'Updated description',
       period: 'monthly',
       startDate: '2024-01-01',
-      endDate: '2024-12-31'
+      endDate: '2024-12-31',
+      totalAmount: 600,
+      currency: 'USD'
     });
 
     component.updateBudget();
     
-    expect(component.budgets[0].amount).toBe(600);
+    expect(component.budgets[0].totalAmount).toBe(600);
     expect(component.editingBudgetId).toBeNull();
   });
 

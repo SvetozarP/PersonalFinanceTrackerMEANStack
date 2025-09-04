@@ -232,7 +232,7 @@ export class CategoryFormComponent implements OnInit, OnDestroy {
         description: formData.description,
         color: formData.color,
         icon: formData.icon,
-        parentId: formData.parentId || null,
+        parentId: formData.parentId || undefined,
         isActive: formData.isActive
       };
 

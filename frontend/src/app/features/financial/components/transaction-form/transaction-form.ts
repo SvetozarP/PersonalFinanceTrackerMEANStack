@@ -37,7 +37,7 @@ export class TransactionFormComponent implements OnInit, OnDestroy {
 
   // Initialize the form group
   transactionForm: FormGroup = this.fb.group({
-    title: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(100)]],
+    title: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(100)]],
     description: ['', [Validators.maxLength(500)]],
     amount: [null, [Validators.required, Validators.min(0.01)]],
     currency: ['USD', Validators.required],
@@ -48,7 +48,14 @@ export class TransactionFormComponent implements OnInit, OnDestroy {
     date: [new Date(), Validators.required],
     time: [''],
     timezone: ['UTC'],
-    location: [''],
+    location: this.fb.group({
+      name: [''],
+      address: [''],
+      coordinates: this.fb.group({
+        latitude: [null],
+        longitude: [null]
+      })
+    }),
     paymentMethod: [PaymentMethod.CASH, Validators.required],
     paymentReference: [''],
     merchantName: [''],
@@ -145,6 +152,34 @@ export class TransactionFormComponent implements OnInit, OnDestroy {
         subcategoryControl?.enable();
       }
     });
+
+    // Handle recurrence controls state
+    this.transactionForm.get('isRecurring')?.valueChanges.subscribe(isRecurring => {
+      const recurrencePatternControl = this.transactionForm.get('recurrencePattern');
+      const recurrenceIntervalControl = this.transactionForm.get('recurrenceInterval');
+      const recurrenceEndDateControl = this.transactionForm.get('recurrenceEndDate');
+      
+      if (isRecurring) {
+        recurrencePatternControl?.enable();
+        recurrenceIntervalControl?.enable();
+        recurrenceEndDateControl?.enable();
+      } else {
+        recurrencePatternControl?.disable();
+        recurrenceIntervalControl?.disable();
+        recurrenceEndDateControl?.disable();
+      }
+    });
+
+    // Handle recurrence pattern changes
+    this.transactionForm.get('recurrencePattern')?.valueChanges.subscribe(pattern => {
+      const intervalControl = this.transactionForm.get('recurrenceInterval');
+      if (pattern === RecurrencePattern.DAILY) {
+        intervalControl?.setValue(1);
+        intervalControl?.disable();
+      } else {
+        intervalControl?.enable();
+      }
+    });
   }
 
   ngOnDestroy(): void {
@@ -211,6 +246,7 @@ export class TransactionFormComponent implements OnInit, OnDestroy {
         error: (error) => {
           console.error('Error loading categories:', error);
           this.isCategoriesLoading = false;
+          this.error = 'Failed to load categories';
         }
       });
   }
@@ -223,14 +259,11 @@ export class TransactionFormComponent implements OnInit, OnDestroy {
 
     this.isSubcategoriesLoading = true;
 
-    // Filter categories to get subcategories since getSubcategories might not exist
-    this.categoryService.getUserCategories()
+    this.categoryService.getCategoriesByParent(categoryId)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (categories) => {
-          this.subcategories = categories.filter(cat => 
-            cat.parentId === categoryId && cat.isActive
-          );
+        next: (subcategories) => {
+          this.subcategories = subcategories.filter(cat => cat.isActive);
           this.isSubcategoriesLoading = false;
         },
         error: (error) => {
@@ -253,7 +286,14 @@ export class TransactionFormComponent implements OnInit, OnDestroy {
       date: new Date(transaction.date),
       time: transaction.time || '',
       timezone: transaction.timezone || 'UTC',
-      location: transaction.location || '',
+      location: transaction.location || {
+        name: '',
+        address: '',
+        coordinates: {
+          latitude: null,
+          longitude: null
+        }
+      },
       paymentMethod: transaction.paymentMethod,
       paymentReference: transaction.paymentReference || '',
       merchantName: transaction.merchantName || '',
@@ -277,8 +317,8 @@ export class TransactionFormComponent implements OnInit, OnDestroy {
     if (!isRecurring) {
       this.transactionForm.patchValue({
         recurrencePattern: RecurrencePattern.NONE,
-        recurrenceInterval: 1,
-        recurrenceEndDate: null
+        recurrenceInterval: undefined,
+        recurrenceEndDate: undefined
       });
     }
   }
@@ -297,6 +337,26 @@ export class TransactionFormComponent implements OnInit, OnDestroy {
     this.transactionForm.patchValue({ tags: currentTags.filter((t: string) => t !== tag) });
   }
 
+  private processTags(tags: any): string[] {
+    if (!tags) return [];
+    
+    if (Array.isArray(tags)) {
+      return tags.filter(tag => tag && tag.trim());
+    }
+    
+    if (typeof tags === 'string') {
+      if (!tags.trim()) return [];
+      
+      // Split by comma only, preserve semicolons and spaces within tags
+      return tags
+        .split(',')
+        .map(tag => tag.trim())
+        .filter(tag => tag.length > 0);
+    }
+    
+    return [];
+  }
+
   onSubmit(): void {
     if (this.transactionForm.valid) {
       this.isSubmitting = true;
@@ -304,29 +364,29 @@ export class TransactionFormComponent implements OnInit, OnDestroy {
 
       const formData = this.transactionForm.value;
       
-      // Prepare the transaction data
+      // Prepare the transaction data with proper transformations
       const transactionData: Partial<Transaction> = {
         title: formData.title,
         description: formData.description,
-        amount: formData.amount,
+        amount: typeof formData.amount === 'string' ? parseFloat(formData.amount) : formData.amount,
         currency: formData.currency,
         type: formData.type,
         status: formData.status,
         categoryId: formData.categoryId,
-        subcategoryId: formData.subcategoryId || null,
-        date: formData.date,
+        subcategoryId: formData.subcategoryId || undefined,
+        date: formData.date instanceof Date ? formData.date : new Date(formData.date),
         time: formData.time || null,
         timezone: formData.timezone,
-        location: formData.location || null,
+        location: formData.location && (formData.location.name || formData.location.address) ? formData.location : null,
         paymentMethod: formData.paymentMethod,
         paymentReference: formData.paymentReference || null,
         merchantName: formData.merchantName || null,
         merchantId: formData.merchantId || null,
-        tags: formData.tags,
+        tags: this.processTags(formData.tags),
         isRecurring: formData.isRecurring,
         recurrencePattern: formData.recurrencePattern,
         recurrenceInterval: formData.recurrenceInterval,
-        recurrenceEndDate: formData.recurrenceEndDate,
+        recurrenceEndDate: formData.recurrenceEndDate ? (formData.recurrenceEndDate instanceof Date ? formData.recurrenceEndDate : new Date(formData.recurrenceEndDate)) : undefined,
         notes: formData.notes || null,
         source: formData.source
       };
@@ -356,7 +416,7 @@ export class TransactionFormComponent implements OnInit, OnDestroy {
               this.router.navigate(['/financial/transactions']);
             },
             error: (error) => {
-              this.error = 'Failed to create transaction';
+              this.error = 'Failed to save transaction';
               this.isSubmitting = false;
               console.error('Error creating transaction:', error);
             }
@@ -410,7 +470,14 @@ export class TransactionFormComponent implements OnInit, OnDestroy {
         date: new Date(),
         time: '',
         timezone: 'UTC',
-        location: '',
+        location: {
+          name: '',
+          address: '',
+          coordinates: {
+            latitude: null,
+            longitude: null
+          }
+        },
         paymentMethod: PaymentMethod.CASH,
         paymentReference: '',
         merchantName: '',
@@ -430,7 +497,18 @@ export class TransactionFormComponent implements OnInit, OnDestroy {
     Object.keys(this.transactionForm.controls).forEach(key => {
       const control = this.transactionForm.get(key);
       if (control instanceof FormGroup) {
-        this.markFormGroupTouched();
+        this.markFormGroupTouchedRecursive(control);
+      } else {
+        control?.markAsTouched();
+      }
+    });
+  }
+
+  private markFormGroupTouchedRecursive(formGroup: FormGroup): void {
+    Object.keys(formGroup.controls).forEach(key => {
+      const control = formGroup.get(key);
+      if (control instanceof FormGroup) {
+        this.markFormGroupTouchedRecursive(control);
       } else {
         control?.markAsTouched();
       }
@@ -444,7 +522,7 @@ export class TransactionFormComponent implements OnInit, OnDestroy {
 
   isFieldInvalid(fieldName: string): boolean {
     const control = this.getFieldControl(fieldName);
-    return control ? control.invalid && control.touched : false;
+    return control ? control.invalid && (control.touched || control.dirty) : false;
   }
 
   getFieldError(fieldName: string): string {
