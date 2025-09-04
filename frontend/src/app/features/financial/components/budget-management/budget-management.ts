@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
@@ -8,25 +8,16 @@ import {
   TransactionType, 
   Category, 
   BudgetAnalysis,
-  FinancialDashboard
+  FinancialDashboard,
+  Budget,
+  BudgetAnalytics,
+  BudgetSummary
 } from '../../../../core/models/financial.model';
 import { FinancialService } from '../../../../core/services/financial.service';
 import { TransactionService } from '../../../../core/services/transaction.service';
 import { CategoryService } from '../../../../core/services/category.service';
-
-interface Budget {
-  _id: string;
-  categoryId: string;
-  categoryName: string;
-  amount: number;
-  period: 'monthly' | 'quarterly' | 'yearly';
-  startDate: Date;
-  endDate: Date;
-  isActive: boolean;
-  userId: string;
-  createdAt: Date;
-  updatedAt: Date;
-}
+import { BudgetService } from '../../../../core/services/budget.service';
+import { BudgetWizardComponent } from '../budget-wizard/budget-wizard';
 
 interface BudgetProgress {
   categoryId: string;
@@ -42,15 +33,18 @@ interface BudgetProgress {
 @Component({
   selector: 'app-budget-management',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule, ReactiveFormsModule],
+  imports: [CommonModule, RouterModule, FormsModule, ReactiveFormsModule, BudgetWizardComponent],
   templateUrl: './budget-management.html',
   styleUrls: ['./budget-management.scss']
 })
 export class BudgetManagementComponent implements OnInit, OnDestroy {
+  @ViewChild(BudgetWizardComponent) budgetWizard!: BudgetWizardComponent;
+  
   private destroy$ = new Subject<void>();
   private financialService = inject(FinancialService);
   private transactionService = inject(TransactionService);
   private categoryService = inject(CategoryService);
+  private budgetService = inject(BudgetService);
   private fb = inject(FormBuilder);
 
   // Data
@@ -58,6 +52,8 @@ export class BudgetManagementComponent implements OnInit, OnDestroy {
   categories: Category[] = [];
   transactions: Transaction[] = [];
   budgetProgress: BudgetProgress[] = [];
+  budgetSummary: BudgetSummary | null = null;
+  budgetAnalytics: Map<string, BudgetAnalytics> = new Map();
   
   // Forms
   budgetForm!: FormGroup;
@@ -95,19 +91,24 @@ export class BudgetManagementComponent implements OnInit, OnDestroy {
 
   private initializeForms(): void {
     this.budgetForm = this.fb.group({
+      name: ['', [Validators.required, Validators.minLength(3)]],
+      description: [''],
       categoryId: ['', Validators.required],
       amount: ['', [Validators.required, Validators.min(0.01)]],
       period: ['monthly', Validators.required],
       startDate: ['', Validators.required],
-      endDate: ['', Validators.required]
+      endDate: ['', Validators.required],
+      currency: ['USD', Validators.required]
     });
 
     this.editBudgetForm = this.fb.group({
-      categoryId: ['', Validators.required],
-      amount: ['', [Validators.required, Validators.min(0.01)]],
+      name: ['', [Validators.required, Validators.minLength(3)]],
+      description: [''],
       period: ['monthly', Validators.required],
       startDate: ['', Validators.required],
-      endDate: ['', Validators.required]
+      endDate: ['', Validators.required],
+      totalAmount: ['', [Validators.required, Validators.min(0.01)]],
+      currency: ['USD', Validators.required]
     });
   }
 
@@ -130,10 +131,35 @@ export class BudgetManagementComponent implements OnInit, OnDestroy {
   }
 
   private loadBudgets(): void {
-    // In a real app, you'd have a budget service
-    // For now, we'll create mock data
-    this.budgets = this.createMockBudgets();
-    this.loadTransactions();
+    // Load budgets from the budget service
+    this.budgetService.getBudgets().pipe(
+      takeUntil(this.destroy$)
+    ).subscribe({
+      next: (response) => {
+        this.budgets = response.budgets || [];
+        this.loadBudgetSummary();
+        this.loadTransactions();
+      },
+      error: (error) => {
+        console.error('Error loading budgets:', error);
+        // Fallback to mock data for development
+        this.budgets = this.createMockBudgets();
+        this.loadTransactions();
+      }
+    });
+  }
+
+  private loadBudgetSummary(): void {
+    this.budgetService.getBudgetSummary().pipe(
+      takeUntil(this.destroy$)
+    ).subscribe({
+      next: (summary) => {
+        this.budgetSummary = summary;
+      },
+      error: (error) => {
+        console.error('Error loading budget summary:', error);
+      }
+    });
   }
 
   private loadTransactions(): void {
@@ -163,40 +189,25 @@ export class BudgetManagementComponent implements OnInit, OnDestroy {
     return [
       {
         _id: '1',
-        categoryId: '1',
-        categoryName: 'Food & Dining',
-        amount: 500,
+        name: 'Monthly Household Budget',
+        description: 'Monthly budget for household expenses',
         period: 'monthly',
         startDate: new Date(2024, 0, 1),
-        endDate: new Date(2024, 11, 31),
-        isActive: true,
+        endDate: new Date(2024, 0, 31),
+        totalAmount: 2000,
+        currency: 'USD',
+        categoryAllocations: [
+          { categoryId: '1', allocatedAmount: 500, isFlexible: false, priority: 1 },
+          { categoryId: '2', allocatedAmount: 300, isFlexible: false, priority: 2 },
+          { categoryId: '3', allocatedAmount: 200, isFlexible: true, priority: 3 }
+        ],
+        status: 'active',
+        alertThreshold: 80,
         userId: 'user1',
-        createdAt: new Date(),
-        updatedAt: new Date()
-      },
-      {
-        _id: '2',
-        categoryId: '2',
-        categoryName: 'Transportation',
-        amount: 300,
-        period: 'monthly',
-        startDate: new Date(2024, 0, 1),
-        endDate: new Date(2024, 11, 31),
         isActive: true,
-        userId: 'user1',
-        createdAt: new Date(),
-        updatedAt: new Date()
-      },
-      {
-        _id: '3',
-        categoryId: '3',
-        categoryName: 'Entertainment',
-        amount: 200,
-        period: 'monthly',
-        startDate: new Date(2024, 0, 1),
-        endDate: new Date(2024, 11, 31),
-        isActive: true,
-        userId: 'user1',
+        autoAdjust: false,
+        allowRollover: false,
+        rolloverAmount: 0,
         createdAt: new Date(),
         updatedAt: new Date()
       }
@@ -204,43 +215,48 @@ export class BudgetManagementComponent implements OnInit, OnDestroy {
   }
 
   private calculateBudgetProgress(): void {
-    this.budgetProgress = this.budgets.map(budget => {
-      const categoryTransactions = this.transactions.filter(t => 
-        t.categoryId === budget.categoryId && 
-        t.type === TransactionType.EXPENSE
-      );
+    this.budgetProgress = [];
+    
+    this.budgets.forEach(budget => {
+      budget.categoryAllocations.forEach(allocation => {
+        const categoryTransactions = this.transactions.filter(t => 
+          t.categoryId === allocation.categoryId && 
+          t.type === TransactionType.EXPENSE
+        );
 
-      const spentAmount = categoryTransactions.reduce((sum, t) => sum + t.amount, 0);
-      const remainingAmount = budget.amount - spentAmount;
-      const percentageUsed = (spentAmount / budget.amount) * 100;
+        const spentAmount = categoryTransactions.reduce((sum, t) => sum + t.amount, 0);
+        const remainingAmount = allocation.allocatedAmount - spentAmount;
+        const percentageUsed = allocation.allocatedAmount > 0 ? (spentAmount / allocation.allocatedAmount) * 100 : 0;
 
-      let status: 'under' | 'at' | 'over' = 'under';
-      if (percentageUsed >= 100) {
-        status = percentageUsed === 100 ? 'at' : 'over';
-      }
+        let status: 'under' | 'at' | 'over' = 'under';
+        if (percentageUsed >= 100) {
+          status = percentageUsed === 100 ? 'at' : 'over';
+        }
 
-      const daysRemaining = this.calculateDaysRemaining(budget.endDate);
+        const daysRemaining = this.calculateDaysRemaining(budget.endDate);
+        const category = this.categories.find(c => c._id === allocation.categoryId);
 
-      return {
-        categoryId: budget.categoryId,
-        categoryName: budget.categoryName,
-        budgetAmount: budget.amount,
-        spentAmount,
-        remainingAmount,
-        percentageUsed,
-        status,
-        daysRemaining
-      };
+        this.budgetProgress.push({
+          categoryId: allocation.categoryId,
+          categoryName: category?.name || 'Unknown Category',
+          budgetAmount: allocation.allocatedAmount,
+          spentAmount,
+          remainingAmount,
+          percentageUsed,
+          status,
+          daysRemaining
+        });
+      });
     });
 
     this.calculateOverallProgress();
   }
 
   private calculateOverallProgress(): void {
-    this.totalBudget = this.budgets.reduce((sum, b) => sum + b.amount, 0);
+    this.totalBudget = this.budgets.reduce((sum, b) => sum + b.totalAmount, 0);
     this.totalSpent = this.budgetProgress.reduce((sum, p) => sum + p.spentAmount, 0);
     this.totalRemaining = this.totalBudget - this.totalSpent;
-    this.overallProgress = (this.totalSpent / this.totalBudget) * 100;
+    this.overallProgress = this.totalBudget > 0 ? (this.totalSpent / this.totalBudget) * 100 : 0;
   }
 
   private calculateDaysRemaining(endDate: Date): number {
@@ -275,8 +291,15 @@ export class BudgetManagementComponent implements OnInit, OnDestroy {
     this.budgetForm.reset({
       period: 'monthly',
       startDate: new Date().toISOString().split('T')[0],
-      endDate: new Date().toISOString().split('T')[0]
+      endDate: new Date().toISOString().split('T')[0],
+      currency: 'USD'
     });
+  }
+
+  showBudgetWizard(): void {
+    if (this.budgetWizard) {
+      this.budgetWizard.openWizard();
+    }
   }
 
   hideAddBudgetForm(): void {
@@ -291,14 +314,26 @@ export class BudgetManagementComponent implements OnInit, OnDestroy {
       
       const newBudget: Budget = {
         _id: Date.now().toString(),
-        categoryId: formValue.categoryId,
-        categoryName: category?.name || 'Unknown Category',
-        amount: formValue.amount,
+        name: formValue.name || 'New Budget',
+        description: formValue.description,
         period: formValue.period,
         startDate: new Date(formValue.startDate),
         endDate: new Date(formValue.endDate),
-        isActive: true,
+        totalAmount: formValue.amount,
+        currency: 'USD',
+        categoryAllocations: [{
+          categoryId: formValue.categoryId,
+          allocatedAmount: formValue.amount,
+          isFlexible: false,
+          priority: 1
+        }],
+        status: 'active',
+        alertThreshold: 80,
         userId: 'user1',
+        isActive: true,
+        autoAdjust: false,
+        allowRollover: false,
+        rolloverAmount: 0,
         createdAt: new Date(),
         updatedAt: new Date()
       };
@@ -312,11 +347,13 @@ export class BudgetManagementComponent implements OnInit, OnDestroy {
   editBudget(budget: Budget): void {
     this.editingBudgetId = budget._id;
     this.editBudgetForm.patchValue({
-      categoryId: budget.categoryId,
-      amount: budget.amount,
+      name: budget.name,
+      description: budget.description,
       period: budget.period,
       startDate: budget.startDate.toISOString().split('T')[0],
-      endDate: budget.endDate.toISOString().split('T')[0]
+      endDate: budget.endDate.toISOString().split('T')[0],
+      totalAmount: budget.totalAmount,
+      currency: budget.currency
     });
   }
 
@@ -328,18 +365,18 @@ export class BudgetManagementComponent implements OnInit, OnDestroy {
   updateBudget(): void {
     if (this.editBudgetForm.valid && this.editingBudgetId) {
       const formValue = this.editBudgetForm.value;
-      const category = this.categories.find(c => c._id === formValue.categoryId);
       
       const budgetIndex = this.budgets.findIndex(b => b._id === this.editingBudgetId);
       if (budgetIndex !== -1) {
         this.budgets[budgetIndex] = {
           ...this.budgets[budgetIndex],
-          categoryId: formValue.categoryId,
-          categoryName: category?.name || 'Unknown Category',
-          amount: formValue.amount,
+          name: formValue.name,
+          description: formValue.description,
           period: formValue.period,
           startDate: new Date(formValue.startDate),
           endDate: new Date(formValue.endDate),
+          totalAmount: formValue.totalAmount,
+          currency: formValue.currency,
           updatedAt: new Date()
         };
 
@@ -405,5 +442,18 @@ export class BudgetManagementComponent implements OnInit, OnDestroy {
   
   getBudgetProgress(categoryId: string): BudgetProgress | undefined {
     return this.budgetProgress.find(p => p.categoryId === categoryId);
+  }
+
+  onBudgetCreated(budget: Budget): void {
+    // Refresh the budget list
+    this.loadBudgets();
+    
+    // Show success message or navigate to budget details
+    console.log('New budget created:', budget);
+  }
+
+  getCategoryName(categoryId: string): string {
+    const category = this.categories.find(c => c._id === categoryId);
+    return category?.name || 'Unknown Category';
   }
 }

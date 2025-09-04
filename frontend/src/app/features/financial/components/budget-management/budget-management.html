@@ -17,9 +17,14 @@
           Print
         </button>
         
-        <button class="btn btn-primary" (click)="showAddBudgetForm()">
+        <button class="btn btn-primary" (click)="showBudgetWizard()">
+          <i class="fas fa-magic"></i>
+          Create Budget Wizard
+        </button>
+        
+        <button class="btn btn-outline-primary" (click)="showAddBudgetForm()">
           <i class="fas fa-plus"></i>
-          Add Budget
+          Quick Add
         </button>
       </div>
     </div>
@@ -107,6 +112,18 @@
       <form [formGroup]="budgetForm" (ngSubmit)="onSubmitBudget()" class="budget-form">
         <div class="form-row">
           <div class="form-group">
+            <label for="budgetName">Budget Name</label>
+            <input type="text" id="budgetName" formControlName="name" class="form-control" placeholder="Budget name">
+          </div>
+
+          <div class="form-group">
+            <label for="budgetDescription">Description</label>
+            <input type="text" id="budgetDescription" formControlName="description" class="form-control" placeholder="Optional description">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
             <label for="categoryId">Category</label>
             <select id="categoryId" formControlName="categoryId" class="form-control">
               <option value="">Select Category</option>
@@ -115,7 +132,7 @@
               </option>
             </select>
           </div>
-  
+
           <div class="form-group">
             <label for="amount">Budget Amount</label>
             <input type="number" id="amount" formControlName="amount" class="form-control" placeholder="0.00" step="0.01" min="0">
@@ -201,7 +218,7 @@
         <div class="budget-item" *ngFor="let budget of budgets">
           <div class="budget-header-row">
             <div class="budget-info">
-              <h4>{{ budget.categoryName }}</h4>
+              <h4>{{ budget.name }}</h4>
               <div class="budget-meta">
                 <span class="period-badge">{{ budget.period | titlecase }}</span>
                 <span class="status-badge" [class.active]="budget.isActive" [class.inactive]="!budget.isActive">
@@ -228,42 +245,49 @@
   
           <!-- Budget Progress -->
           <div class="budget-progress" *ngIf="budget.isActive">
-            <div class="progress-info">
-              <div class="progress-stats">
+            <div class="budget-summary">
+              <div class="summary-stats">
                 <span class="stat">
-                  <strong>Budget:</strong> {{ budget.amount | currency }}
+                  <strong>Total Budget:</strong> {{ budget.totalAmount | currency:budget.currency }}
                 </span>
                 <span class="stat">
-                  <strong>Spent:</strong> {{ getBudgetProgress(budget.categoryId)?.spentAmount | currency }}
+                  <strong>Period:</strong> {{ budget.startDate | date:'shortDate' }} - {{ budget.endDate | date:'shortDate' }}
                 </span>
-                <span class="stat">
-                  <strong>Remaining:</strong> {{ getBudgetProgress(budget.categoryId)?.remainingAmount | currency }}
-                </span>
-              </div>
-  
-              <div class="progress-percentage">
-                {{ getBudgetProgress(budget.categoryId)?.percentageUsed | number:'1.1-1' }}% used
               </div>
             </div>
-  
-            <div class="progress-bar">
-              <div class="progress-fill" 
-                   [style.width.%]="getBudgetProgress(budget.categoryId)?.percentageUsed || 0"
-                   [style.background-color]="getProgressBarColor(getBudgetProgress(budget.categoryId)?.percentageUsed || 0)">
+
+            <!-- Category Allocations -->
+            <div class="category-allocations" *ngIf="budget.categoryAllocations.length > 0">
+              <div class="allocation-item" *ngFor="let allocation of budget.categoryAllocations">
+                <div class="allocation-header">
+                  <span class="category-name">{{ getCategoryName(allocation.categoryId) }}</span>
+                  <span class="allocation-amount">{{ allocation.allocatedAmount | currency:budget.currency }}</span>
+                </div>
+                
+                <div class="allocation-progress">
+                  <div class="progress-info">
+                    <span class="spent">{{ getBudgetProgress(allocation.categoryId)?.spentAmount | currency:budget.currency }}</span>
+                    <span class="percentage">{{ getBudgetProgress(allocation.categoryId)?.percentageUsed | number:'1.1-1' }}%</span>
+                  </div>
+                  
+                  <div class="progress-bar">
+                    <div class="progress-fill" 
+                         [style.width.%]="getBudgetProgress(allocation.categoryId)?.percentageUsed || 0"
+                         [style.background-color]="getProgressBarColor(getBudgetProgress(allocation.categoryId)?.percentageUsed || 0)">
+                    </div>
+                  </div>
+                  
+                  <div class="progress-status">
+                    <i class="fas" [class]="getStatusIcon(getBudgetProgress(allocation.categoryId)?.status || 'under')"
+                       [style.color]="getStatusColor(getBudgetProgress(allocation.categoryId)?.status || 'under')">
+                    </i>
+                    <span class="status-text">
+                      {{ getBudgetProgress(allocation.categoryId)?.status === 'over' ? 'Over Budget' : 
+                         getBudgetProgress(allocation.categoryId)?.status === 'at' ? 'At Budget Limit' : 'Under Budget' }}
+                    </span>
+                  </div>
+                </div>
               </div>
-            </div>
-  
-            <div class="progress-status">
-              <i class="fas" [class]="getStatusIcon(getBudgetProgress(budget.categoryId)?.status || 'under')"
-                 [style.color]="getStatusColor(getBudgetProgress(budget.categoryId)?.status || 'under')">
-              </i>
-              <span class="status-text">
-                {{ getBudgetProgress(budget.categoryId)?.status === 'over' ? 'Over Budget' : 
-                   getBudgetProgress(budget.categoryId)?.status === 'at' ? 'At Budget Limit' : 'Under Budget' }}
-              </span>
-              <span class="days-remaining" *ngIf="getBudgetProgress(budget.categoryId)?.daysRemaining !== undefined">
-                {{ getBudgetProgress(budget.categoryId)?.daysRemaining }} days remaining
-              </span>
             </div>
           </div>
   
@@ -272,17 +296,29 @@
             <form [formGroup]="editBudgetForm" (ngSubmit)="updateBudget()" class="budget-form">
               <div class="form-row">
                 <div class="form-group">
-                  <label for="editCategoryId">Category</label>
-                  <select id="editCategoryId" formControlName="categoryId" class="form-control">
-                    <option *ngFor="let category of categories" [value]="category._id">
-                      {{ category.name }}
-                    </option>
-                  </select>
+                  <label for="editBudgetName">Budget Name</label>
+                  <input type="text" id="editBudgetName" formControlName="name" class="form-control">
                 </div>
-  
+
                 <div class="form-group">
-                  <label for="editAmount">Budget Amount</label>
-                  <input type="number" id="editAmount" formControlName="amount" class="form-control" step="0.01" min="0">
+                  <label for="editBudgetDescription">Description</label>
+                  <input type="text" id="editBudgetDescription" formControlName="description" class="form-control">
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="editTotalAmount">Total Amount</label>
+                  <input type="number" id="editTotalAmount" formControlName="totalAmount" class="form-control" step="0.01" min="0">
+                </div>
+
+                <div class="form-group">
+                  <label for="editCurrency">Currency</label>
+                  <select id="editCurrency" formControlName="currency" class="form-control">
+                    <option value="USD">USD</option>
+                    <option value="EUR">EUR</option>
+                    <option value="GBP">GBP</option>
+                  </select>
                 </div>
               </div>
   
@@ -321,4 +357,7 @@
         </div>
       </div>
     </div>
+
+    <!-- Budget Wizard Component -->
+    <app-budget-wizard (budgetCreated)="onBudgetCreated($event)"></app-budget-wizard>
   </div>

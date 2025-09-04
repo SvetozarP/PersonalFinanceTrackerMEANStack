@@ -240,3 +240,116 @@ export interface Category {
     startDate?: Date;
     endDate?: Date;
   }
+
+  // Budget interfaces
+  export interface Budget {
+    _id: string;
+    name: string;
+    description?: string;
+    period: 'monthly' | 'yearly' | 'custom';
+    startDate: Date;
+    endDate: Date;
+    totalAmount: number;
+    currency: string;
+    categoryAllocations: CategoryAllocation[];
+    status: 'active' | 'paused' | 'completed' | 'archived';
+    alertThreshold: number;
+    userId: string;
+    isActive: boolean;
+    autoAdjust: boolean;
+    allowRollover: boolean;
+    rolloverAmount: number;
+    createdAt: Date;
+    updatedAt: Date;
+  }
+
+  export interface CategoryAllocation {
+    categoryId: string;
+    allocatedAmount: number;
+    isFlexible: boolean;
+    priority: number;
+  }
+
+  export interface BudgetAnalytics {
+    budgetId: string;
+    totalAllocated: number;
+    totalSpent: number;
+    totalRemaining: number;
+    progressPercentage: number;
+    isOverBudget: boolean;
+    categoryBreakdown: CategoryBudgetBreakdown[];
+    spendingTrend: SpendingTrend[];
+    alerts: BudgetAlert[];
+  }
+
+  export interface CategoryBudgetBreakdown {
+    categoryId: string;
+    categoryName: string;
+    allocatedAmount: number;
+    spentAmount: number;
+    remainingAmount: number;
+    progressPercentage: number;
+    isOverBudget: boolean;
+    isFlexible: boolean;
+    priority: number;
+  }
+
+  export interface SpendingTrend {
+    date: Date;
+    amount: number;
+    cumulativeAmount: number;
+  }
+
+  export interface BudgetAlert {
+    type: 'threshold' | 'category_overbudget' | 'deadline';
+    message: string;
+    severity: 'low' | 'medium' | 'high';
+    categoryId?: string;
+    currentAmount?: number;
+    limitAmount?: number;
+  }
+
+  export interface BudgetSummary {
+    totalBudgetAmount: number;
+    totalSpentAmount: number;
+    totalRemainingAmount: number;
+    activeBudgetCount: number;
+    overBudgetCount: number;
+    upcomingDeadlines: {
+      budgetId: string;
+      budgetName: string;
+      endDate: Date;
+      remainingAmount: number;
+      isOverBudget: boolean;
+    }[];
+  }
+
+  export interface CreateBudgetDto {
+    name: string;
+    description?: string;
+    period: 'monthly' | 'yearly' | 'custom';
+    startDate: Date;
+    endDate: Date;
+    totalAmount: number;
+    currency?: string;
+    categoryAllocations: CategoryAllocation[];
+    alertThreshold?: number;
+    autoAdjust?: boolean;
+    allowRollover?: boolean;
+  }
+
+  export interface UpdateBudgetDto {
+    name?: string;
+    description?: string;
+    period?: 'monthly' | 'yearly' | 'custom';
+    startDate?: Date;
+    endDate?: Date;
+    totalAmount?: number;
+    currency?: string;
+    categoryAllocations?: CategoryAllocation[];
+    status?: 'active' | 'paused' | 'completed' | 'archived';
+    alertThreshold?: number;
+    autoAdjust?: boolean;
+    allowRollover?: boolean;
+    rolloverAmount?: number;
+  }

@@ -1,0 +1,499 @@
+<!-- Budget Creation Wizard Modal -->
+<div class="wizard-overlay" *ngIf="showWizard" (click)="hideBudgetWizard()">
+  <div class="wizard-container" (click)="$event.stopPropagation()">
+    
+    <!-- Wizard Header -->
+    <div class="wizard-header">
+      <div class="wizard-title">
+        <h2>Create New Budget</h2>
+        <p class="wizard-subtitle">{{ getCurrentStepDescription() }}</p>
+      </div>
+      
+      <button class="close-btn" (click)="hideBudgetWizard()" type="button">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <!-- Progress Indicator -->
+    <div class="wizard-progress">
+      <div class="progress-bar">
+        <div class="progress-fill" [style.width.%]="getProgressPercentage()"></div>
+      </div>
+      
+      <div class="progress-steps">
+        <div 
+          *ngFor="let step of steps; let i = index" 
+          class="step-indicator"
+          [class.completed]="step.completed"
+          [class.current]="step.current"
+          [class.clickable]="i < currentStep || step.completed"
+          (click)="goToStep(step.id)"
+        >
+          <div class="step-number">
+            <i class="fas fa-check" *ngIf="step.completed"></i>
+            <span *ngIf="!step.completed">{{ step.id }}</span>
+          </div>
+          <div class="step-info">
+            <div class="step-title">{{ step.title }}</div>
+            <div class="step-description">{{ step.description }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Wizard Content -->
+    <div class="wizard-content">
+      
+      <!-- Step 1: Basic Information -->
+      <div class="wizard-step" *ngIf="currentStep === 1">
+        <form [formGroup]="basicInfoForm" class="step-form">
+          
+          <div class="form-section">
+            <h3>Budget Details</h3>
+            
+            <div class="form-group">
+              <label for="budgetName">Budget Name *</label>
+              <input 
+                type="text" 
+                id="budgetName" 
+                formControlName="name" 
+                class="form-control"
+                [class.invalid]="isFieldInvalid(basicInfoForm, 'name')"
+                placeholder="e.g., Monthly Household Budget"
+              >
+              <div class="error-messages" *ngIf="isFieldInvalid(basicInfoForm, 'name')">
+                <div *ngFor="let error of getFormErrors(basicInfoForm, 'name')" class="error-message">
+                  {{ error }}
+                </div>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="budgetDescription">Description</label>
+              <textarea 
+                id="budgetDescription" 
+                formControlName="description" 
+                class="form-control"
+                [class.invalid]="isFieldInvalid(basicInfoForm, 'description')"
+                placeholder="Optional description for your budget"
+                rows="3"
+              ></textarea>
+              <div class="error-messages" *ngIf="isFieldInvalid(basicInfoForm, 'description')">
+                <div *ngFor="let error of getFormErrors(basicInfoForm, 'description')" class="error-message">
+                  {{ error }}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h3>Budget Period</h3>
+            
+            <div class="form-group">
+              <label for="budgetPeriod">Period *</label>
+              <select 
+                id="budgetPeriod" 
+                formControlName="period" 
+                class="form-control"
+                [class.invalid]="isFieldInvalid(basicInfoForm, 'period')"
+              >
+                <option *ngFor="let period of periods" [value]="period.value">
+                  {{ period.label }} - {{ period.description }}
+                </option>
+              </select>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="startDate">Start Date *</label>
+                <input 
+                  type="date" 
+                  id="startDate" 
+                  formControlName="startDate" 
+                  class="form-control"
+                  [class.invalid]="isFieldInvalid(basicInfoForm, 'startDate')"
+                >
+                <div class="error-messages" *ngIf="isFieldInvalid(basicInfoForm, 'startDate')">
+                  <div *ngFor="let error of getFormErrors(basicInfoForm, 'startDate')" class="error-message">
+                    {{ error }}
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="endDate">End Date *</label>
+                <input 
+                  type="date" 
+                  id="endDate" 
+                  formControlName="endDate" 
+                  class="form-control"
+                  [class.invalid]="isFieldInvalid(basicInfoForm, 'endDate')"
+                >
+                <div class="error-messages" *ngIf="isFieldInvalid(basicInfoForm, 'endDate')">
+                  <div *ngFor="let error of getFormErrors(basicInfoForm, 'endDate')" class="error-message">
+                    {{ error }}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h3>Budget Amount</h3>
+            
+            <div class="form-row">
+              <div class="form-group">
+                <label for="totalAmount">Total Amount *</label>
+                <div class="amount-input-group">
+                  <select formControlName="currency" class="currency-select">
+                    <option *ngFor="let currency of currencies" [value]="currency.value">
+                      {{ currency.symbol }} {{ currency.value }}
+                    </option>
+                  </select>
+                  <input 
+                    type="number" 
+                    id="totalAmount" 
+                    formControlName="totalAmount" 
+                    class="form-control amount-input"
+                    [class.invalid]="isFieldInvalid(basicInfoForm, 'totalAmount')"
+                    placeholder="0.00"
+                    step="0.01"
+                    min="0"
+                  >
+                </div>
+                <div class="error-messages" *ngIf="isFieldInvalid(basicInfoForm, 'totalAmount')">
+                  <div *ngFor="let error of getFormErrors(basicInfoForm, 'totalAmount')" class="error-message">
+                    {{ error }}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+
+      <!-- Step 2: Category Allocation -->
+      <div class="wizard-step" *ngIf="currentStep === 2">
+        <form [formGroup]="categoryAllocationForm" class="step-form">
+          
+          <div class="allocation-header">
+            <h3>Category Allocation</h3>
+            <p>Distribute your budget across different categories</p>
+            
+            <div class="allocation-summary">
+              <div class="summary-item">
+                <span class="label">Total Budget:</span>
+                <span class="value">{{ basicInfoForm.get('totalAmount')?.value | currency:basicInfoForm.get('currency')?.value }}</span>
+              </div>
+              <div class="summary-item">
+                <span class="label">Allocated:</span>
+                <span class="value" [class.valid]="isAllocationValid()" [class.invalid]="!isAllocationValid()">
+                  {{ getTotalAllocated() | currency:basicInfoForm.get('currency')?.value }}
+                </span>
+              </div>
+              <div class="summary-item">
+                <span class="label">Remaining:</span>
+                <span class="value" [class.positive]="getRemainingAmount() >= 0" [class.negative]="getRemainingAmount() < 0">
+                  {{ getRemainingAmount() | currency:basicInfoForm.get('currency')?.value }}
+                </span>
+              </div>
+            </div>
+
+            <div class="allocation-actions">
+              <button type="button" class="btn btn-outline-primary" (click)="useSuggestedAmounts()">
+                <i class="fas fa-magic"></i>
+                Use Suggested
+              </button>
+              <button type="button" class="btn btn-outline-secondary" (click)="distributeEvenly()">
+                <i class="fas fa-equals"></i>
+                Distribute Evenly
+              </button>
+              <button type="button" class="btn btn-outline-danger" (click)="clearAllocations()">
+                <i class="fas fa-trash"></i>
+                Clear All
+              </button>
+            </div>
+          </div>
+
+          <div class="allocations-list" formArrayName="allocations">
+            <div 
+              *ngFor="let allocation of getAllocationsArray().controls; let i = index" 
+              class="allocation-item"
+              [formGroupName]="i"
+            >
+              <div class="category-info">
+                <div class="category-icon" [style.background-color]="getCategoryColor(allocation.get('categoryId')?.value)">
+                  <i [class]="getCategoryIcon(allocation.get('categoryId')?.value)"></i>
+                </div>
+                <div class="category-details">
+                  <div class="category-name">{{ getCategoryName(allocation.get('categoryId')?.value) }}</div>
+                  <div class="historical-info" *ngIf="getHistoricalPercentage(allocation.get('categoryId')?.value) > 0">
+                    Historical: {{ getHistoricalPercentage(allocation.get('categoryId')?.value) }}%
+                  </div>
+                </div>
+              </div>
+
+              <div class="allocation-controls">
+                <div class="form-group">
+                  <label>Allocated Amount</label>
+                  <div class="amount-input-group">
+                    <span class="currency-symbol">{{ getCurrencySymbol() }}</span>
+                    <input 
+                      type="number" 
+                      formControlName="allocatedAmount" 
+                      class="form-control amount-input"
+                      [class.invalid]="isAllocationFieldInvalid(allocation, 'allocatedAmount')"
+                      placeholder="0.00"
+                      step="0.01"
+                      min="0"
+                    >
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label>Priority</label>
+                  <select formControlName="priority" class="form-control priority-select">
+                    <option *ngFor="let priority of [1,2,3,4,5,6,7,8,9,10]" [value]="priority">
+                      {{ priority }}
+                    </option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label class="checkbox-label">
+                    <input type="checkbox" formControlName="isFlexible">
+                    <span class="checkmark"></span>
+                    Flexible
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="allocation-validation" *ngIf="!isAllocationValid()">
+            <div class="validation-message error">
+              <i class="fas fa-exclamation-triangle"></i>
+              <span>Total allocated amount must equal the total budget amount</span>
+            </div>
+          </div>
+        </form>
+      </div>
+
+      <!-- Step 3: Settings & Alerts -->
+      <div class="wizard-step" *ngIf="currentStep === 3">
+        <form [formGroup]="settingsForm" class="step-form">
+          
+          <div class="form-section">
+            <h3>Alert Settings</h3>
+            
+            <div class="form-group">
+              <label for="alertThreshold">Alert Threshold (%)</label>
+              <div class="threshold-input-group">
+                <input 
+                  type="range" 
+                  id="alertThreshold" 
+                  formControlName="alertThreshold" 
+                  class="threshold-slider"
+                  min="0"
+                  max="100"
+                  step="5"
+                >
+                <div class="threshold-display">
+                  <span class="threshold-value">{{ settingsForm.get('alertThreshold')?.value }}%</span>
+                  <span class="threshold-description">Alert when budget reaches this percentage</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h3>Budget Options</h3>
+            
+            <div class="checkbox-group">
+              <label class="checkbox-label">
+                <input type="checkbox" formControlName="autoAdjust">
+                <span class="checkmark"></span>
+                <div class="checkbox-content">
+                  <div class="checkbox-title">Auto-adjust allocations</div>
+                  <div class="checkbox-description">Automatically adjust category allocations based on spending patterns</div>
+                </div>
+              </label>
+            </div>
+
+            <div class="checkbox-group">
+              <label class="checkbox-label">
+                <input type="checkbox" formControlName="allowRollover">
+                <span class="checkmark"></span>
+                <div class="checkbox-content">
+                  <div class="checkbox-title">Allow rollover</div>
+                  <div class="checkbox-description">Allow unused amounts to roll over to the next budget period</div>
+                </div>
+              </label>
+            </div>
+
+            <div class="form-group" *ngIf="settingsForm.get('allowRollover')?.value">
+              <label for="rolloverAmount">Rollover Amount</label>
+              <div class="amount-input-group">
+                <span class="currency-symbol">{{ getCurrencySymbol() }}</span>
+                <input 
+                  type="number" 
+                  id="rolloverAmount" 
+                  formControlName="rolloverAmount" 
+                  class="form-control amount-input"
+                  [class.invalid]="isFieldInvalid(settingsForm, 'rolloverAmount')"
+                  placeholder="0.00"
+                  step="0.01"
+                  min="0"
+                >
+              </div>
+              <div class="error-messages" *ngIf="isFieldInvalid(settingsForm, 'rolloverAmount')">
+                <div *ngFor="let error of getFormErrors(settingsForm, 'rolloverAmount')" class="error-message">
+                  {{ error }}
+                </div>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+
+      <!-- Step 4: Review & Create -->
+      <div class="wizard-step" *ngIf="currentStep === 4">
+        <div class="review-content">
+          
+          <div class="review-section">
+            <h3>Budget Summary</h3>
+            
+            <div class="summary-card">
+              <div class="summary-header">
+                <h4>{{ basicInfoForm.get('name')?.value }}</h4>
+                <span class="budget-period">{{ basicInfoForm.get('period')?.value | titlecase }}</span>
+              </div>
+              
+              <div class="summary-details">
+                <div class="detail-row">
+                  <span class="label">Description:</span>
+                  <span class="value">{{ basicInfoForm.get('description')?.value || 'No description' }}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="label">Period:</span>
+                  <span class="value">
+                    {{ basicInfoForm.get('startDate')?.value | date:'mediumDate' }} - 
+                    {{ basicInfoForm.get('endDate')?.value | date:'mediumDate' }}
+                  </span>
+                </div>
+                <div class="detail-row">
+                  <span class="label">Total Amount:</span>
+                  <span class="value">{{ basicInfoForm.get('totalAmount')?.value | currency:basicInfoForm.get('currency')?.value }}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="label">Alert Threshold:</span>
+                  <span class="value">{{ settingsForm.get('alertThreshold')?.value }}%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="review-section">
+            <h3>Category Allocations</h3>
+            
+            <div class="allocations-summary">
+              <div 
+                *ngFor="let allocation of getAllocationsArray().controls" 
+                class="allocation-summary-item"
+              >
+                <div class="allocation-category">
+                  <div class="category-icon" [style.background-color]="getCategoryColor(allocation.get('categoryId')?.value)">
+                    <i [class]="getCategoryIcon(allocation.get('categoryId')?.value)"></i>
+                  </div>
+                  <span class="category-name">{{ getCategoryName(allocation.get('categoryId')?.value) }}</span>
+                </div>
+                <div class="allocation-amount">
+                  {{ allocation.get('allocatedAmount')?.value | currency:basicInfoForm.get('currency')?.value }}
+                </div>
+                <div class="allocation-options">
+                  <span class="priority-badge" *ngIf="allocation.get('priority')?.value > 1">
+                    Priority {{ allocation.get('priority')?.value }}
+                  </span>
+                  <span class="flexible-badge" *ngIf="allocation.get('isFlexible')?.value">
+                    Flexible
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="review-section">
+            <h3>Settings</h3>
+            
+            <div class="settings-summary">
+              <div class="setting-item">
+                <span class="setting-label">Auto-adjust allocations:</span>
+                <span class="setting-value" [class.enabled]="settingsForm.get('autoAdjust')?.value">
+                  {{ settingsForm.get('autoAdjust')?.value ? 'Enabled' : 'Disabled' }}
+                </span>
+              </div>
+              <div class="setting-item">
+                <span class="setting-label">Allow rollover:</span>
+                <span class="setting-value" [class.enabled]="settingsForm.get('allowRollover')?.value">
+                  {{ settingsForm.get('allowRollover')?.value ? 'Enabled' : 'Disabled' }}
+                </span>
+              </div>
+              <div class="setting-item" *ngIf="settingsForm.get('allowRollover')?.value">
+                <span class="setting-label">Rollover amount:</span>
+                <span class="setting-value">
+                  {{ settingsForm.get('rolloverAmount')?.value | currency:basicInfoForm.get('currency')?.value }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Wizard Footer -->
+    <div class="wizard-footer">
+      <div class="footer-actions">
+        <button 
+          type="button" 
+          class="btn btn-outline-secondary" 
+          (click)="previousStep()"
+          [disabled]="!canGoPrevious()"
+        >
+          <i class="fas fa-arrow-left"></i>
+          Previous
+        </button>
+        
+        <button 
+          type="button" 
+          class="btn btn-outline-secondary" 
+          (click)="hideBudgetWizard()"
+        >
+          Cancel
+        </button>
+        
+        <button 
+          type="button" 
+          class="btn btn-primary" 
+          (click)="nextStep()"
+          [disabled]="!canGoNext()"
+          *ngIf="!isLastStep()"
+        >
+          Next
+          <i class="fas fa-arrow-right"></i>
+        </button>
+        
+        <button 
+          type="button" 
+          class="btn btn-success" 
+          (click)="createBudget()"
+          [disabled]="!validateAllSteps() || isSubmitting"
+          *ngIf="isLastStep()"
+        >
+          <i class="fas fa-spinner fa-spin" *ngIf="isSubmitting"></i>
+          <i class="fas fa-check" *ngIf="!isSubmitting"></i>
+          {{ isSubmitting ? 'Creating...' : 'Create Budget' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
