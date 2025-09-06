@@ -205,12 +205,12 @@ export class TransactionDetailsComponent implements OnInit, OnDestroy {
 
   getRecurrenceIcon(pattern: RecurrencePattern): string {
     switch (pattern) {
-      case RecurrencePattern.DAILY: return '��';
-      case RecurrencePattern.WEEKLY: return '��';
-      case RecurrencePattern.BIWEEKLY: return '��';
-      case RecurrencePattern.MONTHLY: return '��';
-      case RecurrencePattern.QUARTERLY: return '��';
-      case RecurrencePattern.YEARLY: return '��';
+      case RecurrencePattern.DAILY: return '📅';
+      case RecurrencePattern.WEEKLY: return '📅';
+      case RecurrencePattern.BIWEEKLY: return '📅';
+      case RecurrencePattern.MONTHLY: return '📅';
+      case RecurrencePattern.QUARTERLY: return '📅';
+      case RecurrencePattern.YEARLY: return '📅';
       case RecurrencePattern.CUSTOM: return '⚙️';
       case RecurrencePattern.NONE:
       default: return '❌';

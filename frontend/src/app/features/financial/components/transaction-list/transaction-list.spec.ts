@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { RouterTestingModule } from '@angular/router/testing';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 
 import { TransactionListComponent } from './transaction-list';
 import { TransactionService } from '../../../../core/services/transaction.service';
@@ -232,5 +232,287 @@ describe('TransactionListComponent', () => {
     expect(component.dateRange).toEqual({ start: '', end: '' });
     expect(component.currentPage).toBe(1);
     expect(transactionService.getUserTransactions).toHaveBeenCalled();
+  });
+
+  describe('error handling', () => {
+    it('should handle transaction loading error', (done) => {
+      transactionService.getUserTransactions.and.returnValue(throwError(() => new Error('API Error')));
+      
+      // Test through public method that calls loadTransactions
+      component.onSearch();
+      
+      // Wait for the setTimeout delay in onSearch()
+      setTimeout(() => {
+        expect(component.error).toBe('Failed to load transactions');
+        expect(component.isTransactionsLoading).toBe(false);
+        done();
+      }, 350);
+    });
+
+    it('should handle category loading error', () => {
+      categoryService.getUserCategories.and.returnValue(throwError(() => new Error('API Error')));
+      
+      // Test through ngOnInit which calls loadCategories
+      component.ngOnInit();
+      
+      expect(component.isCategoriesLoading).toBe(false);
+    });
+
+    it('should handle transaction deletion error', () => {
+      spyOn(window, 'confirm').and.returnValue(true);
+      transactionService.deleteTransaction.and.returnValue(throwError(() => new Error('API Error')));
+      
+      component.onTransactionDelete('1');
+      
+      expect(component.error).toBe('Failed to delete transaction');
+      expect(component.isDeleting).toBe(false);
+    });
+  });
+
+  describe('pagination', () => {
+    it('should calculate page numbers correctly for small number of pages', () => {
+      component.totalPages = 3;
+      component.currentPage = 1;
+      
+      const pages = component.getPageNumbers();
+      expect(pages).toEqual([1, 2, 3]);
+    });
+
+    it('should calculate page numbers correctly for large number of pages', () => {
+      component.totalPages = 10;
+      component.currentPage = 5;
+      
+      const pages = component.getPageNumbers();
+      expect(pages).toEqual([3, 4, 5, 6, 7]);
+    });
+
+    it('should handle page size changes', () => {
+      component.onPageSizeChange(50);
+      
+      expect(component.pageSize).toBe(50);
+      expect(component.currentPage).toBe(1);
+      expect(transactionService.getUserTransactions).toHaveBeenCalled();
+    });
+
+    it('should handle pagination when current page becomes empty', () => {
+      component.transactions = [mockTransaction];
+      component.currentPage = 2;
+      component.pageSize = 20;
+      component.totalItems = 1;
+      component.totalPages = 1;
+      
+      spyOn(window, 'confirm').and.returnValue(true);
+      component.onTransactionDelete('1');
+      
+      expect(component.currentPage).toBe(1);
+    });
+  });
+
+  describe('computed properties', () => {
+    it('should return correct loading state', () => {
+      component.isTransactionsLoading = true;
+      component.isCategoriesLoading = false;
+      expect(component.isLoading).toBe(true);
+      
+      component.isTransactionsLoading = false;
+      component.isCategoriesLoading = true;
+      expect(component.isLoading).toBe(true);
+      
+      component.isTransactionsLoading = false;
+      component.isCategoriesLoading = false;
+      expect(component.isLoading).toBe(false);
+    });
+
+    it('should return correct action loading state', () => {
+      component.isFiltering = true;
+      expect(component.isAnyActionLoading).toBe(true);
+      
+      component.isFiltering = false;
+      component.isDeleting = true;
+      expect(component.isAnyActionLoading).toBe(true);
+      
+      component.isDeleting = false;
+      component.isExporting = true;
+      expect(component.isAnyActionLoading).toBe(true);
+      
+      component.isExporting = false;
+      expect(component.isAnyActionLoading).toBe(false);
+    });
+
+    it('should return correct hasTransactions state', () => {
+      component.transactions = [];
+      expect(component.hasTransactions).toBe(false);
+      
+      component.transactions = [mockTransaction];
+      expect(component.hasTransactions).toBe(true);
+    });
+
+    it('should return correct hasCategories state', () => {
+      component.categories = [];
+      expect(component.hasCategories).toBe(false);
+      
+      component.categories = [mockCategory];
+      expect(component.hasCategories).toBe(true);
+    });
+
+    it('should return correct showPagination state', () => {
+      component.totalPages = 1;
+      expect(component.showPagination).toBe(false);
+      
+      component.totalPages = 2;
+      expect(component.showPagination).toBe(true);
+    });
+  });
+
+  describe('formatting methods', () => {
+    it('should format currency correctly', () => {
+      const formatted = component.formatCurrency(1234.56, 'USD');
+      expect(formatted).toContain('$1,234.56');
+    });
+
+    it('should format currency with different currency', () => {
+      const formatted = component.formatCurrency(1234.56, 'EUR');
+      expect(formatted).toContain('€1,234.56');
+    });
+
+    it('should get correct amount class', () => {
+      expect(component.getAmountClass(TransactionType.EXPENSE)).toBe('negative');
+      expect(component.getAmountClass(TransactionType.INCOME)).toBe('positive');
+      expect(component.getAmountClass(TransactionType.TRANSFER)).toBe('neutral');
+      expect(component.getAmountClass(TransactionType.ADJUSTMENT)).toBe('neutral');
+    });
+
+    it('should get correct status class', () => {
+      expect(component.getTransactionStatusClass(TransactionStatus.COMPLETED)).toBe('status-completed');
+      expect(component.getTransactionStatusClass(TransactionStatus.PENDING)).toBe('status-pending');
+      expect(component.getTransactionStatusClass(TransactionStatus.FAILED)).toBe('status-failed');
+      expect(component.getTransactionStatusClass(TransactionStatus.CANCELLED)).toBe('status-cancelled');
+    });
+
+    it('should get category color correctly', () => {
+      const color = component.getCategoryColor('cat1');
+      expect(color).toBe('#FF0000');
+    });
+
+    it('should return default color for non-existent category', () => {
+      const color = component.getCategoryColor('non-existent');
+      expect(color).toBe('#667eea');
+    });
+  });
+
+  describe('export functionality', () => {
+    it('should handle export transactions', (done) => {
+      component.exportTransactions();
+      
+      expect(component.isExporting).toBe(true);
+      
+      setTimeout(() => {
+        expect(component.isExporting).toBe(false);
+        done();
+      }, 2100);
+    });
+  });
+
+  describe('transaction loading with pagination', () => {
+    it('should handle response without pagination', () => {
+      transactionService.getUserTransactions.and.returnValue(of({
+        data: [mockTransaction],
+        pagination: {
+          page: 1,
+          limit: 20,
+          total: 1,
+          totalPages: 1
+        }
+      }));
+      
+      // Test through public method that calls loadTransactions
+      component.onSearch();
+      
+      expect(component.totalItems).toBe(1);
+      expect(component.totalPages).toBe(1);
+    });
+
+    it('should handle response with pagination', (done) => {
+      transactionService.getUserTransactions.and.returnValue(of({
+        data: [mockTransaction],
+        pagination: {
+          page: 1,
+          limit: 20,
+          total: 50,
+          totalPages: 3
+        }
+      }));
+      
+      // Test through public method that calls loadTransactions
+      component.onSearch();
+      
+      // Wait for the setTimeout delay in onSearch()
+      setTimeout(() => {
+        expect(component.totalItems).toBe(50);
+        expect(component.totalPages).toBe(3);
+        done();
+      }, 350);
+    });
+  });
+
+  describe('sorting functionality', () => {
+    it('should handle sort change', () => {
+      component.onSortChange();
+      expect(transactionService.getUserTransactions).toHaveBeenCalled();
+    });
+
+    it('should toggle sort order for same field', () => {
+      component.sortBy = 'amount';
+      component.sortOrder = 'asc';
+      
+      component.onSort('amount');
+      expect(component.sortOrder).toBe('desc');
+      
+      component.onSort('amount');
+      expect(component.sortOrder).toBe('asc');
+    });
+
+    it('should set new field and reset to asc', () => {
+      component.sortBy = 'date';
+      component.sortOrder = 'desc';
+      
+      component.onSort('amount');
+      expect(component.sortBy).toBe('amount');
+      expect(component.sortOrder).toBe('asc');
+    });
+  });
+
+  describe('duplicate methods', () => {
+    it('should have both getPageNumbers and pageNumbers getter', () => {
+      component.totalPages = 5;
+      component.currentPage = 3;
+      
+      const methodResult = component.getPageNumbers();
+      const getterResult = component.pageNumbers;
+      
+      expect(methodResult).toEqual(getterResult);
+    });
+
+    it('should have both formatAmount and formatCurrency methods', () => {
+      const amount = 1234.56;
+      const currency = 'USD';
+      
+      const formatAmountResult = component.formatAmount(amount, currency);
+      const formatCurrencyResult = component.formatCurrency(amount, currency);
+      
+      expect(formatAmountResult).toEqual(formatCurrencyResult);
+    });
+
+    it('should have both deleteTransaction and onTransactionDelete methods', () => {
+      spyOn(window, 'confirm').and.returnValue(true);
+      
+      component.deleteTransaction('1');
+      expect(transactionService.deleteTransaction).toHaveBeenCalledWith('1');
+      
+      transactionService.deleteTransaction.calls.reset();
+      
+      component.onTransactionDelete('1');
+      expect(transactionService.deleteTransaction).toHaveBeenCalledWith('1');
+    });
   });
 });

@@ -392,5 +392,303 @@ describe('AuthService', () => {
       const isAuthenticated = await firstValueFrom(service.isAuthenticated$);
       expect(isAuthenticated).toBe(true);
     });
+
+    it('should emit false when user is null', async () => {
+      service['currentUserSubject'].next(null);
+      
+      const isAuthenticated = await firstValueFrom(service.isAuthenticated$);
+      expect(isAuthenticated).toBe(false);
+    });
+  });
+
+  describe('error handling', () => {
+    it('should handle network errors', async () => {
+      const networkError = new Error('Network Error');
+      const httpClient = TestBed.inject(HttpClient) as jasmine.SpyObj<HttpClient>;
+      httpClient.post.and.returnValue(throwError(() => networkError));
+
+      try {
+        await firstValueFrom(service.login(mockLoginRequest));
+        fail('should have failed');
+      } catch (error: any) {
+        expect(error.message).toBe('Unable to connect to the server. Please check your internet connection.');
+        expect(error.userFriendly).toBe(true);
+      }
+    });
+
+    it('should handle timeout errors', async () => {
+      const timeoutError = new Error('timeout');
+      const httpClient = TestBed.inject(HttpClient) as jasmine.SpyObj<HttpClient>;
+      httpClient.post.and.returnValue(throwError(() => timeoutError));
+
+      try {
+        await firstValueFrom(service.login(mockLoginRequest));
+        fail('should have failed');
+      } catch (error: any) {
+        expect(error.message).toBe('Request timed out. Please try again.');
+        expect(error.userFriendly).toBe(true);
+      }
+    });
+
+    it('should handle validation errors with multiple messages', async () => {
+      const validationError = {
+        status: 422,
+        error: {
+          errors: [
+            { message: 'Email is required' },
+            { message: 'Password is too short' }
+          ]
+        }
+      };
+      const httpClient = TestBed.inject(HttpClient) as jasmine.SpyObj<HttpClient>;
+      httpClient.post.and.returnValue(throwError(() => validationError));
+
+      try {
+        await firstValueFrom(service.register(mockRegisterRequest));
+        fail('should have failed');
+      } catch (error: any) {
+        expect(error.message).toBe('Email is required, Password is too short');
+        expect(error.userFriendly).toBe(true);
+      }
+    });
+
+    it('should handle different HTTP status codes', async () => {
+      const statusCodes = [
+        { status: 400, expectedMessage: 'Invalid request. Please check your input and try again.' },
+        { status: 401, expectedMessage: 'Invalid credentials. Please check your email and password.' },
+        { status: 403, expectedMessage: 'Access denied. You do not have permission to perform this action.' },
+        { status: 404, expectedMessage: 'The requested resource was not found.' },
+        { status: 409, expectedMessage: 'A user with this email already exists.' },
+        { status: 422, expectedMessage: 'Validation failed. Please check your input and try again.' },
+        { status: 429, expectedMessage: 'Too many requests. Please wait a moment and try again.' },
+        { status: 500, expectedMessage: 'Server error. Please try again later.' },
+        { status: 503, expectedMessage: 'Service temporarily unavailable. Please try again later.' }
+      ];
+
+      for (const testCase of statusCodes) {
+        const httpClient = TestBed.inject(HttpClient) as jasmine.SpyObj<HttpClient>;
+        httpClient.post.and.returnValue(throwError(() => ({ status: testCase.status })));
+
+        try {
+          await firstValueFrom(service.login(mockLoginRequest));
+          fail(`should have failed for status ${testCase.status}`);
+        } catch (error: any) {
+          expect(error.message).toBe(testCase.expectedMessage);
+          expect(error.userFriendly).toBe(true);
+        }
+      }
+    });
+
+    it('should handle unknown status codes', async () => {
+      const httpClient = TestBed.inject(HttpClient) as jasmine.SpyObj<HttpClient>;
+      httpClient.post.and.returnValue(throwError(() => ({ status: 999 })));
+
+      try {
+        await firstValueFrom(service.login(mockLoginRequest));
+        fail('should have failed');
+      } catch (error: any) {
+        expect(error.message).toBe('Request failed with status 999. Please try again.');
+        expect(error.userFriendly).toBe(true);
+      }
+    });
+
+    it('should handle errors with nested error objects', async () => {
+      const nestedError = {
+        status: 400,
+        error: {
+          error: 'Nested error message'
+        }
+      };
+      const httpClient = TestBed.inject(HttpClient) as jasmine.SpyObj<HttpClient>;
+      httpClient.post.and.returnValue(throwError(() => nestedError));
+
+      try {
+        await firstValueFrom(service.login(mockLoginRequest));
+        fail('should have failed');
+      } catch (error: any) {
+        expect(error.message).toBe('Nested error message');
+        expect(error.userFriendly).toBe(true);
+      }
+    });
+
+    it('should handle errors with only status code', async () => {
+      const httpClient = TestBed.inject(HttpClient) as jasmine.SpyObj<HttpClient>;
+      httpClient.post.and.returnValue(throwError(() => ({ status: 500 })));
+
+      try {
+        await firstValueFrom(service.login(mockLoginRequest));
+        fail('should have failed');
+      } catch (error: any) {
+        expect(error.message).toBe('Server error. Please try again later.');
+        expect(error.userFriendly).toBe(true);
+      }
+    });
+
+    it('should handle errors with no specific information', async () => {
+      const httpClient = TestBed.inject(HttpClient) as jasmine.SpyObj<HttpClient>;
+      httpClient.post.and.returnValue(throwError(() => ({})));
+
+      try {
+        await firstValueFrom(service.login(mockLoginRequest));
+        fail('should have failed');
+      } catch (error: any) {
+        expect(error.message).toBe('An unexpected error occurred. Please try again.');
+        expect(error.userFriendly).toBe(true);
+      }
+    });
+  });
+
+  describe('loadUserProfile', () => {
+    it('should load user profile successfully', () => {
+      const httpClient = TestBed.inject(HttpClient) as jasmine.SpyObj<HttpClient>;
+      httpClient.get.and.returnValue(of({ success: true, data: { userId: 'user123' } }));
+      tokenService.getUserData.and.returnValue(mockUser);
+
+      service['loadUserProfile']();
+
+      expect(httpClient.get).toHaveBeenCalledWith(`${environment.apiUrl}/auth/profile`);
+      expect(service['currentUserSubject'].value).toEqual(mockUser);
+    });
+
+    it('should handle 401 error by clearing tokens', () => {
+      const httpClient = TestBed.inject(HttpClient) as jasmine.SpyObj<HttpClient>;
+      httpClient.get.and.returnValue(throwError(() => ({ status: 401 })));
+
+      service['loadUserProfile']();
+
+      expect(tokenService.clearAccessToken).toHaveBeenCalled();
+      expect(tokenService.clearUserData).toHaveBeenCalled();
+      expect(service['currentUserSubject'].value).toBeNull();
+    });
+
+    it('should handle non-401 errors without clearing tokens', () => {
+      const httpClient = TestBed.inject(HttpClient) as jasmine.SpyObj<HttpClient>;
+      httpClient.get.and.returnValue(throwError(() => ({ status: 500 })));
+
+      service['loadUserProfile']();
+
+      expect(tokenService.clearAccessToken).not.toHaveBeenCalled();
+      expect(tokenService.clearUserData).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('refreshTokenInternal', () => {
+    it('should refresh token successfully', () => {
+      const mockResponse = { accessToken: 'new-token' };
+      tokenService.refreshAccessToken.and.returnValue(of(mockResponse));
+      tokenService.getUserData.and.returnValue(mockUser);
+
+      service['refreshTokenInternal']();
+
+      expect(tokenService.refreshAccessToken).toHaveBeenCalled();
+      expect(service['currentUserSubject'].value).toEqual(mockUser);
+    });
+
+    it('should handle refresh token failure by logging out', () => {
+      tokenService.refreshAccessToken.and.returnValue(throwError(() => new Error('Refresh failed')));
+      spyOn(service, 'logout');
+
+      service['refreshTokenInternal']();
+
+      expect(service.logout).toHaveBeenCalled();
+    });
+  });
+
+  describe('initializeAuth edge cases', () => {
+    it('should handle expired token by logging out', () => {
+      tokenService.getAccessToken.and.returnValue('expired-token');
+      tokenService.isTokenExpired.and.returnValue(true);
+      spyOn(service, 'logout');
+
+      service.initializeAuth();
+
+      expect(service.logout).toHaveBeenCalled();
+    });
+
+    it('should handle valid token with no user data by fetching profile', () => {
+      tokenService.getAccessToken.and.returnValue('valid-token');
+      tokenService.isTokenExpired.and.returnValue(false);
+      tokenService.getUserData.and.returnValue(null);
+      tokenService.shouldRefreshToken.and.returnValue(false);
+      spyOn(service, 'getCurrentUser').and.returnValue(of(mockUser));
+
+      service.initializeAuth();
+
+      expect(service.getCurrentUser).toHaveBeenCalled();
+    });
+
+    it('should handle profile fetch error by logging out', () => {
+      tokenService.getAccessToken.and.returnValue('valid-token');
+      tokenService.isTokenExpired.and.returnValue(false);
+      tokenService.getUserData.and.returnValue(null);
+      tokenService.shouldRefreshToken.and.returnValue(false);
+      spyOn(service, 'getCurrentUser').and.returnValue(throwError(() => new Error('Profile fetch failed')));
+      spyOn(service, 'logout');
+
+      service.initializeAuth();
+
+      expect(service.logout).toHaveBeenCalled();
+    });
+  });
+
+  describe('register edge cases', () => {
+    it('should handle registration with empty access token', async () => {
+      const mockResponse = {
+        success: true,
+        data: {
+          user: mockUser,
+          accessToken: '' // Empty access token
+        }
+      };
+
+      const httpClient = TestBed.inject(HttpClient) as jasmine.SpyObj<HttpClient>;
+      httpClient.post.and.returnValue(of(mockResponse));
+
+      const response = await firstValueFrom(service.register(mockRegisterRequest));
+      
+      expect(response.tokens.accessToken).toBe('');
+      expect(tokenService.setAccessToken).not.toHaveBeenCalled();
+      expect(tokenService.setUserData).not.toHaveBeenCalled();
+    });
+
+    it('should handle registration with null access token', async () => {
+      const mockResponse = {
+        success: true,
+        data: {
+          user: mockUser,
+          accessToken: null
+        }
+      };
+
+      const httpClient = TestBed.inject(HttpClient) as jasmine.SpyObj<HttpClient>;
+      httpClient.post.and.returnValue(of(mockResponse));
+
+      const response = await firstValueFrom(service.register(mockRegisterRequest));
+      
+      expect(response.tokens.accessToken).toBe('');
+      expect(tokenService.setAccessToken).not.toHaveBeenCalled();
+      expect(tokenService.setUserData).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('login edge cases', () => {
+    it('should handle login with empty access token', async () => {
+      const mockResponse = {
+        success: true,
+        data: {
+          user: mockUser,
+          accessToken: '' // Empty access token
+        }
+      };
+
+      const httpClient = TestBed.inject(HttpClient) as jasmine.SpyObj<HttpClient>;
+      httpClient.post.and.returnValue(of(mockResponse));
+
+      const response = await firstValueFrom(service.login(mockLoginRequest));
+      
+      expect(response.tokens.accessToken).toBe('');
+      expect(tokenService.setAccessToken).not.toHaveBeenCalled();
+      expect(tokenService.setUserData).not.toHaveBeenCalled();
+    });
   });
 });
