@@ -172,6 +172,18 @@
       </form>
     </div>
   
+    <!-- Real-time Budget Progress (Optimized) -->
+    <div class="realtime-progress-section">
+      <app-optimized-realtime-budget-progress 
+        [showAlerts]="true"
+        [showStats]="true"
+        [autoRefresh]="true"
+        (budgetClick)="onRealtimeBudgetClick($event)"
+        (categoryClick)="onRealtimeCategoryClick($event)"
+        (alertClick)="onRealtimeAlertClick($event)">
+      </app-optimized-realtime-budget-progress>
+    </div>
+
     <!-- Budget List -->
     <div class="budget-list">
       <div class="list-header">
@@ -215,7 +227,7 @@
   
       <!-- Budget Items -->
       <div class="budget-items" *ngIf="!isLoading && budgets.length > 0">
-        <div class="budget-item" *ngFor="let budget of budgets">
+        <div class="budget-item" *ngFor="let budget of budgets" [id]="'budget-' + budget._id">
           <div class="budget-header-row">
             <div class="budget-info">
               <h4>{{ budget.name }}</h4>

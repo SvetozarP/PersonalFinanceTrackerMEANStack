@@ -18,6 +18,7 @@ import { TransactionService } from '../../../../core/services/transaction.servic
 import { CategoryService } from '../../../../core/services/category.service';
 import { BudgetService } from '../../../../core/services/budget.service';
 import { BudgetWizardComponent } from '../budget-wizard/budget-wizard';
+import { OptimizedRealtimeBudgetProgressComponent } from '../realtime-budget-progress/optimized-realtime-budget-progress.component';
 
 interface BudgetProgress {
   categoryId: string;
@@ -33,7 +34,7 @@ interface BudgetProgress {
 @Component({
   selector: 'app-budget-management',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule, ReactiveFormsModule, BudgetWizardComponent],
+  imports: [CommonModule, RouterModule, FormsModule, ReactiveFormsModule, BudgetWizardComponent, OptimizedRealtimeBudgetProgressComponent],
   templateUrl: './budget-management.html',
   styleUrls: ['./budget-management.scss']
 })
@@ -455,5 +456,37 @@ export class BudgetManagementComponent implements OnInit, OnDestroy {
   getCategoryName(categoryId: string): string {
     const category = this.categories.find(c => c._id === categoryId);
     return category?.name || 'Unknown Category';
+  }
+
+  // Real-time progress event handlers
+  onRealtimeBudgetClick(budget: any): void {
+    console.log('Real-time budget clicked:', budget);
+    // Scroll to the budget in the list or highlight it
+    this.scrollToBudget(budget.budgetId);
+  }
+
+  onRealtimeCategoryClick(event: { budget: any; category: any }): void {
+    console.log('Real-time category clicked:', event);
+    // Show category details or filter by category
+    this.selectedCategory = event.category.categoryId;
+    this.onCategoryFilter(event.category.categoryId);
+  }
+
+  onRealtimeAlertClick(alert: any): void {
+    console.log('Real-time alert clicked:', alert);
+    // Show alert details or navigate to relevant budget/category
+    if (alert.categoryId) {
+      this.selectedCategory = alert.categoryId;
+      this.onCategoryFilter(alert.categoryId);
+    }
+  }
+
+  private scrollToBudget(budgetId: string): void {
+    const element = document.getElementById(`budget-${budgetId}`);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      element.classList.add('highlight');
+      setTimeout(() => element.classList.remove('highlight'), 2000);
+    }
   }
 }

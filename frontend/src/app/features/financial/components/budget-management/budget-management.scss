@@ -283,6 +283,11 @@
       }
     }
   
+    // Real-time Progress Section
+    .realtime-progress-section {
+      margin-bottom: 24px;
+    }
+
     // Budget List
     .budget-list {
       background: white;
@@ -690,6 +695,17 @@
   @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
+  }
+
+  // Highlight Animation
+  @keyframes highlight {
+    0% { background-color: transparent; }
+    50% { background-color: #fff3cd; }
+    100% { background-color: transparent; }
+  }
+
+  .highlight {
+    animation: highlight 2s ease-in-out;
   }
   
   // Button Styles (if not globally defined)

@@ -1,0 +1,736 @@
+.realtime-budget-progress {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  transition: all 0.3s ease;
+
+  &.compact {
+    .budget-stats,
+    .alerts-section {
+      display: none;
+    }
+  }
+
+  // Connection Status
+  .connection-status {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 20px;
+    background: #f8f9fa;
+    border-bottom: 1px solid #e9ecef;
+
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      font-weight: 500;
+
+      &.connected {
+        color: #28a745;
+
+        i {
+          animation: pulse 2s infinite;
+        }
+      }
+
+      &.disconnected {
+        color: #dc3545;
+      }
+    }
+
+    .btn {
+      padding: 6px 12px;
+      font-size: 12px;
+    }
+  }
+
+  // Loading State
+  .loading-state {
+    padding: 60px 20px;
+    text-align: center;
+
+    .loading-content {
+      .spinner {
+        width: 40px;
+        height: 40px;
+        border: 3px solid #e9ecef;
+        border-top: 3px solid #007bff;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 16px;
+      }
+
+      p {
+        margin: 0;
+        color: #6c757d;
+        font-size: 14px;
+      }
+    }
+  }
+
+  // Budget Statistics
+  .budget-stats {
+    padding: 20px;
+    background: #f8f9fa;
+    border-bottom: 1px solid #e9ecef;
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 16px;
+
+      .stat-card {
+        background: white;
+        border-radius: 8px;
+        padding: 16px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        transition: transform 0.2s ease;
+
+        &:hover {
+          transform: translateY(-2px);
+        }
+
+        .stat-icon {
+          width: 40px;
+          height: 40px;
+          border-radius: 8px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 18px;
+          color: white;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .stat-content {
+          flex: 1;
+
+          .stat-value {
+            font-size: 18px;
+            font-weight: 700;
+            color: #2c3e50;
+            margin-bottom: 4px;
+          }
+
+          .stat-label {
+            font-size: 12px;
+            color: #6c757d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+          }
+        }
+      }
+
+      @media (max-width: 768px) {
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        gap: 12px;
+
+        .stat-card {
+          padding: 12px;
+          flex-direction: column;
+          text-align: center;
+          gap: 8px;
+
+          .stat-icon {
+            width: 32px;
+            height: 32px;
+            font-size: 14px;
+          }
+
+          .stat-content {
+            .stat-value {
+              font-size: 16px;
+            }
+
+            .stat-label {
+              font-size: 10px;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Alerts Section
+  .alerts-section {
+    border-bottom: 1px solid #e9ecef;
+
+    .alerts-header {
+      padding: 16px 20px;
+      background: #fff3cd;
+      border-bottom: 1px solid #ffeaa7;
+
+      h3 {
+        margin: 0;
+        font-size: 16px;
+        font-weight: 600;
+        color: #856404;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+
+        .alert-count {
+          background: #dc3545;
+          color: white;
+          font-size: 12px;
+          padding: 2px 6px;
+          border-radius: 10px;
+          min-width: 20px;
+          text-align: center;
+        }
+      }
+    }
+
+    .alerts-list {
+      .alert-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 20px;
+        border-bottom: 1px solid #f1f3f4;
+        cursor: pointer;
+        transition: all 0.2s ease;
+
+        &:hover {
+          background: #f8f9fa;
+        }
+
+        &.pulse {
+          animation: pulse 1s ease-in-out;
+        }
+
+        &.acknowledged {
+          opacity: 0.6;
+          background: #f8f9fa;
+        }
+
+        &.alert-critical {
+          border-left: 4px solid #dc3545;
+          background: #f8d7da;
+        }
+
+        &.alert-warning {
+          border-left: 4px solid #ffc107;
+          background: #fff3cd;
+        }
+
+        &.alert-info {
+          border-left: 4px solid #17a2b8;
+          background: #d1ecf1;
+        }
+
+        &.alert-success {
+          border-left: 4px solid #28a745;
+          background: #d4edda;
+        }
+
+        .alert-icon {
+          font-size: 16px;
+          width: 20px;
+          text-align: center;
+        }
+
+        .alert-content {
+          flex: 1;
+
+          .alert-message {
+            font-size: 14px;
+            font-weight: 500;
+            color: #2c3e50;
+            margin-bottom: 4px;
+          }
+
+          .alert-meta {
+            display: flex;
+            gap: 12px;
+            font-size: 12px;
+            color: #6c757d;
+
+            .alert-category {
+              font-weight: 500;
+            }
+          }
+        }
+
+        .alert-actions {
+          .btn {
+            padding: 4px 8px;
+            font-size: 12px;
+          }
+        }
+      }
+    }
+  }
+
+  // Budget Progress List
+  .budget-progress-list {
+    .budget-progress-item {
+      padding: 20px;
+      border-bottom: 1px solid #e9ecef;
+      cursor: pointer;
+      transition: all 0.2s ease;
+
+      &:hover {
+        background: #f8f9fa;
+      }
+
+      &:last-child {
+        border-bottom: none;
+      }
+
+      &.status-under {
+        border-left: 4px solid #28a745;
+      }
+
+      &.status-at {
+        border-left: 4px solid #ffc107;
+      }
+
+      &.status-over {
+        border-left: 4px solid #dc3545;
+      }
+
+      &.status-critical {
+        border-left: 4px solid #dc3545;
+        background: #f8d7da;
+      }
+
+      .budget-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 16px;
+        gap: 16px;
+
+        .budget-info {
+          flex: 1;
+
+          .budget-name {
+            margin: 0 0 8px 0;
+            font-size: 18px;
+            font-weight: 600;
+            color: #2c3e50;
+          }
+
+          .budget-meta {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+
+            .budget-period {
+              font-size: 14px;
+              color: #6c757d;
+            }
+
+            .budget-status {
+              font-size: 12px;
+              padding: 4px 8px;
+              border-radius: 12px;
+              font-weight: 500;
+              text-transform: uppercase;
+              letter-spacing: 0.5px;
+              display: flex;
+              align-items: center;
+              gap: 4px;
+
+              &.status-under {
+                background: #d4edda;
+                color: #155724;
+              }
+
+              &.status-at {
+                background: #fff3cd;
+                color: #856404;
+              }
+
+              &.status-over {
+                background: #f8d7da;
+                color: #721c24;
+              }
+
+              &.status-critical {
+                background: #f8d7da;
+                color: #721c24;
+                animation: pulse 2s infinite;
+              }
+            }
+          }
+        }
+
+        .budget-summary {
+          text-align: right;
+
+          .budget-amounts {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            margin-bottom: 8px;
+
+            .spent-amount {
+              font-size: 20px;
+              font-weight: 700;
+              color: #2c3e50;
+            }
+
+            .total-amount {
+              font-size: 14px;
+              color: #6c757d;
+            }
+          }
+
+          .budget-percentage {
+            font-size: 16px;
+            font-weight: 600;
+            color: #2c3e50;
+          }
+        }
+
+        @media (max-width: 768px) {
+          flex-direction: column;
+          gap: 12px;
+
+          .budget-summary {
+            text-align: left;
+            width: 100%;
+          }
+        }
+      }
+
+      .budget-progress-bar {
+        margin-bottom: 20px;
+
+        .progress-bar {
+          width: 100%;
+          height: 12px;
+          background: #e9ecef;
+          border-radius: 6px;
+          overflow: hidden;
+          margin-bottom: 8px;
+
+          .progress-fill {
+            height: 100%;
+            border-radius: 6px;
+            transition: width 0.3s ease;
+            position: relative;
+
+            &.animated {
+              &::after {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: linear-gradient(
+                  90deg,
+                  transparent,
+                  rgba(255, 255, 255, 0.3),
+                  transparent
+                );
+                animation: shimmer 2s infinite;
+              }
+            }
+
+            &.status-under {
+              background: linear-gradient(90deg, #28a745, #20c997);
+            }
+
+            &.status-at {
+              background: linear-gradient(90deg, #ffc107, #fd7e14);
+            }
+
+            &.status-over {
+              background: linear-gradient(90deg, #dc3545, #e83e8c);
+            }
+
+            &.status-critical {
+              background: linear-gradient(90deg, #dc3545, #e83e8c);
+              animation: pulse 2s infinite;
+            }
+          }
+        }
+
+        .progress-labels {
+          display: flex;
+          justify-content: space-between;
+          font-size: 12px;
+          color: #6c757d;
+        }
+      }
+
+      .category-progress {
+        margin-bottom: 16px;
+
+        .category-header {
+          margin-bottom: 12px;
+
+          h5 {
+            margin: 0;
+            font-size: 14px;
+            font-weight: 600;
+            color: #495057;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+          }
+        }
+
+        .category-list {
+          .category-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+
+            &:hover {
+              background: #e9ecef;
+            }
+
+            &:last-child {
+              margin-bottom: 0;
+            }
+
+            &.status-over {
+              background: #f8d7da;
+              border: 1px solid #f5c6cb;
+            }
+
+            &.status-critical {
+              background: #f8d7da;
+              border: 1px solid #f5c6cb;
+              animation: pulse 2s infinite;
+            }
+
+            .category-info {
+              flex: 1;
+              min-width: 0;
+
+              .category-name {
+                font-size: 14px;
+                font-weight: 500;
+                color: #2c3e50;
+                margin-bottom: 4px;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+              }
+
+              .category-amounts {
+                display: flex;
+                gap: 8px;
+                font-size: 12px;
+                color: #6c757d;
+
+                .category-spent {
+                  font-weight: 600;
+                  color: #2c3e50;
+                }
+              }
+            }
+
+            .category-progress-bar {
+              display: flex;
+              align-items: center;
+              gap: 8px;
+              min-width: 120px;
+
+              .progress-bar {
+                flex: 1;
+                height: 8px;
+                background: #e9ecef;
+                border-radius: 4px;
+                overflow: hidden;
+
+                .progress-fill {
+                  height: 100%;
+                  border-radius: 4px;
+                  transition: width 0.3s ease;
+
+                  &.status-under {
+                    background: #28a745;
+                  }
+
+                  &.status-at {
+                    background: #ffc107;
+                  }
+
+                  &.status-over {
+                    background: #dc3545;
+                  }
+
+                  &.status-critical {
+                    background: #dc3545;
+                    animation: pulse 2s infinite;
+                  }
+                }
+              }
+
+              .category-percentage {
+                font-size: 12px;
+                font-weight: 600;
+                color: #2c3e50;
+                min-width: 40px;
+                text-align: right;
+              }
+            }
+
+            .category-trend {
+              display: flex;
+              flex-direction: column;
+              gap: 4px;
+              min-width: 80px;
+
+              .trend-indicator {
+                display: flex;
+                align-items: center;
+                gap: 4px;
+                font-size: 12px;
+                font-weight: 500;
+
+                &.trend-increasing {
+                  color: #dc3545;
+                }
+
+                &.trend-decreasing {
+                  color: #28a745;
+                }
+
+                &.trend-stable {
+                  color: #6c757d;
+                }
+              }
+
+              .daily-average {
+                font-size: 10px;
+                color: #6c757d;
+              }
+            }
+
+            .category-alerts {
+              .projection-warning {
+                display: flex;
+                align-items: center;
+                gap: 4px;
+                font-size: 10px;
+                color: #dc3545;
+                font-weight: 500;
+              }
+            }
+
+            @media (max-width: 768px) {
+              flex-direction: column;
+              align-items: stretch;
+              gap: 8px;
+
+              .category-progress-bar {
+                min-width: auto;
+              }
+
+              .category-trend {
+                min-width: auto;
+                flex-direction: row;
+                justify-content: space-between;
+              }
+            }
+          }
+        }
+      }
+
+      .last-updated {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+        color: #6c757d;
+        margin-top: 12px;
+        padding-top: 12px;
+        border-top: 1px solid #e9ecef;
+      }
+    }
+  }
+
+  // No Data State
+  .no-data {
+    padding: 60px 20px;
+    text-align: center;
+
+    .no-data-content {
+      i {
+        font-size: 48px;
+        color: #dee2e6;
+        margin-bottom: 16px;
+      }
+
+      h3 {
+        margin: 0 0 8px 0;
+        font-size: 18px;
+        font-weight: 600;
+        color: #6c757d;
+      }
+
+      p {
+        margin: 0;
+        color: #6c757d;
+        font-size: 14px;
+      }
+    }
+  }
+
+  // Animations
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  @keyframes shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+  }
+
+  // Responsive Design
+  @media (max-width: 768px) {
+    .budget-stats {
+      .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+      }
+    }
+
+    .alerts-section {
+      .alerts-list {
+        .alert-item {
+          padding: 12px 16px;
+          flex-direction: column;
+          align-items: stretch;
+          gap: 8px;
+
+          .alert-content {
+            .alert-meta {
+              flex-direction: column;
+              gap: 4px;
+            }
+          }
+
+          .alert-actions {
+            align-self: flex-end;
+          }
+        }
+      }
+    }
+  }
+}

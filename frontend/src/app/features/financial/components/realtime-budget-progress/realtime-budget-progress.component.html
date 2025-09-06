@@ -1,0 +1,246 @@
+<div class="realtime-budget-progress" [class.compact]="compact">
+  <!-- Connection Status -->
+  <div class="connection-status" *ngIf="!compact">
+    <div class="status-indicator" [class.connected]="isConnected" [class.disconnected]="!isConnected">
+      <i class="fas" [class.fa-wifi]="isConnected" [class.fa-wifi-slash]="!isConnected"></i>
+      <span>{{ isConnected ? 'Connected' : 'Disconnected' }}</span>
+    </div>
+    <button class="btn btn-sm btn-outline-primary" (click)="onRefresh()" [disabled]="isLoading">
+      <i class="fas fa-sync-alt" [class.fa-spin]="isLoading"></i>
+      Refresh
+    </button>
+  </div>
+
+  <!-- Loading State -->
+  <div class="loading-state" *ngIf="isLoading && budgetProgress.length === 0">
+    <div class="loading-content">
+      <div class="spinner"></div>
+      <p>Loading real-time budget data...</p>
+    </div>
+  </div>
+
+  <!-- Budget Statistics -->
+  <div class="budget-stats" *ngIf="showStats && budgetStats && !compact">
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon">
+          <i class="fas fa-wallet"></i>
+        </div>
+        <div class="stat-content">
+          <div class="stat-value">{{ budgetStats.totalBudget | currency }}</div>
+          <div class="stat-label">Total Budget</div>
+        </div>
+      </div>
+      
+      <div class="stat-card">
+        <div class="stat-icon">
+          <i class="fas fa-shopping-cart"></i>
+        </div>
+        <div class="stat-content">
+          <div class="stat-value">{{ budgetStats.totalSpent | currency }}</div>
+          <div class="stat-label">Total Spent</div>
+        </div>
+      </div>
+      
+      <div class="stat-card">
+        <div class="stat-icon">
+          <i class="fas fa-chart-pie"></i>
+        </div>
+        <div class="stat-content">
+          <div class="stat-value">{{ formatPercentage(budgetStats.overallProgress) }}</div>
+          <div class="stat-label">Overall Progress</div>
+        </div>
+      </div>
+      
+      <div class="stat-card">
+        <div class="stat-icon">
+          <i class="fas fa-check-circle"></i>
+        </div>
+        <div class="stat-content">
+          <div class="stat-value">{{ getOnTrackCount() }}</div>
+          <div class="stat-label">On Track</div>
+        </div>
+      </div>
+      
+      <div class="stat-card">
+        <div class="stat-icon">
+          <i class="fas fa-exclamation-triangle"></i>
+        </div>
+        <div class="stat-content">
+          <div class="stat-value">{{ getAtThresholdCount() }}</div>
+          <div class="stat-label">At Threshold</div>
+        </div>
+      </div>
+      
+      <div class="stat-card">
+        <div class="stat-icon">
+          <i class="fas fa-times-circle"></i>
+        </div>
+        <div class="stat-content">
+          <div class="stat-value">{{ getOverBudgetCount() }}</div>
+          <div class="stat-label">Over Budget</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Alerts Section -->
+  <div class="alerts-section" *ngIf="showAlerts && getUnacknowledgedAlerts().length > 0">
+    <div class="alerts-header">
+      <h3>
+        <i class="fas fa-bell"></i>
+        Budget Alerts
+        <span class="alert-count">{{ getUnacknowledgedAlerts().length }}</span>
+      </h3>
+    </div>
+    
+    <div class="alerts-list">
+      <div 
+        *ngFor="let alert of getUnacknowledgedAlerts()" 
+        class="alert-item"
+        [ngClass]="getAlertClass(alert)"
+        (click)="onAlertClick(alert)">
+        
+        <div class="alert-icon">
+          <i class="fas" 
+             [class.fa-exclamation-circle]="alert.type === 'critical'"
+             [class.fa-exclamation-triangle]="alert.type === 'warning'"
+             [class.fa-info-circle]="alert.type === 'info'"
+             [class.fa-check-circle]="alert.type === 'success'">
+          </i>
+        </div>
+        
+        <div class="alert-content">
+          <div class="alert-message">{{ alert.message }}</div>
+          <div class="alert-meta">
+            <span class="alert-time">{{ getTimeAgo(alert.timestamp) }}</span>
+            <span class="alert-category" *ngIf="alert.categoryName">{{ alert.categoryName }}</span>
+          </div>
+        </div>
+        
+        <div class="alert-actions">
+          <button 
+            class="btn btn-sm btn-outline-primary" 
+            (click)="onAcknowledgeAlert(alert.id); $event.stopPropagation()"
+            title="Acknowledge">
+            <i class="fas fa-check"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Budget Progress List -->
+  <div class="budget-progress-list" *ngIf="budgetProgress.length > 0">
+    <div 
+      *ngFor="let budget of budgetProgress" 
+      class="budget-progress-item"
+      [ngClass]="getStatusClass(budget.status)"
+      (click)="onBudgetClick(budget)">
+      
+      <!-- Budget Header -->
+      <div class="budget-header">
+        <div class="budget-info">
+          <h4 class="budget-name">{{ budget.budgetName }}</h4>
+          <div class="budget-meta">
+            <span class="budget-period">{{ budget.daysRemaining }} days remaining</span>
+            <span class="budget-status" [ngClass]="getStatusClass(budget.status)">
+              <i [class]="getStatusIcon(budget.status)"></i>
+              {{ budget.status | titlecase }}
+            </span>
+          </div>
+        </div>
+        
+        <div class="budget-summary">
+          <div class="budget-amounts">
+            <span class="spent-amount">{{ formatCurrency(budget.spentAmount) }}</span>
+            <span class="total-amount">of {{ formatCurrency(budget.totalAmount) }}</span>
+          </div>
+          <div class="budget-percentage">{{ formatPercentage(budget.progressPercentage) }}</div>
+        </div>
+      </div>
+
+      <!-- Overall Progress Bar -->
+      <div class="budget-progress-bar">
+        <div class="progress-bar">
+          <div 
+            class="progress-fill"
+            [ngClass]="getProgressBarClass(budget.progressPercentage, budget.status)"
+            [style.width.%]="getProgressValue(budget.budgetId)">
+          </div>
+        </div>
+        <div class="progress-labels">
+          <span class="progress-label">Spent: {{ formatCurrency(budget.spentAmount) }}</span>
+          <span class="progress-label">Remaining: {{ formatCurrency(budget.remainingAmount) }}</span>
+        </div>
+      </div>
+
+      <!-- Category Progress -->
+      <div class="category-progress" *ngIf="budget.categoryProgress.length > 0">
+        <div class="category-header">
+          <h5>Category Breakdown</h5>
+        </div>
+        
+        <div class="category-list">
+          <div 
+            *ngFor="let category of budget.categoryProgress" 
+            class="category-item"
+            [ngClass]="getStatusClass(category.status)"
+            (click)="onCategoryClick(budget, category); $event.stopPropagation()">
+            
+            <div class="category-info">
+              <div class="category-name">{{ category.categoryName }}</div>
+              <div class="category-amounts">
+                <span class="category-spent">{{ formatCurrency(category.spentAmount) }}</span>
+                <span class="category-allocated">of {{ formatCurrency(category.allocatedAmount) }}</span>
+              </div>
+            </div>
+            
+            <div class="category-progress-bar">
+              <div class="progress-bar">
+                <div 
+                  class="progress-fill"
+                  [ngClass]="getProgressBarClass(category.progressPercentage, category.status)"
+                  [style.width.%]="getCategoryProgressValue(budget.budgetId, category.categoryId)">
+                </div>
+              </div>
+              <div class="category-percentage">{{ formatPercentage(category.progressPercentage) }}</div>
+            </div>
+            
+            <div class="category-trend" *ngIf="!compact">
+              <div class="trend-indicator" [ngClass]="getTrendClass(category.trend)">
+                <i [class]="getTrendIcon(category.trend)"></i>
+                <span>{{ category.trend | titlecase }}</span>
+              </div>
+              <div class="daily-average" *ngIf="category.dailyAverage > 0">
+                Daily: {{ formatCurrency(category.dailyAverage) }}
+              </div>
+            </div>
+            
+            <div class="category-alerts" *ngIf="category.projectedOverspend">
+              <div class="projection-warning">
+                <i class="fas fa-exclamation-triangle"></i>
+                <span>Projected overspend</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Last Updated -->
+      <div class="last-updated">
+        <i class="fas fa-clock"></i>
+        <span>Updated {{ getTimeAgo(budget.lastUpdated) }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- No Data State -->
+  <div class="no-data" *ngIf="!isLoading && budgetProgress.length === 0">
+    <div class="no-data-content">
+      <i class="fas fa-chart-pie"></i>
+      <h3>No Active Budgets</h3>
+      <p>Create a budget to start tracking your spending in real-time</p>
+    </div>
+  </div>
+</div>
