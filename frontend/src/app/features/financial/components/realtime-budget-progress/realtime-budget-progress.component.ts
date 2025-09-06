@@ -8,6 +8,7 @@ import {
   RealtimeBudgetStats 
 } from '../../../../core/services/realtime-budget-progress.service';
 import { RealtimeBudgetProgressService } from '../../../../core/services/realtime-budget-progress.service';
+import { BudgetNotificationService } from '../../../../core/services/budget-notification.service';
 
 @Component({
   selector: 'app-realtime-budget-progress',
@@ -29,6 +30,7 @@ export class RealtimeBudgetProgressComponent implements OnInit, OnDestroy {
 
   private destroy$ = new Subject<void>();
   private realtimeService = inject(RealtimeBudgetProgressService);
+  private notificationService = inject(BudgetNotificationService);
 
   // Data
   budgetProgress: RealtimeBudgetProgress[] = [];
@@ -128,6 +130,7 @@ export class RealtimeBudgetProgressComponent implements OnInit, OnDestroy {
 
   onAcknowledgeAlert(alertId: string): void {
     this.realtimeService.acknowledgeAlert(alertId);
+    this.notificationService.markAsRead(alertId);
   }
 
   onRefresh(): void {

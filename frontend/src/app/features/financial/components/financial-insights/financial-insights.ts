@@ -236,6 +236,44 @@ export class FinancialInsightsComponent implements OnInit, OnDestroy {
         actionText: 'Add Income',
         actionRoute: '/financial/transactions/new'
       });
+    } else {
+      // Generate positive income insights when there is recent income
+      const recentTotalIncome = recentIncome.reduce((sum, t) => sum + t.amount, 0);
+      
+      this.insights.push({
+        id: 'recent-income-summary',
+        type: 'income',
+        title: 'Recent Income',
+        description: `You've earned $${recentTotalIncome.toFixed(2)} in the last 30 days.`,
+        value: recentTotalIncome,
+        change: 0,
+        changeType: 'increase',
+        severity: 'low',
+        icon: 'fas fa-dollar-sign',
+        color: '#28a745',
+        actionable: false,
+        actionText: '',
+        actionRoute: ''
+      });
+
+      // Income consistency insight
+      if (recentIncome.length > 1) {
+        this.insights.push({
+          id: 'income-consistency',
+          type: 'income',
+          title: 'Income Consistency',
+          description: `You have ${recentIncome.length} income transactions this month.`,
+          value: recentIncome.length,
+          change: 0,
+          changeType: 'increase',
+          severity: 'low',
+          icon: 'fas fa-chart-line',
+          color: '#17a2b8',
+          actionable: false,
+          actionText: '',
+          actionRoute: ''
+        });
+      }
     }
   }
 

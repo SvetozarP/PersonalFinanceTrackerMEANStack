@@ -1,5 +1,5 @@
 import { Injectable, OnDestroy } from '@angular/core';
-import { BehaviorSubject, Observable, Subject, interval } from 'rxjs';
+import { BehaviorSubject, Observable, Subject, interval, of, throwError } from 'rxjs';
 import { takeUntil, switchMap, catchError } from 'rxjs/operators';
 import { Budget, CategoryAllocation, Transaction, TransactionType } from '../models/financial.model';
 import { BudgetService } from './budget.service';
@@ -73,13 +73,24 @@ export class RealtimeBudgetProgressService implements OnDestroy {
   private readonly UPDATE_INTERVAL = 60000; // 60 seconds
   private readonly CRITICAL_THRESHOLD = 90; // 90% threshold for critical alerts
   private readonly WARNING_THRESHOLD = 75; // 75% threshold for warning alerts
+  
+  // Flag to prevent auto-initialization during tests
+  private static isTestEnvironment = false;
 
   constructor(
     private budgetService: BudgetService,
     private transactionService: TransactionService,
     private categoryService: CategoryService
   ) {
-    this.initializeRealtimeUpdates();
+    // Only auto-initialize if not in test environment
+    if (!RealtimeBudgetProgressService.isTestEnvironment) {
+      this.initializeRealtimeUpdates();
+    }
+  }
+
+  // Method to set test environment flag
+  static setTestEnvironment(isTest: boolean): void {
+    RealtimeBudgetProgressService.isTestEnvironment = isTest;
   }
 
   ngOnDestroy(): void {
@@ -130,7 +141,7 @@ export class RealtimeBudgetProgressService implements OnDestroy {
         if (budgets.length === 0) {
           this.realtimeProgress$.next([]);
           this.budgetStats$.next(null);
-          return [];
+          return of([]);
         }
 
         return this.transactionService.getUserTransactions().pipe(
@@ -142,7 +153,7 @@ export class RealtimeBudgetProgressService implements OnDestroy {
                 this.updateBudgetStats(progressData);
                 this.checkForAlerts(progressData);
                 this.isConnected$.next(true);
-                return [progressData];
+                return of(progressData);
               })
             )
           )
@@ -151,7 +162,7 @@ export class RealtimeBudgetProgressService implements OnDestroy {
       catchError(error => {
         console.error('Error loading real-time data:', error);
         this.isConnected$.next(false);
-        return [];
+        return throwError(() => error);
       })
     );
   }
@@ -293,7 +304,7 @@ export class RealtimeBudgetProgressService implements OnDestroy {
 
   // Calculate daily average spending
   private calculateDailyAverage(transactions: Transaction[], budget: Budget): number {
-    const budgetDuration = this.calculateDaysRemaining(budget.startDate, budget.endDate);
+    const budgetDuration = this.calculateBudgetDuration(budget.startDate, budget.endDate);
     const totalSpent = transactions.reduce((sum, t) => sum + t.amount, 0);
     return budgetDuration > 0 ? totalSpent / budgetDuration : 0;
   }
@@ -328,6 +339,16 @@ export class RealtimeBudgetProgressService implements OnDestroy {
     const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24));
     
     return Math.max(0, daysDiff);
+  }
+
+  private calculateBudgetDuration(startDate: Date, endDate: Date): number {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    
+    const timeDiff = end.getTime() - start.getTime();
+    const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24));
+    
+    return Math.max(1, daysDiff); // At least 1 day
   }
 
   // Update budget statistics

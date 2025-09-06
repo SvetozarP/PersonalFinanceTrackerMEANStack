@@ -119,7 +119,7 @@ describe('FinancialInsightsComponent', () => {
       categoryId: 'cat1',
       subcategoryId: undefined,
       tags: ['salary', 'monthly'],
-      date: new Date('2024-01-01'),
+      date: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000), // 10 days ago
       time: '09:00',
       timezone: 'America/New_York',
       location: undefined,
@@ -245,7 +245,7 @@ describe('FinancialInsightsComponent', () => {
       categoryId: 'cat1',
       subcategoryId: undefined,
       tags: ['salary', 'monthly'],
-      date: new Date('2023-12-01'),
+      date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000), // 5 days ago
       time: '09:00',
       timezone: 'America/New_York',
       location: undefined,

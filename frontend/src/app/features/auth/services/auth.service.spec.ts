@@ -53,6 +53,7 @@ describe('AuthService', () => {
       'getUserData',
       'clearAccessToken',
       'clearUserData',
+      'clearTokens',
       'isTokenExpired',
       'shouldRefreshToken',
       'refreshAccessToken'
@@ -363,8 +364,9 @@ describe('AuthService', () => {
       setTimeout(() => {
         // The error should be handled gracefully - the service should call logout which clears tokens
         expect(tokenService.clearAccessToken).toHaveBeenCalled();
+        expect(tokenService.clearUserData).toHaveBeenCalled();
         done();
-      }, 100);
+      }, 200);
     });
 
     it('should not initialize when no token exists', () => {

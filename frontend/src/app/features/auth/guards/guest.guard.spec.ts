@@ -160,7 +160,7 @@ describe('GuestGuard', () => {
   });
 
   describe('error handling', () => {
-    it('should handle observable errors gracefully', () => {
+    it('should handle observable errors gracefully', (done) => {
       // Mock the isAuthenticated$ observable to emit an error
       const mockIsAuthenticated$ = new BehaviorSubject<boolean>(false);
       Object.defineProperty(authService, 'isAuthenticated$', {
@@ -175,6 +175,7 @@ describe('GuestGuard', () => {
         next: (result) => {
           // Should handle error gracefully and allow access
           expect(result).toBe(true);
+          done();
         },
         error: (error) => {
           fail('Should not emit error, should handle it gracefully');
@@ -182,7 +183,7 @@ describe('GuestGuard', () => {
       });
     });
 
-    it('should handle router navigation errors gracefully', () => {
+    it('should handle router navigation errors gracefully', (done) => {
       // Mock the isAuthenticated$ observable
       const mockIsAuthenticated$ = new BehaviorSubject<boolean>(true);
       Object.defineProperty(authService, 'isAuthenticated$', {
@@ -193,10 +194,16 @@ describe('GuestGuard', () => {
       router.navigate.and.throwError('Guard error');
 
       // The guard should handle the error gracefully and still return false
-      guard.canActivate().subscribe(result => {
-        // Should return false when user is authenticated, even if navigation fails
-        expect(result).toBe(false);
-        expect(router.navigate).toHaveBeenCalledWith(['/dashboard']);
+      guard.canActivate().subscribe({
+        next: (result) => {
+          // Should return false when user is authenticated, even if navigation fails
+          expect(result).toBe(false);
+          expect(router.navigate).toHaveBeenCalledWith(['/dashboard']);
+          done();
+        },
+        error: (error) => {
+          fail('Should not emit error, should handle it gracefully');
+        }
       });
     });
   });

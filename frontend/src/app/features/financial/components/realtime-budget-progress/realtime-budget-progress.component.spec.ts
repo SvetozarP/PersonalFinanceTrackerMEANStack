@@ -264,7 +264,7 @@ describe('RealtimeBudgetProgressComponent', () => {
     component.alerts = alerts;
 
     const unacknowledged = component.getUnacknowledgedAlerts();
-    expect(unacknowledged).toHaveLength(2);
+    expect(unacknowledged.length).toBe(2);
     expect(unacknowledged[0].id).toBe('1');
     expect(unacknowledged[1].id).toBe('3');
   });
@@ -278,7 +278,7 @@ describe('RealtimeBudgetProgressComponent', () => {
     component.alerts = alerts;
 
     const critical = component.getCriticalAlerts();
-    expect(critical).toHaveLength(1);
+    expect(critical.length).toBe(1);
     expect(critical[0].id).toBe('1');
   });
 
@@ -291,7 +291,7 @@ describe('RealtimeBudgetProgressComponent', () => {
     component.alerts = alerts;
 
     const warnings = component.getWarningAlerts();
-    expect(warnings).toHaveLength(1);
+    expect(warnings.length).toBe(1);
     expect(warnings[0].id).toBe('2');
   });
 
@@ -310,22 +310,22 @@ describe('RealtimeBudgetProgressComponent', () => {
     expect(component.getCriticalCount()).toBe(1);
   });
 
-  it('should animate progress bars', () => {
-    spyOn(component, 'animateProgressBar');
+  it('should update progress bars', () => {
     component.budgetProgress = mockBudgetProgress;
     
     component['animateProgressBars']();
     
-    expect(component.animateProgressBar).toHaveBeenCalled();
+    // Verify that progress animations are set
+    expect(component['progressAnimations'].size).toBeGreaterThan(0);
   });
 
-  it('should animate alerts', () => {
-    spyOn(component, 'animateAlerts');
+  it('should update alert animations', () => {
     component.alerts = mockAlerts;
     
     component['animateAlerts']();
     
-    expect(component.animateAlerts).toHaveBeenCalled();
+    // Verify that alert animations are set
+    expect(component['alertAnimations'].size).toBeGreaterThan(0);
   });
 
   it('should handle component destruction', () => {
