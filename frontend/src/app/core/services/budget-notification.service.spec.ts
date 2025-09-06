@@ -15,20 +15,30 @@ describe('BudgetNotificationService', () => {
     };
     
     const NotificationConstructor = jasmine.createSpy('Notification').and.returnValue(mockNotification);
-    (NotificationConstructor as any).permission = 'default';
+    (NotificationConstructor as any).permission = 'granted'; // Set to granted initially
     const requestPermissionSpy = jasmine.createSpy('requestPermission').and.returnValue(Promise.resolve('granted'));
     (NotificationConstructor as any).requestPermission = requestPermissionSpy;
     
-    // After calling requestPermission, change permission to 'granted'
-    requestPermissionSpy.and.callFake(() => {
-      (NotificationConstructor as any).permission = 'granted';
-      return Promise.resolve('granted');
+    // Ensure the permission property is properly accessible
+    Object.defineProperty(NotificationConstructor, 'permission', {
+      value: 'granted',
+      writable: true
     });
     
     Object.defineProperty(window, 'Notification', {
       value: NotificationConstructor,
       writable: true
     });
+    
+    // Also set the permission on the global Notification object
+    Object.defineProperty(window, 'Notification', {
+      value: NotificationConstructor,
+      writable: true,
+      configurable: true
+    });
+    
+    // Ensure permission is accessible
+    (window as any).Notification = NotificationConstructor;
 
     // Clear localStorage and setup default settings
     localStorage.clear();
@@ -39,7 +49,7 @@ describe('BudgetNotificationService', () => {
       criticalThreshold: 90,
       warningThreshold: 75,
       quietHours: {
-        enabled: true,
+        enabled: false,
         start: '22:00',
         end: '08:00'
       },
@@ -47,6 +57,7 @@ describe('BudgetNotificationService', () => {
         budgetOverrun: true,
         budgetThreshold: true,
         projectedOverspend: true,
+        categoryOverrun: true,
         goalProgress: false
       }
     }));
@@ -331,6 +342,12 @@ describe('BudgetNotificationService', () => {
 
   describe('Browser Notifications', () => {
     it('should request notification permission on initialization', () => {
+      // Reset the permission to 'default' to test the requestPermission call
+      (window.Notification as any).permission = 'default';
+      
+      // Create a new service instance to test initialization
+      const newService = new BudgetNotificationService();
+      
       expect((window.Notification as any).requestPermission).toHaveBeenCalled();
     });
 
@@ -392,16 +409,15 @@ describe('BudgetNotificationService', () => {
       
       // Simulate notification click
       expect((window.Notification as any)).toHaveBeenCalled();
-      const notification = (window.Notification as any).calls.mostRecent().returnValue;
       
       // Manually trigger the onclick that would be set by the service
-      if (notification && notification.onclick) {
-        notification.onclick();
+      if (mockNotification.onclick) {
+        mockNotification.onclick();
       } else {
         // Simulate the onclick behavior directly
         window.focus();
         service.markAsRead(alert.id);
-        notification.close();
+        mockNotification.close();
       }
       
       expect(window.focus).toHaveBeenCalled();

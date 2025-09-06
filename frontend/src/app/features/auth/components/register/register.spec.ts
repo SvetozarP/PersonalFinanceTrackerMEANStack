@@ -364,7 +364,7 @@ describe('RegisterComponent', () => {
   });
 
   describe('error handling', () => {
-    it('should handle registration errors with error message', () => {
+    it('should handle registration errors with error message', (done) => {
       // Fill in valid form data
       component.registerForm.patchValue(mockRegisterRequest);
       component.registerForm.get('confirmPassword')?.setValue('Password123!');
@@ -376,11 +376,15 @@ describe('RegisterComponent', () => {
       
       component.onSubmit();
       
-      expect(component.isLoading).toBeFalse();
-      expect(snackBar.open).toHaveBeenCalledWith('Email already exists', 'Close', jasmine.any(Object));
+      // Wait for async operation to complete
+      setTimeout(() => {
+        expect(component.isLoading).toBeFalse();
+        expect(snackBar.open).toHaveBeenCalledWith('Email already exists', 'Close', jasmine.any(Object));
+        done();
+      }, 0);
     });
 
-    it('should handle registration errors with detailed error messages', () => {
+    it('should handle registration errors with detailed error messages', (done) => {
       // Fill in valid form data
       component.registerForm.patchValue(mockRegisterRequest);
       component.registerForm.get('confirmPassword')?.setValue('Password123!');
@@ -399,11 +403,15 @@ describe('RegisterComponent', () => {
       
       component.onSubmit();
       
-      expect(component.isLoading).toBeFalse();
-      expect(snackBar.open).toHaveBeenCalledWith('Email is invalid, Password too weak', 'Close', jasmine.any(Object));
+      // Wait for async operation to complete
+      setTimeout(() => {
+        expect(component.isLoading).toBeFalse();
+        expect(snackBar.open).toHaveBeenCalledWith('Email is invalid, Password too weak', 'Close', jasmine.any(Object));
+        done();
+      }, 0);
     });
 
-    it('should handle registration errors with fallback message', () => {
+    it('should handle registration errors with fallback message', (done) => {
       // Fill in valid form data
       component.registerForm.patchValue(mockRegisterRequest);
       component.registerForm.get('confirmPassword')?.setValue('Password123!');
@@ -415,11 +423,15 @@ describe('RegisterComponent', () => {
       
       component.onSubmit();
       
-      expect(component.isLoading).toBeFalse();
-      expect(snackBar.open).toHaveBeenCalledWith('Registration failed. Please try again.', 'Close', jasmine.any(Object));
+      // Wait for async operation to complete
+      setTimeout(() => {
+        expect(component.isLoading).toBeFalse();
+        expect(snackBar.open).toHaveBeenCalledWith('Registration failed. Please try again.', 'Close', jasmine.any(Object));
+        done();
+      }, 0);
     });
 
-    it('should handle registration errors with generic message', () => {
+    it('should handle registration errors with generic message', (done) => {
       // Fill in valid form data
       component.registerForm.patchValue(mockRegisterRequest);
       component.registerForm.get('confirmPassword')?.setValue('Password123!');
@@ -431,8 +443,12 @@ describe('RegisterComponent', () => {
       
       component.onSubmit();
       
-      expect(component.isLoading).toBeFalse();
-      expect(snackBar.open).toHaveBeenCalledWith('Registration failed. Please try again.', 'Close', jasmine.any(Object));
+      // Wait for async operation to complete
+      setTimeout(() => {
+        expect(component.isLoading).toBeFalse();
+        expect(snackBar.open).toHaveBeenCalledWith('Registration failed. Please try again.', 'Close', jasmine.any(Object));
+        done();
+      }, 0);
     });
 
     it('should reset loading state on error', () => {
@@ -467,7 +483,7 @@ describe('RegisterComponent', () => {
       expect(snackBar.open).toHaveBeenCalledWith('Account created successfully!', 'Close', jasmine.any(Object));
     });
 
-    it('should handle registration error flow', () => {
+    it('should handle registration error flow', (done) => {
       // Fill in valid form data
       component.registerForm.patchValue(mockRegisterRequest);
       component.registerForm.get('confirmPassword')?.setValue('Password123!');
@@ -479,9 +495,13 @@ describe('RegisterComponent', () => {
       
       component.onSubmit();
       
-      expect(component.isLoading).toBeFalse();
-      expect(snackBar.open).toHaveBeenCalledWith('Email already exists', 'Close', jasmine.any(Object));
-      expect(router.navigate).not.toHaveBeenCalled();
+      // Wait for async operation to complete
+      setTimeout(() => {
+        expect(component.isLoading).toBeFalse();
+        expect(snackBar.open).toHaveBeenCalledWith('Email already exists', 'Close', jasmine.any(Object));
+        expect(router.navigate).not.toHaveBeenCalled();
+        done();
+      }, 0);
     });
   });
 });

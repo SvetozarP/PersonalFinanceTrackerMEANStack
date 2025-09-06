@@ -22,7 +22,13 @@ export class GuestGuard implements CanActivate {
           return true;
         } else {
           try {
-            this.router.navigate(['/dashboard']);
+            const navigationPromise = this.router.navigate(['/dashboard']);
+            if (navigationPromise && typeof navigationPromise.catch === 'function') {
+              navigationPromise.catch(error => {
+                console.error('GuestGuard navigation error:', error);
+                // If navigation fails, still return false to prevent access
+              });
+            }
           } catch (error) {
             console.error('GuestGuard navigation error:', error);
             // If navigation fails, still return false to prevent access

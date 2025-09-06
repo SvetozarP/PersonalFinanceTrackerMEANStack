@@ -171,6 +171,7 @@ export class AuthService {
     console.error('Auth Service Error:', error);
     
     let errorMessage = 'An unexpected error occurred. Please try again.';
+    let userFriendly = true;
     
     if (error.error) {
       // Handle structured error responses from the backend
@@ -228,14 +229,13 @@ export class AuthService {
       }
     }
     
-    // Create a more structured error object that includes the original error
+    // Preserve the original error structure but add user-friendly message
     const enhancedError = {
       ...error, // Preserve original error properties
       message: errorMessage,
       timestamp: new Date().toISOString(),
       userFriendly: true
     };
-    
     return throwError(() => enhancedError);
   };
 

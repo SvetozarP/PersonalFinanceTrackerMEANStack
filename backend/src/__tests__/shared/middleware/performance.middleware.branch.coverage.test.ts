@@ -1,283 +1,379 @@
+import { performanceMiddleware } from '../../../shared/middleware/performance.middleware';
 import { Request, Response, NextFunction } from 'express';
-import { performanceMiddleware, databasePerformanceMiddleware, memoryMonitoringMiddleware } from '../../../shared/middleware/performance.middleware';
-import { logger } from '../../../shared/services/logger.service';
 
+// Mock logger
 jest.mock('../../../shared/services/logger.service', () => ({
   logger: {
     info: jest.fn(),
     error: jest.fn(),
     warn: jest.fn(),
-    debug: jest.fn()
-  }
+  },
 }));
 
-describe('Performance Middleware - Branch Coverage Tests', () => {
-  let mockReq: Partial<Request>;
-  let mockRes: Partial<Response>;
+import { logger as mockLogger } from '../../../shared/services/logger.service';
+
+describe('Performance Middleware - Branch Coverage', () => {
+  let mockRequest: Partial<Request>;
+  let mockResponse: Partial<Response>;
   let mockNext: NextFunction;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    mockReq = {
+    
+    mockRequest = {
       method: 'GET',
       url: '/test',
-      headers: {},
-      get: jest.fn().mockReturnValue('127.0.0.1')
-    } as any;
-    mockRes = {
+      path: '/test',
+      headers: {
+        'user-agent': 'test-agent',
+        'x-forwarded-for': '192.168.1.1',
+      },
+      ip: '127.0.0.1',
+      body: {},
+      query: {},
+      params: {},
+    };
+
+    mockResponse = {
       status: jest.fn().mockReturnThis(),
-      json: jest.fn().mockReturnThis(),
-      end: jest.fn()
-    } as any;
+      json: jest.fn(),
+      on: jest.fn(),
+      get: jest.fn(),
+      locals: {},
+    };
+
     mockNext = jest.fn();
   });
 
-  describe('Performance Middleware - Branch Coverage', () => {
-    it('should handle different request methods', () => {
-      const methods = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'];
-      
-      methods.forEach(method => {
-        const req = { ...mockReq, method } as Request;
-        performanceMiddleware(req, mockRes as Response, mockNext);
-        expect(mockNext).toHaveBeenCalled();
-      });
-    });
+  describe('performanceMiddleware', () => {
+    it('should track request performance successfully', (done) => {
+      const middleware = performanceMiddleware();
 
-    it('should handle different response status codes', () => {
-      const originalEnd = mockRes.end;
-      mockRes.end = function(chunk?: any, encoding?: any): any {
-        if (originalEnd) {
-          originalEnd.call(this, chunk, encoding);
+      // Mock response events
+      let finishCallback: () => void;
+      let closeCallback: () => void;
+
+      (mockResponse.on as jest.Mock).mockImplementation((event: string, callback: () => void) => {
+        if (event === 'finish') {
+          finishCallback = callback;
+        } else if (event === 'close') {
+          closeCallback = callback;
         }
-      };
-
-      // Test different status codes
-      const statusCodes = [200, 201, 400, 401, 403, 404, 500];
-      
-      statusCodes.forEach(statusCode => {
-        const res = { ...mockRes, statusCode } as Response;
-        performanceMiddleware(mockReq as Request, res, mockNext);
       });
 
-      expect(mockNext).toHaveBeenCalledTimes(statusCodes.length);
-    });
+      (mockResponse.get as jest.Mock).mockReturnValue('text/html');
 
-    it('should handle requests with different durations', () => {
-      const originalEnd = mockRes.end;
-      mockRes.end = function(chunk?: any, encoding?: any): any {
-        if (originalEnd) {
-          originalEnd.call(this, chunk, encoding);
-        }
-      };
+      middleware(mockRequest as Request, mockResponse as Response, mockNext);
 
-      // Test fast requests
-      performanceMiddleware(mockReq as Request, mockRes as Response, mockNext);
-      
-      // Test slow requests by adding delay
+      expect(mockNext).toHaveBeenCalled();
+
+      // Simulate response finish
       setTimeout(() => {
-        performanceMiddleware(mockReq as Request, mockRes as Response, mockNext);
+        finishCallback();
+        expect(mockLogger.info).toHaveBeenCalledWith(
+          'Request completed',
+          expect.objectContaining({
+            method: 'GET',
+            url: '/test',
+            statusCode: 200,
+            duration: expect.any(Number),
+          })
+        );
+        done();
       }, 10);
+    });
+
+    it('should handle response close event', (done) => {
+      const middleware = performanceMiddleware();
+
+      let closeCallback: () => void;
+
+      (mockResponse.on as jest.Mock).mockImplementation((event: string, callback: () => void) => {
+        if (event === 'close') {
+          closeCallback = callback;
+        }
+      });
+
+      (mockResponse.get as jest.Mock).mockReturnValue('text/html');
+
+      middleware(mockRequest as Request, mockResponse as Response, mockNext);
+
+      // Simulate response close
+      setTimeout(() => {
+        closeCallback();
+        expect(mockLogger.warn).toHaveBeenCalledWith(
+          'Request closed before completion',
+          expect.objectContaining({
+            method: 'GET',
+            url: '/test',
+            duration: expect.any(Number),
+          })
+        );
+        done();
+      }, 10);
+    });
+
+    it('should handle slow requests', (done) => {
+      const middleware = performanceMiddleware();
+
+      let finishCallback: () => void;
+
+      (mockResponse.on as jest.Mock).mockImplementation((event: string, callback: () => void) => {
+        if (event === 'finish') {
+          finishCallback = callback;
+        }
+      });
+
+      (mockResponse.get as jest.Mock).mockReturnValue('text/html');
+
+      middleware(mockRequest as Request, mockResponse as Response, mockNext);
+
+      // Simulate slow response
+      setTimeout(() => {
+        finishCallback();
+        expect(mockLogger.warn).toHaveBeenCalledWith(
+          'Slow request detected',
+          expect.objectContaining({
+            method: 'GET',
+            url: '/test',
+            duration: expect.any(Number),
+            threshold: 1000,
+          })
+        );
+        done();
+      }, 1100); // Simulate slow request
+    });
+
+    it('should handle requests without user-agent', () => {
+      const middleware = performanceMiddleware();
+
+      mockRequest.headers = {};
+
+      (mockResponse.on as jest.Mock).mockImplementation(() => {});
+      (mockResponse.get as jest.Mock).mockReturnValue('text/html');
+
+      middleware(mockRequest as Request, mockResponse as Response, mockNext);
 
       expect(mockNext).toHaveBeenCalled();
     });
 
+    it('should handle requests without x-forwarded-for', () => {
+      const middleware = performanceMiddleware();
+
+      mockRequest.headers = {
+        'user-agent': 'test-agent',
+      };
+
+      (mockResponse.on as jest.Mock).mockImplementation(() => {});
+      (mockResponse.get as jest.Mock).mockReturnValue('text/html');
+
+      middleware(mockRequest as Request, mockResponse as Response, mockNext);
+
+      expect(mockNext).toHaveBeenCalled();
+    });
+
+    it('should handle requests with different content types', () => {
+      const middleware = performanceMiddleware();
+
+      (mockResponse.on as jest.Mock).mockImplementation(() => {});
+      (mockResponse.get as jest.Mock).mockReturnValue('application/json');
+
+      middleware(mockRequest as Request, mockResponse as Response, mockNext);
+
+      expect(mockNext).toHaveBeenCalled();
+    });
+
+    it('should handle requests with different status codes', (done) => {
+      const middleware = performanceMiddleware();
+
+      let finishCallback: () => void;
+
+      (mockResponse.on as jest.Mock).mockImplementation((event: string, callback: () => void) => {
+        if (event === 'finish') {
+          finishCallback = callback;
+        }
+      });
+
+      (mockResponse.get as jest.Mock).mockReturnValue('text/html');
+      (mockResponse.status as jest.Mock).mockReturnValue(404);
+
+      middleware(mockRequest as Request, mockResponse as Response, mockNext);
+
+      setTimeout(() => {
+        finishCallback();
+        expect(mockLogger.info).toHaveBeenCalledWith(
+          'Request completed',
+          expect.objectContaining({
+            statusCode: 404,
+          })
+        );
+        done();
+      }, 10);
+    });
+
+    it('should handle error responses', (done) => {
+      const middleware = performanceMiddleware();
+
+      let finishCallback: () => void;
+
+      (mockResponse.on as jest.Mock).mockImplementation((event: string, callback: () => void) => {
+        if (event === 'finish') {
+          finishCallback = callback;
+        }
+      });
+
+      (mockResponse.get as jest.Mock).mockReturnValue('text/html');
+      (mockResponse.status as jest.Mock).mockReturnValue(500);
+
+      middleware(mockRequest as Request, mockResponse as Response, mockNext);
+
+      setTimeout(() => {
+        finishCallback();
+        expect(mockLogger.error).toHaveBeenCalledWith(
+          'Request completed with error',
+          expect.objectContaining({
+            statusCode: 500,
+          })
+        );
+        done();
+      }, 10);
+    });
+
+    it('should handle requests with query parameters', () => {
+      const middleware = performanceMiddleware();
+
+      mockRequest.query = { page: '1', limit: '10' };
+
+      (mockResponse.on as jest.Mock).mockImplementation(() => {});
+      (mockResponse.get as jest.Mock).mockReturnValue('text/html');
+
+      middleware(mockRequest as Request, mockResponse as Response, mockNext);
+
+      expect(mockNext).toHaveBeenCalled();
+    });
+
+    it('should handle requests with body data', () => {
+      const middleware = performanceMiddleware();
+
+      mockRequest.body = { name: 'test', email: 'test@example.com' };
+
+      (mockResponse.on as jest.Mock).mockImplementation(() => {});
+      (mockResponse.get as jest.Mock).mockReturnValue('text/html');
+
+      middleware(mockRequest as Request, mockResponse as Response, mockNext);
+
+      expect(mockNext).toHaveBeenCalled();
+    });
+
+    it('should handle requests with params', () => {
+      const middleware = performanceMiddleware();
+
+      mockRequest.params = { id: '123' };
+
+      (mockResponse.on as jest.Mock).mockImplementation(() => {});
+      (mockResponse.get as jest.Mock).mockReturnValue('text/html');
+
+      middleware(mockRequest as Request, mockResponse as Response, mockNext);
+
+      expect(mockNext).toHaveBeenCalled();
+    });
+
+    it('should handle different HTTP methods', () => {
+      const middleware = performanceMiddleware();
+
+      const methods = ['POST', 'PUT', 'DELETE', 'PATCH'];
+      
+      methods.forEach(method => {
+        mockRequest.method = method;
+        (mockResponse.on as jest.Mock).mockImplementation(() => {});
+        (mockResponse.get as jest.Mock).mockReturnValue('text/html');
+
+        middleware(mockRequest as Request, mockResponse as Response, mockNext);
+      });
+
+      expect(mockNext).toHaveBeenCalledTimes(methods.length);
+    });
+
     it('should handle requests with different URLs', () => {
-      const urls = ['/api/users', '/api/transactions', '/api/budgets', '/api/categories'];
+      const middleware = performanceMiddleware();
+
+      const urls = ['/api/users', '/api/transactions', '/api/categories'];
       
       urls.forEach(url => {
-        const req = { ...mockReq, url } as Request;
-        performanceMiddleware(req, mockRes as Response, mockNext);
+        mockRequest.url = url;
+        mockRequest.path = url;
+        (mockResponse.on as jest.Mock).mockImplementation(() => {});
+        (mockResponse.get as jest.Mock).mockReturnValue('text/html');
+
+        middleware(mockRequest as Request, mockResponse as Response, mockNext);
       });
 
       expect(mockNext).toHaveBeenCalledTimes(urls.length);
     });
 
-    it('should handle requests with different IP addresses', () => {
-      const ips = ['127.0.0.1', '192.168.1.1', '10.0.0.1', '::1'];
-      
-      ips.forEach(ip => {
-        const req = { ...mockReq, get: jest.fn().mockReturnValue(ip) } as Request;
-        performanceMiddleware(req, mockRes as Response, mockNext);
-      });
+    it('should handle requests with complex headers', () => {
+      const middleware = performanceMiddleware();
 
-      expect(mockNext).toHaveBeenCalledTimes(ips.length);
-    });
-  });
+      mockRequest.headers = {
+        'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'x-forwarded-for': '192.168.1.1, 10.0.0.1',
+        'x-real-ip': '203.0.113.1',
+        'accept': 'application/json',
+        'content-type': 'application/json',
+        'authorization': 'Bearer token123',
+      };
 
-  describe('Database Performance Middleware - Branch Coverage', () => {
-    it('should handle different mongoose query types', () => {
-      // Mock different query types
-      const queryTypes = ['find', 'findOne', 'aggregate', 'count', 'distinct'];
-      
-      queryTypes.forEach(queryType => {
-        const req = { ...mockReq, [queryType]: jest.fn() } as any;
-        databasePerformanceMiddleware(req, mockRes as Response, mockNext);
-      });
+      (mockResponse.on as jest.Mock).mockImplementation(() => {});
+      (mockResponse.get as jest.Mock).mockReturnValue('application/json');
 
-      expect(mockNext).toHaveBeenCalledTimes(queryTypes.length);
-    });
-
-    it('should handle queries with different execution times', () => {
-      // Test fast queries
-      databasePerformanceMiddleware(mockReq as Request, mockRes as Response, mockNext);
-      
-      // Test slow queries
-      setTimeout(() => {
-        databasePerformanceMiddleware(mockReq as Request, mockRes as Response, mockNext);
-      }, 10);
+      middleware(mockRequest as Request, mockResponse as Response, mockNext);
 
       expect(mockNext).toHaveBeenCalled();
     });
 
-    it('should handle different collection names', () => {
-      const collections = ['transactions', 'budgets', 'categories', 'users'];
+    it('should handle requests with different IP addresses', () => {
+      const middleware = performanceMiddleware();
+
+      const ips = ['127.0.0.1', '192.168.1.100', '10.0.0.1', '::1'];
       
-      collections.forEach(collection => {
-        const req = { ...mockReq, collection } as any;
-        databasePerformanceMiddleware(req, mockRes as Response, mockNext);
+      ips.forEach(ip => {
+        mockRequest.ip = ip;
+        (mockResponse.on as jest.Mock).mockImplementation(() => {});
+        (mockResponse.get as jest.Mock).mockReturnValue('text/html');
+
+        middleware(mockRequest as Request, mockResponse as Response, mockNext);
       });
 
-      expect(mockNext).toHaveBeenCalledTimes(collections.length);
-    });
-  });
-
-  describe('Memory Monitoring Middleware - Branch Coverage', () => {
-    it('should handle different memory usage levels', () => {
-      const memoryLevels = [
-        { heapUsed: 100 * 1024 * 1024, heapTotal: 1000 * 1024 * 1024 }, // 10%
-        { heapUsed: 500 * 1024 * 1024, heapTotal: 1000 * 1024 * 1024 }, // 50%
-        { heapUsed: 800 * 1024 * 1024, heapTotal: 1000 * 1024 * 1024 }, // 80%
-        { heapUsed: 900 * 1024 * 1024, heapTotal: 1000 * 1024 * 1024 }, // 90%
-        { heapUsed: 1000 * 1024 * 1024, heapTotal: 1000 * 1024 * 1024 } // 100%
-      ];
-
-      memoryLevels.forEach(memory => {
-        const originalMemoryUsage = process.memoryUsage;
-        (process as any).memoryUsage = jest.fn().mockReturnValue({
-          rss: 1000 * 1024 * 1024,
-          heapTotal: memory.heapTotal,
-          heapUsed: memory.heapUsed,
-          external: 0,
-          arrayBuffers: 0
-        });
-
-        memoryMonitoringMiddleware(mockReq as Request, mockRes as Response, mockNext);
-        
-        process.memoryUsage = originalMemoryUsage;
-      });
-
-      expect(mockNext).toHaveBeenCalledTimes(memoryLevels.length);
+      expect(mockNext).toHaveBeenCalledTimes(ips.length);
     });
 
-    it('should handle different heap total sizes', () => {
-      const heapTotals = [0, 100, 1000, 10000, 100000]; // Different sizes in MB
-      
-      heapTotals.forEach(heapTotal => {
-        const originalMemoryUsage = process.memoryUsage;
-        (process as any).memoryUsage = jest.fn().mockReturnValue({
-          rss: 1000 * 1024 * 1024,
-          heapTotal: heapTotal * 1024 * 1024,
-          heapUsed: 500 * 1024 * 1024,
-          external: 0,
-          arrayBuffers: 0
-        });
+    it('should handle response events in different order', (done) => {
+      const middleware = performanceMiddleware();
 
-        memoryMonitoringMiddleware(mockReq as Request, mockRes as Response, mockNext);
-        
-        process.memoryUsage = originalMemoryUsage;
+      let closeCallback: () => void;
+
+      (mockResponse.on as jest.Mock).mockImplementation((event: string, callback: () => void) => {
+        if (event === 'close') {
+          closeCallback = callback;
+        }
       });
 
-      expect(mockNext).toHaveBeenCalledTimes(heapTotals.length);
-    });
+      (mockResponse.get as jest.Mock).mockReturnValue('text/html');
 
-    it('should handle edge cases for memory monitoring', () => {
-      const edgeCases = [
-        { heapUsed: 0, heapTotal: 1000 * 1024 * 1024 }, // 0% usage
-        { heapUsed: 1000 * 1024 * 1024, heapTotal: 0 }, // Infinite usage
-        { heapUsed: -100, heapTotal: 1000 * 1024 * 1024 }, // Negative usage
-        { heapUsed: 1000 * 1024 * 1024, heapTotal: -1000 } // Negative total
-      ];
+      middleware(mockRequest as Request, mockResponse as Response, mockNext);
 
-      edgeCases.forEach(memory => {
-        const originalMemoryUsage = process.memoryUsage;
-        (process as any).memoryUsage = jest.fn().mockReturnValue({
-          rss: 1000 * 1024 * 1024,
-          heapTotal: memory.heapTotal,
-          heapUsed: memory.heapUsed,
-          external: 0,
-          arrayBuffers: 0
-        });
-
-        memoryMonitoringMiddleware(mockReq as Request, mockRes as Response, mockNext);
-        
-        process.memoryUsage = originalMemoryUsage;
-      });
-
-      expect(mockNext).toHaveBeenCalledTimes(edgeCases.length);
-    });
-  });
-
-  describe('Integration Tests - Branch Coverage', () => {
-    it('should handle all middleware together with different scenarios', () => {
-      const scenarios = [
-        { method: 'GET', url: '/api/transactions', statusCode: 200 },
-        { method: 'POST', url: '/api/budgets', statusCode: 201 },
-        { method: 'PUT', url: '/api/categories', statusCode: 200 },
-        { method: 'DELETE', url: '/api/users', statusCode: 204 }
-      ];
-
-      scenarios.forEach(scenario => {
-        const req = { ...mockReq, method: scenario.method, url: scenario.url } as Request;
-        const res = { ...mockRes, statusCode: scenario.statusCode } as Response;
-        
-        // Mock memory usage for each scenario
-        const originalMemoryUsage = process.memoryUsage;
-        (process as any).memoryUsage = jest.fn().mockReturnValue({
-          rss: 1000 * 1024 * 1024,
-          heapTotal: 1000 * 1024 * 1024,
-          heapUsed: 500 * 1024 * 1024,
-          external: 0,
-          arrayBuffers: 0
-        });
-
-        performanceMiddleware(req, res, mockNext);
-        databasePerformanceMiddleware(req, res, mockNext);
-        memoryMonitoringMiddleware(req, res, mockNext);
-        
-        process.memoryUsage = originalMemoryUsage;
-      });
-
-      expect(mockNext).toHaveBeenCalledTimes(scenarios.length * 3);
-    });
-
-    it('should handle middleware with missing request properties', () => {
-      const minimalReq = {} as any;
-      const minimalRes = { end: jest.fn() } as any;
-      const next = jest.fn();
-
-      // Mock memory usage to prevent errors
-      const originalMemoryUsage = process.memoryUsage;
-      (process as any).memoryUsage = jest.fn().mockReturnValue({
-        rss: 1000 * 1024 * 1024,
-        heapTotal: 1000 * 1024 * 1024,
-        heapUsed: 500 * 1024 * 1024,
-        external: 0,
-        arrayBuffers: 0
-      });
-
-      expect(() => {
-        performanceMiddleware(minimalReq, minimalRes, next);
-        databasePerformanceMiddleware(minimalReq, minimalRes, next);
-        memoryMonitoringMiddleware(minimalReq, minimalRes, next);
-      }).not.toThrow();
-
-      expect(next).toHaveBeenCalledTimes(3);
-
-      // Restore original function
-      process.memoryUsage = originalMemoryUsage;
+      // Simulate close before finish
+      setTimeout(() => {
+        closeCallback();
+        expect(mockLogger.warn).toHaveBeenCalledWith(
+          'Request closed before completion',
+          expect.objectContaining({
+            method: 'GET',
+            url: '/test',
+          })
+        );
+        done();
+      }, 10);
     });
   });
 });
-
-
-

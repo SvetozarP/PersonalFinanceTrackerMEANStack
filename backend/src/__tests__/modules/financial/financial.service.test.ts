@@ -293,6 +293,70 @@ describe('FinancialService', () => {
         financialService.getFinancialDashboard(mockUserId)
       ).rejects.toThrow('Service unavailable');
     });
+
+    it('should handle errors in recurring transactions service', async () => {
+      const error = new Error('Recurring transactions service failed');
+
+      // Setup mocks
+      mockTransactionService.getTransactionStats.mockResolvedValue(
+        mockTransactionStats
+      );
+      mockTransactionService.getUserTransactions
+        .mockResolvedValueOnce(mockRecentTransactions)
+        .mockResolvedValueOnce(mockPendingTransactions);
+      mockTransactionService.getRecurringTransactions.mockRejectedValue(error);
+
+      // Execute and verify
+      await expect(
+        financialService.getFinancialDashboard(mockUserId)
+      ).rejects.toThrow('Recurring transactions service failed');
+    });
+
+    it('should handle errors in pending transactions service', async () => {
+      const error = new Error('Pending transactions service failed');
+
+      // Setup mocks
+      mockTransactionService.getTransactionStats.mockResolvedValue(
+        mockTransactionStats
+      );
+      mockTransactionService.getUserTransactions
+        .mockResolvedValueOnce(mockRecentTransactions)
+        .mockRejectedValueOnce(error);
+
+      // Execute and verify
+      await expect(
+        financialService.getFinancialDashboard(mockUserId)
+      ).rejects.toThrow('Pending transactions service failed');
+    });
+
+    it('should handle custom date ranges correctly', async () => {
+      const startDate = new Date('2024-01-01');
+      const endDate = new Date('2024-01-31');
+
+      // Setup mocks
+      mockTransactionService.getTransactionStats.mockResolvedValue(
+        mockTransactionStats
+      );
+      mockTransactionService.getUserTransactions
+        .mockResolvedValueOnce(mockRecentTransactions)
+        .mockResolvedValueOnce(mockPendingTransactions);
+      mockTransactionService.getRecurringTransactions.mockResolvedValue(
+        mockRecurringTransactions
+      );
+
+      // Execute
+      const result = await financialService.getFinancialDashboard(mockUserId, {
+        startDate,
+        endDate,
+      });
+
+      // Verify
+      expect(mockTransactionService.getTransactionStats).toHaveBeenCalledWith(
+        mockUserId,
+        { startDate, endDate }
+      );
+      expect(result).toBeDefined();
+    });
   });
 
   describe('generateFinancialReport', () => {

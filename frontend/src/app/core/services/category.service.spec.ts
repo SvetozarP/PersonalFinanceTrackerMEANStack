@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
+import { HttpErrorResponse } from '@angular/common/http';
 import { CategoryService } from './category.service';
 import { Category, CategoryStats, ApiResponse } from '../models/financial.model';
 import { environment } from '../../../environments/environment';
@@ -107,6 +108,41 @@ describe('CategoryService', () => {
       req.flush({ success: true, data: [mockCategory] });
     });
 
+    it('should return cached data when cache is valid', () => {
+      // First call to populate cache
+      service.getUserCategories().subscribe();
+      const req1 = httpMock.expectOne(`${environment.apiUrl}/categories`);
+      req1.flush({ success: true, data: [mockCategory] });
+
+      // Second call should return cached data
+      service.getUserCategories().subscribe(categories => {
+        expect(categories).toEqual([mockCategory]);
+      });
+
+      // Should not make another HTTP request
+      httpMock.expectNone(`${environment.apiUrl}/categories`);
+    });
+
+    it('should make new request when cache is invalid', () => {
+      // Set up expired cache
+      service['categoryStateSubject'].next({
+        categories: [mockCategory],
+        categoryTree: [],
+        stats: null,
+        isLoading: false,
+        error: null,
+        lastUpdated: new Date(Date.now() - 11 * 60 * 1000) // 11 minutes ago
+      });
+
+      service.getUserCategories().subscribe(categories => {
+        expect(categories).toEqual([mockCategory]);
+      });
+
+      const req = httpMock.expectOne(`${environment.apiUrl}/categories`);
+      expect(req.request.method).toBe('GET');
+      req.flush({ success: true, data: [mockCategory] });
+    });
+
     it('should handle errors', () => {
       service.getUserCategories().subscribe({
         next: () => fail('should have failed'),
@@ -117,6 +153,49 @@ describe('CategoryService', () => {
 
       const req = httpMock.expectOne(`${environment.apiUrl}/categories`);
       req.flush('Server Error', { status: 500, statusText: 'Internal Server Error' });
+    });
+
+    it('should handle client-side errors', () => {
+      service.getUserCategories().subscribe({
+        next: () => fail('should have failed'),
+        error: (error) => {
+          expect(error.message).toBe('Client error message');
+        }
+      });
+
+      const req = httpMock.expectOne(`${environment.apiUrl}/categories`);
+      req.error(new ErrorEvent('error', { message: 'Client error message' }));
+    });
+
+    it('should handle server-side errors with message', () => {
+      service.getUserCategories().subscribe({
+        next: () => fail('should have failed'),
+        error: (error) => {
+          expect(error.message).toBe('Server error message');
+        }
+      });
+
+      const req = httpMock.expectOne(`${environment.apiUrl}/categories`);
+      req.flush({ message: 'Server error message' }, { status: 500, statusText: 'Internal Server Error' });
+    });
+
+    it('should handle server-side errors without message', () => {
+      // Test the handleError method directly to cover the specific branch
+      const mockError = new HttpErrorResponse({
+        status: 500,
+        statusText: 'Internal Server Error',
+        url: 'http://localhost:3000/api/categories',
+        error: null
+      });
+
+      // Override the message property to be empty to test the fallback
+      Object.defineProperty(mockError, 'message', {
+        value: '',
+        writable: true
+      });
+
+      const errorMessage = service['handleError'](mockError);
+      expect(errorMessage).toBe('An error occurred');
     });
   });
 
@@ -129,6 +208,21 @@ describe('CategoryService', () => {
       const req = httpMock.expectOne(`${environment.apiUrl}/categories/tree`);
       expect(req.request.method).toBe('GET');
       req.flush({ success: true, data: [mockCategory, mockChildCategory] });
+    });
+
+    it('should return cached data when cache is valid', () => {
+      // First call to populate cache
+      service.getCategoryTree().subscribe();
+      const req1 = httpMock.expectOne(`${environment.apiUrl}/categories/tree`);
+      req1.flush({ success: true, data: [mockCategory, mockChildCategory] });
+
+      // Second call should return cached data
+      service.getCategoryTree().subscribe(tree => {
+        expect(tree).toEqual([mockCategory, mockChildCategory]);
+      });
+
+      // Should not make another HTTP request
+      httpMock.expectNone(`${environment.apiUrl}/categories/tree`);
     });
 
     it('should handle errors', () => {
@@ -153,6 +247,21 @@ describe('CategoryService', () => {
       const req = httpMock.expectOne(`${environment.apiUrl}/categories/stats`);
       expect(req.request.method).toBe('GET');
       req.flush({ success: true, data: mockCategoryStats });
+    });
+
+    it('should return cached data when cache is valid', () => {
+      // First call to populate cache
+      service.getCategoryStats().subscribe();
+      const req1 = httpMock.expectOne(`${environment.apiUrl}/categories/stats`);
+      req1.flush({ success: true, data: mockCategoryStats });
+
+      // Second call should return cached data
+      service.getCategoryStats().subscribe(stats => {
+        expect(stats).toEqual(mockCategoryStats);
+      });
+
+      // Should not make another HTTP request
+      httpMock.expectNone(`${environment.apiUrl}/categories/stats`);
     });
 
     it('should handle errors', () => {
@@ -292,6 +401,34 @@ describe('CategoryService', () => {
         expect(categories).toEqual([mockChildCategory]);
       });
     });
+
+    it('should search categories case-insensitively', () => {
+      service.searchCategories('test').subscribe(categories => {
+        expect(categories).toEqual([mockCategory]);
+      });
+    });
+
+    it('should handle categories without description', () => {
+      const categoryWithoutDescription = { ...mockCategory, description: undefined };
+      service['categoryStateSubject'].next({
+        categories: [categoryWithoutDescription],
+        categoryTree: [],
+        stats: null,
+        isLoading: false,
+        error: null,
+        lastUpdated: new Date()
+      });
+
+      service.searchCategories('Test').subscribe(categories => {
+        expect(categories).toEqual([categoryWithoutDescription]);
+      });
+    });
+
+    it('should return empty array when no matches found', () => {
+      service.searchCategories('NonExistent').subscribe(categories => {
+        expect(categories).toEqual([]);
+      });
+    });
   });
 
   describe('refreshCategories', () => {
@@ -361,6 +498,50 @@ describe('CategoryService', () => {
       expect(state.categoryTree).toEqual([]);
       expect(state.stats).toBeNull();
       expect(state.lastUpdated).toBeNull();
+    });
+  });
+
+  describe('Cache Management', () => {
+    it('should return false when lastUpdated is null', () => {
+      service['categoryStateSubject'].next({
+        categories: [],
+        categoryTree: [],
+        stats: null,
+        isLoading: false,
+        error: null,
+        lastUpdated: null
+      });
+
+      const isValid = service['isCacheValid']();
+      expect(isValid).toBe(false);
+    });
+
+    it('should return true when cache is within expiry time', () => {
+      service['categoryStateSubject'].next({
+        categories: [],
+        categoryTree: [],
+        stats: null,
+        isLoading: false,
+        error: null,
+        lastUpdated: new Date(Date.now() - 5 * 60 * 1000) // 5 minutes ago
+      });
+
+      const isValid = service['isCacheValid']();
+      expect(isValid).toBe(true);
+    });
+
+    it('should return false when cache is expired', () => {
+      service['categoryStateSubject'].next({
+        categories: [],
+        categoryTree: [],
+        stats: null,
+        isLoading: false,
+        error: null,
+        lastUpdated: new Date(Date.now() - 11 * 60 * 1000) // 11 minutes ago
+      });
+
+      const isValid = service['isCacheValid']();
+      expect(isValid).toBe(false);
     });
   });
 });

@@ -54,6 +54,35 @@ describe('Auth Service', () => {
   });
 
   describe('register', () => {
+    it('should register user successfully when user does not exist', async () => {
+      const userData = {
+        email: 'new@example.com',
+        password: 'Password123!',
+        firstName: 'Test',
+        lastName: 'User',
+      };
+
+      const newUser = {
+        ...mockUser,
+        email: 'new@example.com',
+        save: jest.fn().mockResolvedValue(mockUser),
+        toObject: jest.fn().mockReturnValue({
+          ...mockUser,
+          password: undefined,
+        }),
+      };
+
+      (mockUserModel.findOne as any).mockResolvedValue(null);
+      (mockUserModel as any).mockImplementation(() => newUser);
+
+      const result = await authService.register(userData);
+
+      expect(result).toBeDefined();
+      expect(result.email).toBe('new@example.com');
+      expect(result.password).toBeUndefined();
+      expect(newUser.save).toHaveBeenCalled();
+    });
+
     it('should throw error when user already exists', async () => {
       const userData = {
         email: 'existing@example.com',
@@ -66,6 +95,28 @@ describe('Auth Service', () => {
 
       await expect(authService.register(userData)).rejects.toThrow(
         'User with this email already exists'
+      );
+    });
+
+    it('should handle database errors during user creation', async () => {
+      const userData = {
+        email: 'new@example.com',
+        password: 'Password123!',
+        firstName: 'Test',
+        lastName: 'User',
+      };
+
+      const newUser = {
+        ...mockUser,
+        email: 'new@example.com',
+        save: jest.fn().mockRejectedValue(new Error('Database error')),
+      };
+
+      (mockUserModel.findOne as any).mockResolvedValue(null);
+      (mockUserModel as any).mockImplementation(() => newUser);
+
+      await expect(authService.register(userData)).rejects.toThrow(
+        'Database error'
       );
     });
   });
@@ -314,6 +365,47 @@ describe('Auth Service', () => {
         'Invalid token'
       );
     });
+
+    it('should throw error when token type is not access', async () => {
+      const token = 'refresh-token';
+      const decodedToken = {
+        userId: '507f1f77bcf86cd799439011',
+        type: 'refresh',
+      };
+
+      (mockJwt.verify as any).mockReturnValue(decodedToken);
+
+      await expect(authService.validateToken(token)).rejects.toThrow(
+        'Invalid token'
+      );
+    });
+
+    it('should handle JWT verification errors', async () => {
+      const token = 'malformed-token';
+
+      (mockJwt.verify as any).mockImplementation(() => {
+        throw new Error('Malformed token');
+      });
+
+      await expect(authService.validateToken(token)).rejects.toThrow(
+        'Invalid token'
+      );
+    });
+
+    it('should handle database errors during user lookup', async () => {
+      const token = 'valid-access-token';
+      const decodedToken = {
+        userId: '507f1f77bcf86cd799439011',
+        type: 'access',
+      };
+
+      (mockJwt.verify as any).mockReturnValue(decodedToken);
+      (mockUserModel.findById as any).mockRejectedValue(new Error('Database error'));
+
+      await expect(authService.validateToken(token)).rejects.toThrow(
+        'Invalid token'
+      );
+    });
   });
 
   describe('private methods', () => {
@@ -367,6 +459,23 @@ describe('Auth Service', () => {
 
       // Restore JWT_SECRET
       process.env.JWT_SECRET = originalSecret;
+    });
+
+    it('should handle JWT signing errors', async () => {
+      const userId = '507f1f77bcf86cd799439011';
+
+      (mockJwt.sign as any).mockImplementation(() => {
+        throw new Error('JWT signing failed');
+      });
+
+      // Access private method through reflection
+      const generateTokensMethod = (authService as any).generateTokens.bind(
+        authService
+      );
+
+      await expect(generateTokensMethod(userId)).rejects.toThrow(
+        'JWT signing failed'
+      );
     });
   });
 });

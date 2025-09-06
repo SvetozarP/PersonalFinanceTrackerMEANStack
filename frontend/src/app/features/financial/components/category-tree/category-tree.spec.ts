@@ -280,11 +280,15 @@ describe('CategoryTreeComponent', () => {
     expect(filtered).toBeDefined();
   });
 
-  it('should handle error loading categories', () => {
+  it('should handle error loading categories', (done) => {
     categoryService.getUserCategories.and.returnValue(throwError(() => new Error('API Error')));
     
     component['loadCategories']();
     
-    expect(component.isLoading).toBe(false);
+    // Wait for the async operation to complete
+    setTimeout(() => {
+      expect(component.isLoading).toBe(false);
+      done();
+    }, 0);
   });
 });

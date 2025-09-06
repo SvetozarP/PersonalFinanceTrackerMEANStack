@@ -285,7 +285,7 @@ export class FinancialGoalsComponent implements OnInit, OnDestroy {
   private calculateDaysRemaining(targetDate: Date): number {
     const now = new Date();
     const diffTime = targetDate.getTime() - now.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
     return Math.max(0, diffDays);
   }
 

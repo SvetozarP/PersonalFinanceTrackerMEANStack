@@ -287,9 +287,43 @@ describe('DashboardService', () => {
       });
     });
 
+    it('should return null when dashboard is null', () => {
+      service['dashboardStateSubject'].next({
+        dashboard: null,
+        categories: [],
+        recentTransactions: [],
+        stats: null,
+        categoryStats: null,
+        isLoading: false,
+        error: null,
+        lastUpdated: new Date()
+      });
+
+      service.dashboardOverview$.subscribe(overview => {
+        expect(overview).toBeNull();
+      });
+    });
+
     it('should provide top categories observable', () => {
       service.topCategories$.subscribe(categories => {
         expect(categories).toBeDefined();
+      });
+    });
+
+    it('should return empty array when dashboard is null', () => {
+      service['dashboardStateSubject'].next({
+        dashboard: null,
+        categories: [],
+        recentTransactions: [],
+        stats: null,
+        categoryStats: null,
+        isLoading: false,
+        error: null,
+        lastUpdated: new Date()
+      });
+
+      service.topCategories$.subscribe(categories => {
+        expect(categories).toEqual([]);
       });
     });
 
@@ -299,9 +333,43 @@ describe('DashboardService', () => {
       });
     });
 
+    it('should return empty array when dashboard is null', () => {
+      service['dashboardStateSubject'].next({
+        dashboard: null,
+        categories: [],
+        recentTransactions: [],
+        stats: null,
+        categoryStats: null,
+        isLoading: false,
+        error: null,
+        lastUpdated: new Date()
+      });
+
+      service.spendingTrends$.subscribe(trends => {
+        expect(trends).toEqual([]);
+      });
+    });
+
     it('should provide budget status observable', () => {
       service.budgetStatus$.subscribe(status => {
         expect(status).toBeDefined();
+      });
+    });
+
+    it('should return empty array when dashboard is null', () => {
+      service['dashboardStateSubject'].next({
+        dashboard: null,
+        categories: [],
+        recentTransactions: [],
+        stats: null,
+        categoryStats: null,
+        isLoading: false,
+        error: null,
+        lastUpdated: new Date()
+      });
+
+      service.budgetStatus$.subscribe(status => {
+        expect(status).toEqual([]);
       });
     });
 
@@ -311,9 +379,43 @@ describe('DashboardService', () => {
       });
     });
 
+    it('should return 0 when dashboard is null', () => {
+      service['dashboardStateSubject'].next({
+        dashboard: null,
+        categories: [],
+        recentTransactions: [],
+        stats: null,
+        categoryStats: null,
+        isLoading: false,
+        error: null,
+        lastUpdated: new Date()
+      });
+
+      service.pendingTransactionsCount$.subscribe(count => {
+        expect(count).toBe(0);
+      });
+    });
+
     it('should provide upcoming recurring count observable', () => {
       service.upcomingRecurringCount$.subscribe(count => {
         expect(typeof count).toBe('number');
+      });
+    });
+
+    it('should return 0 when dashboard is null', () => {
+      service['dashboardStateSubject'].next({
+        dashboard: null,
+        categories: [],
+        recentTransactions: [],
+        stats: null,
+        categoryStats: null,
+        isLoading: false,
+        error: null,
+        lastUpdated: new Date()
+      });
+
+      service.upcomingRecurringCount$.subscribe(count => {
+        expect(count).toBe(0);
       });
     });
 
@@ -323,9 +425,43 @@ describe('DashboardService', () => {
       });
     });
 
+    it('should return 0 when dashboard is null', () => {
+      service['dashboardStateSubject'].next({
+        dashboard: null,
+        categories: [],
+        recentTransactions: [],
+        stats: null,
+        categoryStats: null,
+        isLoading: false,
+        error: null,
+        lastUpdated: new Date()
+      });
+
+      service.monthlyNet$.subscribe(net => {
+        expect(net).toBe(0);
+      });
+    });
+
     it('should provide monthly income observable', () => {
       service.monthlyIncome$.subscribe(income => {
         expect(typeof income).toBe('number');
+      });
+    });
+
+    it('should return 0 when dashboard is null', () => {
+      service['dashboardStateSubject'].next({
+        dashboard: null,
+        categories: [],
+        recentTransactions: [],
+        stats: null,
+        categoryStats: null,
+        isLoading: false,
+        error: null,
+        lastUpdated: new Date()
+      });
+
+      service.monthlyIncome$.subscribe(income => {
+        expect(income).toBe(0);
       });
     });
 
@@ -335,9 +471,43 @@ describe('DashboardService', () => {
       });
     });
 
+    it('should return 0 when dashboard is null', () => {
+      service['dashboardStateSubject'].next({
+        dashboard: null,
+        categories: [],
+        recentTransactions: [],
+        stats: null,
+        categoryStats: null,
+        isLoading: false,
+        error: null,
+        lastUpdated: new Date()
+      });
+
+      service.monthlyExpenses$.subscribe(expenses => {
+        expect(expenses).toBe(0);
+      });
+    });
+
     it('should provide total balance observable', () => {
       service.totalBalance$.subscribe(balance => {
         expect(typeof balance).toBe('number');
+      });
+    });
+
+    it('should return 0 when dashboard is null', () => {
+      service['dashboardStateSubject'].next({
+        dashboard: null,
+        categories: [],
+        recentTransactions: [],
+        stats: null,
+        categoryStats: null,
+        isLoading: false,
+        error: null,
+        lastUpdated: new Date()
+      });
+
+      service.totalBalance$.subscribe(balance => {
+        expect(balance).toBe(0);
       });
     });
   });
@@ -385,6 +555,62 @@ describe('DashboardService', () => {
       });
     });
 
+    it('should return empty array when categories or stats are null', () => {
+      // Set up state with null categories
+      service['dashboardStateSubject'].next({
+        dashboard: null,
+        categories: null as any,
+        recentTransactions: [],
+        stats: mockTransactionStats,
+        categoryStats: null,
+        isLoading: false,
+        error: null,
+        lastUpdated: new Date()
+      });
+
+      service.getCategoriesWithTransactionCounts().subscribe(categories => {
+        expect(categories).toEqual([]);
+      });
+    });
+
+    it('should return empty array when stats are null', () => {
+      // Set up state with null stats
+      service['dashboardStateSubject'].next({
+        dashboard: null,
+        categories: [mockCategory],
+        recentTransactions: [],
+        stats: null,
+        categoryStats: null,
+        isLoading: false,
+        error: null,
+        lastUpdated: new Date()
+      });
+
+      service.getCategoriesWithTransactionCounts().subscribe(categories => {
+        expect(categories).toEqual([]);
+      });
+    });
+
+    it('should handle categories without matching stats', () => {
+      const categoryWithoutStats = { ...mockCategory, _id: 'cat2' };
+      service['dashboardStateSubject'].next({
+        dashboard: null,
+        categories: [categoryWithoutStats],
+        recentTransactions: [],
+        stats: mockTransactionStats,
+        categoryStats: null,
+        isLoading: false,
+        error: null,
+        lastUpdated: new Date()
+      });
+
+      service.getCategoriesWithTransactionCounts().subscribe(categories => {
+        expect(categories.length).toBe(1);
+        expect(categories[0].transactionCount).toBe(0);
+        expect(categories[0].totalAmount).toBe(0);
+      });
+    });
+
     it('should get income vs expenses comparison', () => {
       service.getIncomeVsExpenses().subscribe(comparison => {
         expect(comparison.income).toBeDefined();
@@ -393,9 +619,46 @@ describe('DashboardService', () => {
       });
     });
 
+    it('should return zero values when stats are null', () => {
+      service['dashboardStateSubject'].next({
+        dashboard: null,
+        categories: [],
+        recentTransactions: [],
+        stats: null,
+        categoryStats: null,
+        isLoading: false,
+        error: null,
+        lastUpdated: new Date()
+      });
+
+      service.getIncomeVsExpenses().subscribe(comparison => {
+        expect(comparison.income).toBe(0);
+        expect(comparison.expenses).toBe(0);
+        expect(comparison.net).toBe(0);
+      });
+    });
+
     it('should get monthly spending breakdown', () => {
       service.getMonthlySpendingBreakdown().subscribe(breakdown => {
         expect(Array.isArray(breakdown)).toBe(true);
+      });
+    });
+
+    it('should return empty array when monthly trends are null', () => {
+      const statsWithoutTrends = { ...mockTransactionStats, monthlyTrends: null as any };
+      service['dashboardStateSubject'].next({
+        dashboard: null,
+        categories: [],
+        recentTransactions: [],
+        stats: statsWithoutTrends,
+        categoryStats: null,
+        isLoading: false,
+        error: null,
+        lastUpdated: new Date()
+      });
+
+      service.getMonthlySpendingBreakdown().subscribe(breakdown => {
+        expect(breakdown).toEqual([]);
       });
     });
 
@@ -408,6 +671,24 @@ describe('DashboardService', () => {
           expect(breakdown[0].amount).toBeDefined();
           expect(breakdown[0].percentage).toBeDefined();
         }
+      });
+    });
+
+    it('should return empty array when transactions by category are null', () => {
+      const statsWithoutCategoryData = { ...mockTransactionStats, transactionsByCategory: null as any };
+      service['dashboardStateSubject'].next({
+        dashboard: null,
+        categories: [],
+        recentTransactions: [],
+        stats: statsWithoutCategoryData,
+        categoryStats: null,
+        isLoading: false,
+        error: null,
+        lastUpdated: new Date()
+      });
+
+      service.getCategorySpendingBreakdown().subscribe(breakdown => {
+        expect(breakdown).toEqual([]);
       });
     });
   });
@@ -436,6 +717,65 @@ describe('DashboardService', () => {
         expect(summary.netAmount).toBeDefined();
         expect(summary.pendingTransactions).toBeDefined();
         expect(summary.upcomingRecurring).toBeDefined();
+      });
+    });
+
+    it('should handle null values in dashboard summary', () => {
+      service['dashboardStateSubject'].next({
+        dashboard: null,
+        categories: null as any,
+        recentTransactions: [],
+        stats: null,
+        categoryStats: null,
+        isLoading: false,
+        error: null,
+        lastUpdated: new Date()
+      });
+
+      service.getDashboardSummary().subscribe(summary => {
+        expect(summary.totalTransactions).toBe(0);
+        expect(summary.totalCategories).toBe(0);
+        expect(summary.totalIncome).toBe(0);
+        expect(summary.totalExpenses).toBe(0);
+        expect(summary.netAmount).toBe(0);
+        expect(summary.pendingTransactions).toBe(0);
+        expect(summary.upcomingRecurring).toBe(0);
+      });
+    });
+
+    it('should handle partial null values in dashboard summary', () => {
+      const partialStats = {
+        totalTransactions: 50,
+        totalIncome: 2000,
+        totalExpenses: 1500,
+        totalTransfers: 0,
+        transactionsByType: {
+          income: { count: 10, total: 2000 },
+          expense: { count: 40, total: 1500 }
+        },
+        transactionsByCategory: [],
+        monthlyTrends: []
+      };
+
+      service['dashboardStateSubject'].next({
+        dashboard: null,
+        categories: [mockCategory],
+        recentTransactions: [],
+        stats: partialStats,
+        categoryStats: null,
+        isLoading: false,
+        error: null,
+        lastUpdated: new Date()
+      });
+
+      service.getDashboardSummary().subscribe(summary => {
+        expect(summary.totalTransactions).toBe(50);
+        expect(summary.totalCategories).toBe(1);
+        expect(summary.totalIncome).toBe(2000);
+        expect(summary.totalExpenses).toBe(1500);
+        expect(summary.netAmount).toBe(500);
+        expect(summary.pendingTransactions).toBe(0);
+        expect(summary.upcomingRecurring).toBe(0);
       });
     });
   });

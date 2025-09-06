@@ -447,7 +447,12 @@ describe('BudgetService', () => {
       const endDate = new Date('2023-12-31');
       const filters: BudgetFilters = { startDate, endDate };
 
-      service.getBudgets(filters).subscribe(() => {
+      service.getBudgets(filters).subscribe((response) => {
+        expect(response).toBeDefined();
+        expect(response.budgets).toEqual([]);
+        expect(response.total).toBe(0);
+        expect(response.page).toBe(1);
+        expect(response.totalPages).toBe(0);
         done();
       });
 
@@ -466,7 +471,12 @@ describe('BudgetService', () => {
     it('should handle string filters correctly', (done) => {
       const filters: BudgetFilters = { status: 'active', search: 'test' };
 
-      service.getBudgets(filters).subscribe(() => {
+      service.getBudgets(filters).subscribe((response) => {
+        expect(response).toBeDefined();
+        expect(response.budgets).toEqual([]);
+        expect(response.total).toBe(0);
+        expect(response.page).toBe(1);
+        expect(response.totalPages).toBe(0);
         done();
       });
 
@@ -490,7 +500,12 @@ describe('BudgetService', () => {
         startDate: null as any
       };
 
-      service.getBudgets(filters).subscribe(() => {
+      service.getBudgets(filters).subscribe((response) => {
+        expect(response).toBeDefined();
+        expect(response.budgets).toEqual([]);
+        expect(response.total).toBe(0);
+        expect(response.page).toBe(1);
+        expect(response.totalPages).toBe(0);
         done();
       });
 

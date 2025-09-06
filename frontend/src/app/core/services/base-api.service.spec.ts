@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { throwError } from 'rxjs';
 import { BaseApiService } from './base-api.service';
 import { Injectable, provideZoneChangeDetection } from '@angular/core';
 
@@ -192,6 +193,29 @@ describe('BaseApiService', () => {
 
       const req = httpMock.expectOne(request => request.url.endsWith('/test'));
       req.flush(null, { status: 500, statusText: 'Internal Server Error' });
+    });
+
+    it('should handle server-side errors with no message at all', () => {
+      // Test the handleError method directly to cover the specific branch
+      const mockError = new HttpErrorResponse({
+        status: 500,
+        statusText: 'Internal Server Error',
+        url: 'http://localhost:3000/api/test',
+        error: null
+      });
+      
+      // Override the message property to be empty to test the fallback
+      Object.defineProperty(mockError, 'message', {
+        value: '',
+        writable: true
+      });
+
+      service['handleError'](mockError).subscribe({
+        next: () => fail('should have failed'),
+        error: (error) => {
+          expect(error.message).toBe('An error occurred');
+        }
+      });
     });
   });
 

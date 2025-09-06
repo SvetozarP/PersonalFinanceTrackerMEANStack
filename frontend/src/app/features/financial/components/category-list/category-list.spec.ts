@@ -308,48 +308,68 @@ describe('CategoryListComponent', () => {
     expect(topCategories[0].name).toBe('Food & Dining');
   });
 
-  it('should handle category loading error', () => {
+  it('should handle category loading error', (done) => {
     categoryService.getUserCategories.and.returnValue(throwError(() => new Error('API Error')));
     
     component['loadCategories']();
     
-    expect(component.error).toBe('Failed to load categories');
-    expect(component.isCategoriesLoading).toBe(false);
+    // Wait for the async operation to complete
+    setTimeout(() => {
+      expect(component.error).toBe('Failed to load categories');
+      expect(component.isCategoriesLoading).toBe(false);
+      done();
+    }, 0);
   });
 
-  it('should handle category stats loading error', () => {
+  it('should handle category stats loading error', (done) => {
     categoryService.getCategoryStats.and.returnValue(throwError(() => new Error('API Error')));
     
     component['loadCategoryStats']();
     
-    expect(component.isStatsLoading).toBe(false);
+    // Wait for the async operation to complete
+    setTimeout(() => {
+      expect(component.isStatsLoading).toBe(false);
+      done();
+    }, 0);
   });
 
-  it('should handle category tree loading error', () => {
+  it('should handle category tree loading error', (done) => {
     categoryService.getCategoryTree.and.returnValue(throwError(() => new Error('API Error')));
     
     component['loadCategoryTree']();
     
-    expect(component.isTreeLoading).toBe(false);
+    // Wait for the async operation to complete
+    setTimeout(() => {
+      expect(component.isTreeLoading).toBe(false);
+      done();
+    }, 0);
   });
 
-  it('should handle category deletion error', () => {
+  it('should handle category deletion error', (done) => {
     categoryService.deleteCategory.and.returnValue(throwError(() => new Error('API Error')));
     spyOn(window, 'confirm').and.returnValue(true);
     
     component.onCategoryDelete('cat1');
     
-    expect(component.error).toBe('Failed to delete category');
-    expect(component.isDeleting).toBe(false);
+    // Wait for the async operation to complete
+    setTimeout(() => {
+      expect(component.error).toBe('Failed to delete category');
+      expect(component.isDeleting).toBe(false);
+      done();
+    }, 0);
   });
 
-  it('should handle category toggle active error', () => {
+  it('should handle category toggle active error', (done) => {
     categoryService.updateCategory.and.returnValue(throwError(() => new Error('API Error')));
     
     component.onCategoryToggleActive('cat1', true);
     
-    expect(component.error).toBe('Failed to update category status');
-    expect(component.isDeleting).toBe(false);
+    // Wait for the async operation to complete
+    setTimeout(() => {
+      expect(component.error).toBe('Failed to update category status');
+      expect(component.isDeleting).toBe(false);
+      done();
+    }, 0);
   });
 
   it('should handle pagination when current page becomes empty', () => {
@@ -413,7 +433,7 @@ describe('CategoryListComponent', () => {
     expect(component.viewMode).toBe('grid');
   });
 
-  it('should handle export categories', () => {
+  it('should handle export categories', (done) => {
     const consoleSpy = spyOn(console, 'log');
     
     component.exportCategories();
@@ -424,6 +444,7 @@ describe('CategoryListComponent', () => {
     setTimeout(() => {
       expect(consoleSpy).toHaveBeenCalledWith('Exporting categories...');
       expect(component.isExporting).toBe(false);
+      done();
     }, 2100);
   });
 

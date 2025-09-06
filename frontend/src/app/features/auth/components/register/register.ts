@@ -171,11 +171,14 @@ export class RegisterComponent implements OnInit, OnDestroy {
           let errorMessage = 'Registration failed. Please try again.';
           if (error.error && error.error.errors && Array.isArray(error.error.errors)) {
             // Handle array of error objects with field and message properties
-            if (error.error.errors.length > 0 && typeof error.error.errors[0] === 'object' && 'message' in error.error.errors[0]) {
-              errorMessage = error.error.errors.map((err: any) => err.message).join(', ');
-            } else {
-              errorMessage = error.error.errors.join(', ');
+            if (error.error.errors.length > 0) {
+              if (typeof error.error.errors[0] === 'object' && 'message' in error.error.errors[0]) {
+                errorMessage = error.error.errors.map((err: any) => err.message).join(', ');
+              } else {
+                errorMessage = error.error.errors.join(', ');
+              }
             }
+            // If errors array is empty, keep the default error message
           } else if (error.error && error.error.message) {
             errorMessage = error.error.message;
           } else if (error.message) {
@@ -208,7 +211,14 @@ export class RegisterComponent implements OnInit, OnDestroy {
   // Helper method to get field error message
   getFieldError(fieldName: string): string {
     const field = this.registerForm.get(fieldName);
-    if (!field || !field.errors || !field.touched) return '';
+    if (!field || !field.touched) return '';
+
+    // Check for form-level password mismatch error
+    if (fieldName === 'confirmPassword' && this.registerForm.errors?.['passwordMismatch']) {
+      return 'Passwords do not match';
+    }
+
+    if (!field.errors) return '';
 
     if (field.errors['required']) return `${fieldName} is required`;
     if (field.errors['email']) return 'Please enter a valid email';

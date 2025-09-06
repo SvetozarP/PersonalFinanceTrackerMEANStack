@@ -144,7 +144,7 @@ export class RealtimeBudgetProgressService implements OnDestroy {
           return of([]);
         }
 
-        return this.transactionService.getUserTransactions().pipe(
+        return this.transactionService.getUserTransactions({}).pipe(
           switchMap(transactionResponse => 
             this.categoryService.getUserCategories().pipe(
               switchMap(categories => {

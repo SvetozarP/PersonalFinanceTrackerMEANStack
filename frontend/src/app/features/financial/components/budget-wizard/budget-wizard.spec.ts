@@ -367,7 +367,7 @@ describe('BudgetWizardComponent', () => {
     expect(component.isSubmitting).toBeFalse();
   });
 
-  it('should handle budget creation error', () => {
+  it('should handle budget creation error', (done) => {
     mockBudgetService.createBudget.and.returnValue(throwError(() => new Error('Creation failed')));
     
     component.ngOnInit();
@@ -396,7 +396,11 @@ describe('BudgetWizardComponent', () => {
     
     component.createBudget();
     
-    expect(component.isSubmitting).toBeFalse();
+    // Wait for the async error handling to complete
+    setTimeout(() => {
+      expect(component.isSubmitting).toBeFalse();
+      done();
+    }, 0);
   });
 
   it('should validate all steps correctly', () => {

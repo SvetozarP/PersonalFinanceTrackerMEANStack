@@ -442,7 +442,7 @@ export class TransactionService {
    */
   refreshTransactions(): Observable<PaginatedResponse<Transaction>> {
     this.clearCache();
-    return this.getUserTransactions();
+    return this.getUserTransactions({});
   }
 
   /**
