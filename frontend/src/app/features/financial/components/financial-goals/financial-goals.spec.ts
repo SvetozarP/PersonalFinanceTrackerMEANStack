@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { RouterTestingModule } from '@angular/router/testing';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { of, throwError } from 'rxjs';
 
 import { FinancialGoalsComponent } from './financial-goals';
 import { FinancialService } from '../../../../core/services/financial.service';
@@ -18,6 +19,10 @@ describe('FinancialGoalsComponent', () => {
     const financialServiceSpy = jasmine.createSpyObj('FinancialService', ['getFinancialDashboard']);
     const transactionServiceSpy = jasmine.createSpyObj('TransactionService', ['getUserTransactions']);
     const categoryServiceSpy = jasmine.createSpyObj('CategoryService', ['getUserCategories']);
+
+    // Set default return values to prevent undefined errors
+    transactionServiceSpy.getUserTransactions.and.returnValue(of({ data: [], pagination: { page: 1, limit: 10, total: 0, totalPages: 0 } }));
+    categoryServiceSpy.getUserCategories.and.returnValue(of([]));
 
     await TestBed.configureTestingModule({
       imports: [
@@ -817,24 +822,169 @@ describe('FinancialGoalsComponent', () => {
       expect(component.goalForm.get('type')?.value).toBe('');
     });
 
-    it('should handle form reset after multiple patches', () => {
-      // First patch
-      component.goalForm.patchValue({
-        title: 'First Goal',
-        targetAmount: 1000
-      });
-
-      // Second patch
-      component.goalForm.patchValue({
-        title: 'Second Goal',
-        targetAmount: 2000
-      });
-
-      // Reset form
-      component.goalForm.reset();
-
-      expect(component.goalForm.get('title')?.value).toBeFalsy();
-      expect(component.goalForm.get('targetAmount')?.value).toBeFalsy();
+  it('should handle form reset after multiple patches', () => {
+    // First patch
+    component.goalForm.patchValue({
+      title: 'First Goal',
+      targetAmount: 1000
     });
+
+    // Second patch
+    component.goalForm.patchValue({
+      title: 'Second Goal',
+      targetAmount: 2000
+    });
+
+    // Reset form
+    component.goalForm.reset();
+
+    expect(component.goalForm.get('title')?.value).toBeFalsy();
+    expect(component.goalForm.get('targetAmount')?.value).toBeFalsy();
   });
+
+  it('should handle data loading errors', () => {
+    mockCategoryService.getUserCategories.and.returnValue(throwError(() => new Error('API Error')));
+    
+    component['loadData']();
+    
+    expect(component.isLoading).toBe(false);
+  });
+
+  it('should handle transaction loading errors', () => {
+    mockTransactionService.getUserTransactions.and.returnValue(throwError(() => new Error('API Error')));
+    
+    component['loadTransactions']();
+    
+    expect(component.isLoading).toBe(false);
+  });
+
+  it('should handle empty categories response', () => {
+    mockCategoryService.getUserCategories.and.returnValue(of([]));
+    
+    component['loadData']();
+    
+    expect(component.categories).toEqual([]);
+  });
+
+  it('should handle empty transactions response', () => {
+    mockTransactionService.getUserTransactions.and.returnValue(of({ data: [], pagination: { page: 1, limit: 10, total: 0, totalPages: 0 } }));
+    
+    component['loadTransactions']();
+    
+    expect(component.transactions).toEqual([]);
+  });
+
+  it('should calculate goal progress with zero target amount', () => {
+    component.goals = [{
+      _id: '1',
+      title: 'Test Goal',
+      description: 'Test Description',
+      targetAmount: 0,
+      currentAmount: 100,
+      startDate: new Date('2024-01-01'),
+      targetDate: new Date('2024-12-31'),
+      category: 'Savings',
+      priority: 'high',
+      status: 'active',
+      type: 'savings',
+      icon: 'fas fa-star',
+      color: '#007bff',
+      userId: 'user1',
+      createdAt: new Date(),
+      updatedAt: new Date()
+    }];
+    
+    component['calculateGoalProgress']();
+    
+    expect(component.goalProgress[0].percentageComplete).toBe(Infinity);
+  });
+
+  it('should calculate days remaining for past date', () => {
+    const pastDate = new Date('2020-01-01');
+    const daysRemaining = component['calculateDaysRemaining'](pastDate);
+    
+    expect(daysRemaining).toBe(0);
+  });
+
+  it('should calculate days remaining for future date', () => {
+    const futureDate = new Date();
+    futureDate.setDate(futureDate.getDate() + 30);
+    const daysRemaining = component['calculateDaysRemaining'](futureDate);
+    
+    expect(daysRemaining).toBeGreaterThan(0);
+    expect(daysRemaining).toBeLessThanOrEqual(30);
+  });
+
+  it('should handle update goal progress with negative amount', () => {
+    const goal = { 
+      ...component.goals[0],
+      currentAmount: 1000,
+      targetAmount: 5000
+    };
+    const initialAmount = goal.currentAmount;
+    
+    component.updateGoalProgress(goal, -1000);
+    
+    expect(goal.currentAmount).toBe(0);
+  });
+
+  it('should handle update goal progress with amount exceeding target', () => {
+    const goal = { 
+      ...component.goals[0],
+      currentAmount: 1000,
+      targetAmount: 5000
+    };
+    const targetAmount = goal.targetAmount;
+    
+    component.updateGoalProgress(goal, 10000);
+    
+    expect(goal.currentAmount).toBe(targetAmount);
+  });
+
+  it('should handle toggle goal status from paused to active', () => {
+    const goal = { ...component.goals[0], status: 'paused' as const };
+    
+    component.toggleGoalStatus(goal);
+    
+    expect(goal.status).toBe('active');
+  });
+
+  it('should handle complete goal', () => {
+    const goal = { 
+      ...component.goals[0],
+      currentAmount: 1000,
+      targetAmount: 5000
+    };
+    const targetAmount = goal.targetAmount;
+    
+    component.completeGoal(goal);
+    
+    expect(goal.status).toBe('completed');
+    expect(goal.currentAmount).toBe(targetAmount);
+  });
+
+  it('should handle get goal progress for non-existent goal', () => {
+    const progress = component.getGoalProgress('nonexistent');
+    
+    expect(progress).toBeUndefined();
+  });
+
+  it('should handle delete goal without confirmation', () => {
+    spyOn(window, 'confirm').and.returnValue(false);
+    const initialGoalCount = component.goals.length;
+    
+    component.deleteGoal('1');
+    
+    expect(component.goals.length).toBe(initialGoalCount);
+  });
+
+  it('should handle delete goal with confirmation', () => {
+    spyOn(window, 'confirm').and.returnValue(true);
+    const initialGoalCount = component.goals.length;
+    
+    component.deleteGoal('1');
+    
+    expect(component.goals.length).toBe(initialGoalCount);
+  });
+});
 });

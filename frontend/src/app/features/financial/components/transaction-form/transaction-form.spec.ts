@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { ReactiveFormsModule } from '@angular/forms';
+import { ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterTestingModule } from '@angular/router/testing';
 import { ActivatedRoute, Router } from '@angular/router';
 import { TransactionFormComponent } from './transaction-form';
@@ -88,7 +88,8 @@ describe('TransactionFormComponent', () => {
     mockTransactionService = jasmine.createSpyObj('TransactionService', [
       'getTransactionById',
       'createTransaction',
-      'updateTransaction'
+      'updateTransaction',
+      'deleteTransaction'
     ]);
 
     mockCategoryService = jasmine.createSpyObj('CategoryService', [
@@ -105,6 +106,11 @@ describe('TransactionFormComponent', () => {
 
     mockCategoryService.getUserCategories.and.returnValue(of([mockCategory]));
     mockCategoryService.getCategoriesByParent.and.returnValue(of([mockSubcategory]));
+    
+    // Set default return values for transaction service methods
+    mockTransactionService.createTransaction.and.returnValue(of(mockTransaction));
+    mockTransactionService.updateTransaction.and.returnValue(of(mockTransaction));
+    mockTransactionService.deleteTransaction.and.returnValue(of(true));
 
     await TestBed.configureTestingModule({
       imports: [
@@ -1368,5 +1374,371 @@ describe('TransactionFormComponent', () => {
     expect(callArgs.paymentMethod).toBe(PaymentMethod.DEBIT_CARD);
   });
 
+  it('should handle category change', () => {
+    const categoryId = 'cat1';
+    component.onCategoryChange(categoryId);
+    
+    expect(component.transactionForm.get('subcategoryId')?.value).toBe('');
+    expect(mockCategoryService.getCategoriesByParent).toHaveBeenCalledWith(categoryId);
+  });
 
+  it('should handle recurring change to false', () => {
+    component.onRecurringChange(false);
+    
+    expect(component.transactionForm.get('recurrencePattern')?.value).toBe(RecurrencePattern.NONE);
+    expect(component.transactionForm.get('recurrenceInterval')?.value).toBeUndefined();
+    expect(component.transactionForm.get('recurrenceEndDate')?.value).toBeUndefined();
+  });
+
+  it('should handle recurring change to true', () => {
+    component.onRecurringChange(true);
+    
+    // Should not reset recurrence values when enabling
+    expect(component.transactionForm.get('recurrencePattern')?.value).toBe(RecurrencePattern.NONE);
+  });
+
+  it('should add tag when tag is valid', () => {
+    const tag = 'test-tag';
+    component.onTagAdd(tag);
+    
+    expect(component.transactionForm.get('tags')?.value).toContain(tag);
+  });
+
+  it('should not add duplicate tag', () => {
+    const tag = 'test-tag';
+    component.transactionForm.patchValue({ tags: [tag] });
+    
+    component.onTagAdd(tag);
+    
+    const tags = component.transactionForm.get('tags')?.value;
+    expect(tags.filter((t: string) => t === tag).length).toBe(1);
+  });
+
+  it('should not add empty tag', () => {
+    const initialTags = component.transactionForm.get('tags')?.value || [];
+    component.onTagAdd('');
+    
+    expect(component.transactionForm.get('tags')?.value).toEqual(initialTags);
+  });
+
+  it('should not add whitespace-only tag', () => {
+    const initialTags = component.transactionForm.get('tags')?.value || [];
+    component.onTagAdd('   ');
+    
+    expect(component.transactionForm.get('tags')?.value).toEqual(initialTags);
+  });
+
+  it('should remove tag', () => {
+    const tag = 'test-tag';
+    component.transactionForm.patchValue({ tags: [tag, 'other-tag'] });
+    
+    component.onTagRemove(tag);
+    
+    expect(component.transactionForm.get('tags')?.value).not.toContain(tag);
+    expect(component.transactionForm.get('tags')?.value).toContain('other-tag');
+  });
+
+  it('should handle processTags with array input', () => {
+    const tags = ['tag1', 'tag2', '', 'tag3'];
+    const result = component['processTags'](tags);
+    
+    expect(result).toEqual(['tag1', 'tag2', 'tag3']);
+  });
+
+  it('should handle processTags with string input', () => {
+    const tags = 'tag1, tag2, , tag3';
+    const result = component['processTags'](tags);
+    
+    expect(result).toEqual(['tag1', 'tag2', 'tag3']);
+  });
+
+  it('should handle processTags with empty string', () => {
+    const result = component['processTags']('');
+    
+    expect(result).toEqual([]);
+  });
+
+  it('should handle processTags with null input', () => {
+    const result = component['processTags'](null);
+    
+    expect(result).toEqual([]);
+  });
+
+  it('should handle processTags with undefined input', () => {
+    const result = component['processTags'](undefined);
+    
+    expect(result).toEqual([]);
+  });
+
+  it('should handle form submission with invalid form', () => {
+    component.transactionForm.patchValue({ title: '' }); // Make form invalid
+    
+    component.onSubmit();
+    
+    expect(mockTransactionService.createTransaction).not.toHaveBeenCalled();
+    expect(mockTransactionService.updateTransaction).not.toHaveBeenCalled();
+  });
+
+  it('should handle form submission in edit mode', () => {
+    component.isEditMode = true;
+    component.transactionId = 'trans1';
+    component.transactionForm.patchValue({
+      title: 'Updated Transaction',
+      amount: 200,
+      categoryId: 'cat1'
+    });
+    
+    component.onSubmit();
+    
+    expect(mockTransactionService.updateTransaction).toHaveBeenCalledWith('trans1', jasmine.any(Object));
+  });
+
+  it('should handle form submission in create mode', () => {
+    component.isEditMode = false;
+    component.transactionForm.patchValue({
+      title: 'New Transaction',
+      amount: 100,
+      categoryId: 'cat1'
+    });
+    
+    component.onSubmit();
+    
+    expect(mockTransactionService.createTransaction).toHaveBeenCalledWith(jasmine.any(Object));
+  });
+
+  it('should handle delete without confirmation', () => {
+    spyOn(window, 'confirm').and.returnValue(false);
+    component.transaction = mockTransaction;
+    component.transactionId = 'trans1';
+    
+    component.onDelete();
+    
+    expect(mockTransactionService.deleteTransaction).not.toHaveBeenCalled();
+  });
+
+  it('should handle delete with confirmation', () => {
+    spyOn(window, 'confirm').and.returnValue(true);
+    component.transaction = mockTransaction;
+    component.transactionId = 'trans1';
+    
+    component.onDelete();
+    
+    expect(mockTransactionService.deleteTransaction).toHaveBeenCalledWith('trans1');
+  });
+
+  it('should handle delete without transaction', () => {
+    component.transaction = null;
+    component.transactionId = 'trans1';
+    
+    component.onDelete();
+    
+    expect(mockTransactionService.deleteTransaction).not.toHaveBeenCalled();
+  });
+
+  it('should handle delete without transactionId', () => {
+    component.transaction = mockTransaction;
+    component.transactionId = null;
+    
+    component.onDelete();
+    
+    expect(mockTransactionService.deleteTransaction).not.toHaveBeenCalled();
+  });
+
+  it('should handle cancel', () => {
+    component.onCancel();
+    
+    expect(mockRouter.navigate).toHaveBeenCalledWith(['/financial/transactions']);
+  });
+
+  it('should handle reset form with transaction', () => {
+    component.transaction = mockTransaction;
+    
+    component.resetForm();
+    
+    expect(component.transactionForm.get('title')?.value).toBe(mockTransaction.title);
+  });
+
+  it('should handle reset form without transaction', () => {
+    component.transaction = null;
+    
+    component.resetForm();
+    
+    expect(component.transactionForm.get('title')?.value).toBe('');
+    expect(component.transactionForm.get('currency')?.value).toBe('USD');
+  });
+
+  it('should handle markFormGroupTouched with nested FormGroup', () => {
+    const nestedFormGroup = component['fb'].group({
+      nestedField: ['', [Validators.required]]
+    });
+    component.transactionForm.addControl('nestedGroup', nestedFormGroup);
+
+    // This should not throw an error
+    expect(() => component['markFormGroupTouched']()).not.toThrow();
+  });
+
+  it('should handle markFormGroupTouchedRecursive with nested FormGroup', () => {
+    const nestedFormGroup = component['fb'].group({
+      nestedField: ['', [Validators.required]]
+    });
+    const parentFormGroup = component['fb'].group({
+      parentField: ['', [Validators.required]],
+      nested: nestedFormGroup
+    });
+
+    // This should not throw an error
+    expect(() => component['markFormGroupTouchedRecursive'](parentFormGroup)).not.toThrow();
+  });
+
+  it('should handle getFieldControl with invalid field name', () => {
+    const control = component.getFieldControl('invalidField');
+    
+    expect(control).toBeNull();
+  });
+
+  it('should handle isFieldInvalid with invalid field name', () => {
+    const isInvalid = component.isFieldInvalid('invalidField');
+    
+    expect(isInvalid).toBeFalse();
+  });
+
+  it('should handle getFieldError with invalid field name', () => {
+    const error = component.getFieldError('invalidField');
+    
+    expect(error).toBe('');
+  });
+
+  it('should handle getFieldError with control without errors', () => {
+    component.transactionForm.patchValue({ title: 'Valid Title' });
+    const error = component.getFieldError('title');
+    
+    expect(error).toBe('');
+  });
+
+  it('should handle getFieldError with unknown error', () => {
+    const control = component.transactionForm.get('title');
+    control?.setErrors({ unknownError: true });
+    const error = component.getFieldError('title');
+    
+    expect(error).toBe('Invalid input');
+  });
+
+  it('should handle getCategoryName with unknown category', () => {
+    const name = component.getCategoryName('unknown');
+    
+    expect(name).toBe('Unknown');
+  });
+
+  it('should handle getSubcategoryName with unknown subcategory', () => {
+    const name = component.getSubcategoryName('unknown');
+    
+    expect(name).toBe('Unknown');
+  });
+
+  it('should handle formatCurrency with different currency', () => {
+    const formatted = component.formatCurrency(100, 'EUR');
+    
+    expect(formatted).toContain('100');
+  });
+
+  it('should handle formatDate', () => {
+    const date = new Date('2024-01-01');
+    const formatted = component.formatDate(date);
+    
+    expect(formatted).toContain('2024');
+  });
+
+  it('should handle canDelete when not in edit mode', () => {
+    component.isEditMode = false;
+    component.transaction = mockTransaction;
+    
+    expect(component.canDelete).toBeFalse();
+  });
+
+  it('should handle canDelete when transaction is null', () => {
+    component.isEditMode = true;
+    component.transaction = null;
+    
+    expect(component.canDelete).toBeFalse();
+  });
+
+  it('should handle formTitle in edit mode', () => {
+    component.isEditMode = true;
+    
+    expect(component.formTitle).toBe('Edit Transaction');
+  });
+
+  it('should handle formTitle in create mode', () => {
+    component.isEditMode = false;
+    
+    expect(component.formTitle).toBe('New Transaction');
+  });
+
+  it('should handle submitButtonText when submitting in edit mode', () => {
+    component.isEditMode = true;
+    component.isSubmitting = true;
+    
+    expect(component.submitButtonText).toBe('Updating...');
+  });
+
+  it('should handle submitButtonText when submitting in create mode', () => {
+    component.isEditMode = false;
+    component.isSubmitting = true;
+    
+    expect(component.submitButtonText).toBe('Creating...');
+  });
+
+  it('should handle submitButtonText when not submitting in edit mode', () => {
+    component.isEditMode = true;
+    component.isSubmitting = false;
+    
+    expect(component.submitButtonText).toBe('Update Transaction');
+  });
+
+  it('should handle submitButtonText when not submitting in create mode', () => {
+    component.isEditMode = false;
+    component.isSubmitting = false;
+    
+    expect(component.submitButtonText).toBe('Create Transaction');
+  });
+
+  it('should handle deleteButtonText when deleting', () => {
+    component.isDeleting = true;
+    
+    expect(component.deleteButtonText).toBe('Deleting...');
+  });
+
+  it('should handle deleteButtonText when not deleting', () => {
+    component.isDeleting = false;
+    
+    expect(component.deleteButtonText).toBe('Delete Transaction');
+  });
+
+  it('should handle titleError getter', () => {
+    component.transactionForm.patchValue({ title: '' });
+    component.transactionForm.get('title')?.markAsTouched();
+    
+    expect(component.titleError).toContain('required');
+  });
+
+  it('should handle amountError getter', () => {
+    component.transactionForm.patchValue({ amount: -1 });
+    component.transactionForm.get('amount')?.markAsTouched();
+    
+    expect(component.amountError).toContain('Minimum value');
+  });
+
+  it('should handle categoryError getter', () => {
+    component.transactionForm.patchValue({ categoryId: '' });
+    component.transactionForm.get('categoryId')?.markAsTouched();
+    
+    expect(component.categoryError).toContain('required');
+  });
+
+  it('should handle dateError getter', () => {
+    component.transactionForm.patchValue({ date: null });
+    component.transactionForm.get('date')?.markAsTouched();
+    
+    expect(component.dateError).toContain('required');
+  });
 });
