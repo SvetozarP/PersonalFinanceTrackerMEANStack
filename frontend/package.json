@@ -63,6 +63,8 @@
     "karma-coverage": "~2.2.0",
     "karma-jasmine": "~5.1.0",
     "karma-jasmine-html-reporter": "~2.1.0",
+    "karma-spec-reporter": "^0.0.36",
+    "karma-verbose-reporter": "^0.0.8",
     "typescript": "~5.8.2"
   }
 }

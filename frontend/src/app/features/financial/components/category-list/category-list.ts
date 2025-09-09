@@ -120,6 +120,7 @@ export class CategoryListComponent implements OnInit, OnDestroy {
         },
         error: (error) => {
           console.error('Error loading category stats:', error);
+          this.error = 'Failed to load category statistics';
           this.isStatsLoading = false;
         }
       });
@@ -137,6 +138,7 @@ export class CategoryListComponent implements OnInit, OnDestroy {
         },
         error: (error) => {
           console.error('Error loading category tree:', error);
+          this.error = 'Failed to load category tree';
           this.isTreeLoading = false;
         }
       });

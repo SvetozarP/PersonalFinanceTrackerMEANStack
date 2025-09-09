@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { Chart, ChartConfiguration, ChartType } from 'chart.js';
-import { zoomPlugin } from 'chartjs-plugin-zoom';
+import zoomPlugin from 'chartjs-plugin-zoom';
 
 // Register zoom plugin
 Chart.register(zoomPlugin);
@@ -346,8 +346,8 @@ export class ChartInteractionService {
   private panLeft(chart: Chart): void {
     if (chart.options.plugins?.zoom) {
       const scales = chart.scales;
-      if (scales.x) {
-        const range = scales.x.max - scales.x.min;
+      if (scales['x']) {
+        const range = scales['x'].max - scales['x'].min;
         chart.pan({ x: -range * 0.1 });
       }
     }
@@ -356,8 +356,8 @@ export class ChartInteractionService {
   private panRight(chart: Chart): void {
     if (chart.options.plugins?.zoom) {
       const scales = chart.scales;
-      if (scales.x) {
-        const range = scales.x.max - scales.x.min;
+      if (scales['x']) {
+        const range = scales['x'].max - scales['x'].min;
         chart.pan({ x: range * 0.1 });
       }
     }

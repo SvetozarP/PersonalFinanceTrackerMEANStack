@@ -1,21 +1,47 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { SimpleChange } from '@angular/core';
-import { RouterTestingModule } from '@angular/router/testing';
+import { FormsModule } from '@angular/forms';
+import { of, throwError } from 'rxjs';
 
 import { FinancialChartsComponent } from './financial-charts';
+import { ChartService } from '../../../../core/services/chart.service';
+import { SharedChartService } from '../../../../shared/chart/chart.service';
 import { 
   Transaction, 
   TransactionType, 
-  TransactionStatus, 
-  PaymentMethod, 
-  RecurrencePattern,
   Category, 
-  FinancialDashboard 
+  FinancialDashboard
 } from '../../../../core/models/financial.model';
+
+// Mock Chart.js
+const mockChart = {
+  destroy: jasmine.createSpy('destroy'),
+  update: jasmine.createSpy('update'),
+  resize: jasmine.createSpy('resize'),
+  canvas: {
+    toDataURL: jasmine.createSpy('toDataURL').and.returnValue('data:image/png;base64,mock')
+  },
+  width: 400,
+  height: 300
+};
+
+// Mock Chart.js module
+const mockChartJS = {
+  Chart: {
+    register: jasmine.createSpy('register'),
+    getChart: jasmine.createSpy('getChart').and.returnValue(mockChart)
+  },
+  __esModule: true,
+  default: jasmine.createSpy('Chart').and.returnValue(mockChart)
+};
+
+// Mock the module
+(window as any).Chart = mockChart;
 
 describe('FinancialChartsComponent', () => {
   let component: FinancialChartsComponent;
   let fixture: ComponentFixture<FinancialChartsComponent>;
+  let mockChartService: jasmine.SpyObj<ChartService>;
+  let mockSharedChartService: jasmine.SpyObj<SharedChartService>;
 
   const mockCategories: Category[] = [
     {
@@ -25,6 +51,7 @@ describe('FinancialChartsComponent', () => {
       level: 1,
       isActive: true,
       isSystem: false,
+      color: '#ff6b6b',
       userId: 'user1',
       createdAt: new Date(),
       updatedAt: new Date()
@@ -36,17 +63,7 @@ describe('FinancialChartsComponent', () => {
       level: 1,
       isActive: true,
       isSystem: false,
-      userId: 'user1',
-      createdAt: new Date(),
-      updatedAt: new Date()
-    },
-    {
-      _id: '3',
-      name: 'Entertainment',
-      path: ['Entertainment'],
-      level: 1,
-      isActive: true,
-      isSystem: false,
+      color: '#4ecdc4',
       userId: 'user1',
       createdAt: new Date(),
       updatedAt: new Date()
@@ -60,20 +77,21 @@ describe('FinancialChartsComponent', () => {
       amount: 150,
       currency: 'USD',
       type: TransactionType.EXPENSE,
-      status: TransactionStatus.COMPLETED,
+      status: 'completed' as any,
       categoryId: '1',
       tags: [],
       date: new Date('2024-01-15'),
       timezone: 'UTC',
-      paymentMethod: PaymentMethod.DEBIT_CARD,
-      isRecurring: false,
-      recurrencePattern: RecurrencePattern.NONE,
+      paymentMethod: 'debit_card' as any,
       attachments: [],
       source: 'manual',
       userId: 'user1',
       accountId: 'account1',
+      isRecurring: false,
+      recurrencePattern: 'none' as any,
       createdAt: new Date(),
       updatedAt: new Date(),
+      deletedAt: undefined,
       isDeleted: false
     },
     {
@@ -82,86 +100,21 @@ describe('FinancialChartsComponent', () => {
       amount: 5000,
       currency: 'USD',
       type: TransactionType.INCOME,
-      status: TransactionStatus.COMPLETED,
-      categoryId: '4',
+      status: 'completed' as any,
+      categoryId: '2',
       tags: [],
       date: new Date('2024-01-01'),
       timezone: 'UTC',
-      paymentMethod: PaymentMethod.BANK_TRANSFER,
-      isRecurring: false,
-      recurrencePattern: RecurrencePattern.NONE,
+      paymentMethod: 'bank_transfer' as any,
       attachments: [],
       source: 'manual',
       userId: 'user1',
       accountId: 'account1',
+      isRecurring: true,
+      recurrencePattern: 'monthly' as any,
       createdAt: new Date(),
       updatedAt: new Date(),
-      isDeleted: false
-    },
-    {
-      _id: '3',
-      title: 'Gas Station',
-      amount: 75,
-      currency: 'USD',
-      type: TransactionType.EXPENSE,
-      status: TransactionStatus.COMPLETED,
-      categoryId: '2',
-      tags: [],
-      date: new Date('2024-02-10'),
-      timezone: 'UTC',
-      paymentMethod: PaymentMethod.CREDIT_CARD,
-      isRecurring: false,
-      recurrencePattern: RecurrencePattern.NONE,
-      attachments: [],
-      source: 'manual',
-      userId: 'user1',
-      accountId: 'account1',
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      isDeleted: false
-    },
-    {
-      _id: '4',
-      title: 'Movie Tickets',
-      amount: 25,
-      currency: 'USD',
-      type: TransactionType.EXPENSE,
-      status: TransactionStatus.COMPLETED,
-      categoryId: '3',
-      tags: [],
-      date: new Date('2024-02-15'),
-      timezone: 'UTC',
-      paymentMethod: PaymentMethod.CREDIT_CARD,
-      isRecurring: false,
-      recurrencePattern: RecurrencePattern.NONE,
-      attachments: [],
-      source: 'manual',
-      userId: 'user1',
-      accountId: 'account1',
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      isDeleted: false
-    },
-    {
-      _id: '5',
-      title: 'Freelance Work',
-      amount: 1200,
-      currency: 'USD',
-      type: TransactionType.INCOME,
-      status: TransactionStatus.COMPLETED,
-      categoryId: '4',
-      tags: [],
-      date: new Date('2024-02-20'),
-      timezone: 'UTC',
-      paymentMethod: PaymentMethod.BANK_TRANSFER,
-      isRecurring: false,
-      recurrencePattern: RecurrencePattern.NONE,
-      attachments: [],
-      source: 'manual',
-      userId: 'user1',
-      accountId: 'account1',
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      deletedAt: undefined,
       isDeleted: false
     }
   ];
@@ -169,364 +122,564 @@ describe('FinancialChartsComponent', () => {
   const mockDashboard: FinancialDashboard = {
     overview: {
       totalBalance: 10000,
-      monthlyIncome: 6200,
-      monthlyExpenses: 250,
-      monthlyNet: 5950,
+      monthlyIncome: 5000,
+      monthlyExpenses: 3000,
+      monthlyNet: 2000,
       pendingTransactions: 0,
-      upcomingRecurring: 3
+      upcomingRecurring: 0
     },
-    recentTransactions: mockTransactions.slice(0, 3),
-    topCategories: [],
+    recentTransactions: mockTransactions,
     spendingTrends: [],
-    budgetStatus: []
+    budgetStatus: [],
+    topCategories: []
   };
 
   beforeEach(async () => {
+    const chartServiceSpy = jasmine.createSpyObj('ChartService', [
+      'generateExpenseTrendChart',
+      'generateIncomeTrendChart',
+      'generateCategorySpendingChart',
+      'generateNetIncomeTrendChart',
+      'generateSavingsRateChart',
+      'generateIncomeExpenseScatter',
+      'getChartOptions',
+      'exportChartDataToCSV',
+      'exportChartAsImage'
+    ]);
+
+    const sharedChartServiceSpy = jasmine.createSpyObj('SharedChartService', [
+      'createChart'
+    ]);
+
     await TestBed.configureTestingModule({
-      imports: [
-        FinancialChartsComponent,
-        RouterTestingModule
+      imports: [FinancialChartsComponent, FormsModule],
+      providers: [
+        { provide: ChartService, useValue: chartServiceSpy },
+        { provide: SharedChartService, useValue: sharedChartServiceSpy }
       ]
-    })
-    .compileComponents();
+    }).compileComponents();
 
     fixture = TestBed.createComponent(FinancialChartsComponent);
     component = fixture.componentInstance;
-  });
-
-  it('should create', () => {
-    expect(component).toBeTruthy();
-  });
-
-  it('should initialize with default values', () => {
-    expect(component.transactions).toEqual([]);
-    expect(component.categories).toEqual([]);
-    expect(component.dashboard).toBeNull();
-    expect(component.period).toBe('month');
-    expect(component.showCharts).toBe(true);
-    expect(component.expenseChartData).toBeNull();
-    expect(component.incomeChartData).toBeNull();
-    expect(component.categoryChartData).toBeNull();
-    expect(component.trendChartData).toBeNull();
-  });
-
-  it('should have correct chart options', () => {
-    expect(component.chartOptions.responsive).toBe(true);
-    expect(component.chartOptions.maintainAspectRatio).toBe(false);
-    expect(component.chartOptions.plugins.legend.position).toBe('top');
-    expect(component.chartOptions.plugins.tooltip.backgroundColor).toBe('rgba(0, 0, 0, 0.8)');
-  });
-
-  it('should initialize charts on ngOnInit', () => {
-    spyOn(component, 'initializeCharts' as any);
+    mockChartService = TestBed.inject(ChartService) as jasmine.SpyObj<ChartService>;
+    mockSharedChartService = TestBed.inject(SharedChartService) as jasmine.SpyObj<SharedChartService>;
     
+    // Initialize the component's chart options
+    component.chartOptions = mockChartService.getChartOptions('line');
+    component.barChartOptions = mockChartService.getChartOptions('bar');
+    component.pieChartOptions = mockChartService.getChartOptions('pie');
+    component.scatterChartOptions = mockChartService.getChartOptions('scatter');
+    
+    // Force the component to reinitialize its chart options
     component.ngOnInit();
-    
-    expect(component['initializeCharts']).toHaveBeenCalled();
+
+    // Setup default mock returns
+    mockChartService.generateExpenseTrendChart.and.returnValue({
+      labels: ['Jan', 'Feb', 'Mar'],
+      datasets: [{ label: 'Expenses', data: [100, 200, 150] }]
+    });
+    mockChartService.generateIncomeTrendChart.and.returnValue({
+      labels: ['Jan', 'Feb', 'Mar'],
+      datasets: [{ label: 'Income', data: [5000, 5000, 5000] }]
+    });
+    mockChartService.generateCategorySpendingChart.and.returnValue({
+      labels: ['Food', 'Transport'],
+      datasets: [{ label: 'Spending', data: [300, 200] }]
+    });
+    mockChartService.generateNetIncomeTrendChart.and.returnValue({
+      labels: ['Jan', 'Feb', 'Mar'],
+      datasets: [
+        { label: 'Net Income', data: [4900, 4800, 4850] },
+        { label: 'Income', data: [5000, 5000, 5000] },
+        { label: 'Expenses', data: [100, 200, 150] }
+      ]
+    });
+    mockChartService.generateSavingsRateChart.and.returnValue({
+      labels: ['Jan', 'Feb', 'Mar'],
+      datasets: [{ label: 'Savings Rate', data: [98, 96, 97] }]
+    });
+    mockChartService.generateIncomeExpenseScatter.and.returnValue({
+      labels: ['Jan', 'Feb', 'Mar'],
+      datasets: [{ label: 'Income vs Expenses', data: [100, 200, 150] }]
+    });
+    mockChartService.getChartOptions.and.returnValue({
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'top' as const, labels: { usePointStyle: true, padding: 20, font: { size: 12 } } },
+        tooltip: { backgroundColor: 'rgba(0, 0, 0, 0.8)', titleColor: 'white', bodyColor: 'white', borderColor: 'rgba(255, 255, 255, 0.2)', borderWidth: 1, cornerRadius: 8, displayColors: true }
+      }
+    });
+    (mockChartService as any)['calculateCategorySpending'] = jasmine.createSpy('calculateCategorySpending').and.returnValue([
+      { name: 'Food & Dining', value: 300 },
+      { name: 'Transportation', value: 200 }
+    ]);
+    mockSharedChartService.createChart.and.returnValue(mockChart as any);
   });
 
-  it('should update charts when inputs change', () => {
-    spyOn(component, 'updateCharts' as any);
-    
-    const changes = {
-      transactions: new SimpleChange([], mockTransactions, false),
-      categories: new SimpleChange([], mockCategories, false)
-    };
-    
-    component.ngOnChanges(changes);
-    
-    expect(component['updateCharts']).toHaveBeenCalled();
+  describe('Component Initialization', () => {
+    it('should create', () => {
+      expect(component).toBeTruthy();
+    });
+
+    it('should initialize with default values', () => {
+      expect(component.transactions).toEqual([]);
+      expect(component.categories).toEqual([]);
+      expect(component.dashboard).toBeNull();
+      expect(component.period).toBe('month');
+      expect(component.showCharts).toBe(true);
+    });
+
+    it('should call initializeCharts on ngOnInit', () => {
+      spyOn(component, 'updateCharts' as any);
+      component.ngOnInit();
+      expect(component['updateCharts']).toHaveBeenCalled();
+    });
   });
 
-  it('should not update charts when non-relevant inputs change', () => {
-    spyOn(component, 'updateCharts' as any);
-    
-    const changes = {
-      someOtherProperty: new SimpleChange('old', 'new', false)
-    };
-    
-    component.ngOnChanges(changes);
-    
-    expect(component['updateCharts']).not.toHaveBeenCalled();
+  describe('Input Changes', () => {
+    it('should update charts when transactions change', () => {
+      spyOn(component, 'updateCharts' as any);
+      component.transactions = mockTransactions;
+      component.ngOnChanges({
+        transactions: {
+          currentValue: mockTransactions,
+          previousValue: [],
+          firstChange: true,
+          isFirstChange: () => true
+        }
+      });
+      expect(component['updateCharts']).toHaveBeenCalled();
+    });
+
+    it('should update charts when categories change', () => {
+      spyOn(component, 'updateCharts' as any);
+      component.categories = mockCategories;
+      component.ngOnChanges({
+        categories: {
+          currentValue: mockCategories,
+          previousValue: [],
+          firstChange: true,
+          isFirstChange: () => true
+        }
+      });
+      expect(component['updateCharts']).toHaveBeenCalled();
+    });
+
+    it('should update charts when dashboard changes', () => {
+      spyOn(component, 'updateCharts' as any);
+      component.dashboard = mockDashboard;
+      component.ngOnChanges({
+        dashboard: {
+          currentValue: mockDashboard,
+          previousValue: null,
+          firstChange: true,
+          isFirstChange: () => true
+        }
+      });
+      expect(component['updateCharts']).toHaveBeenCalled();
+    });
+
+    it('should update charts when period changes', () => {
+      spyOn(component, 'updateCharts' as any);
+      component.period = 'year';
+      component.ngOnChanges({
+        period: {
+          currentValue: 'year',
+          previousValue: 'month',
+          firstChange: false,
+          isFirstChange: () => false
+        }
+      });
+      expect(component['updateCharts']).toHaveBeenCalled();
+    });
+
+    it('should not update charts when other properties change', () => {
+      spyOn(component, 'updateCharts' as any);
+      component.ngOnChanges({
+        showCharts: {
+          currentValue: false,
+          previousValue: true,
+          firstChange: false,
+          isFirstChange: () => false
+        }
+      });
+      expect(component['updateCharts']).not.toHaveBeenCalled();
+    });
   });
 
-  it('should clean up on destroy', () => {
-    spyOn(component['destroy$'], 'next');
-    spyOn(component['destroy$'], 'complete');
-    
-    component.ngOnDestroy();
-    
-    expect(component['destroy$'].next).toHaveBeenCalled();
-    expect(component['destroy$'].complete).toHaveBeenCalled();
-  });
-
-  describe('Chart Generation', () => {
+  describe('Chart Data Generation', () => {
     beforeEach(() => {
       component.transactions = mockTransactions;
       component.categories = mockCategories;
     });
 
-    it('should not update charts when transactions are empty', () => {
-      component.transactions = [];
-      spyOn(component, 'generateExpenseChart' as any);
-      
-      component['updateCharts']();
-      
-      expect(component['generateExpenseChart']).not.toHaveBeenCalled();
+    it('should generate expense chart data', () => {
+      component['generateExpenseChart']();
+      expect(component.expenseChartData).toBeDefined();
+      expect(mockChartService.generateExpenseTrendChart).toHaveBeenCalledWith(mockTransactions, 'month');
     });
 
-    it('should generate all charts when transactions exist', () => {
+    it('should generate income chart data', () => {
+      component['generateIncomeChart']();
+      expect(component.incomeChartData).toBeDefined();
+      expect(mockChartService.generateIncomeTrendChart).toHaveBeenCalledWith(mockTransactions, 'month');
+    });
+
+    it('should generate category chart data', () => {
+      component['generateCategoryChart']();
+      expect(component.categoryChartData).toBeDefined();
+      expect(mockChartService.generateCategorySpendingChart).toHaveBeenCalledWith(mockTransactions, mockCategories);
+    });
+
+    it('should generate trend chart data', () => {
+      component['generateTrendChart']();
+      expect(component.trendChartData).toBeDefined();
+      expect(mockChartService.generateNetIncomeTrendChart).toHaveBeenCalledWith(mockTransactions, 'month');
+    });
+
+    it('should generate savings chart data', () => {
+      component['generateSavingsChart']();
+      expect(component.savingsChartData).toBeDefined();
+      expect(mockChartService.generateSavingsRateChart).toHaveBeenCalledWith(mockTransactions, 'month');
+    });
+
+    it('should generate scatter chart data', () => {
+      component['generateScatterChart']();
+      expect(component.scatterChartData).toBeDefined();
+      expect(mockChartService.generateIncomeExpenseScatter).toHaveBeenCalledWith(mockTransactions);
+    });
+  });
+
+  describe('Chart Creation', () => {
+    beforeEach(() => {
+      // Mock ViewChild elements
+      component.expenseChartRef = { nativeElement: document.createElement('canvas') } as any;
+      component.incomeChartRef = { nativeElement: document.createElement('canvas') } as any;
+      component.categoryChartRef = { nativeElement: document.createElement('canvas') } as any;
+      component.trendChartRef = { nativeElement: document.createElement('canvas') } as any;
+      component.savingsChartRef = { nativeElement: document.createElement('canvas') } as any;
+      component.scatterChartRef = { nativeElement: document.createElement('canvas') } as any;
+    });
+
+    it('should create chart when data is available', () => {
+      const mockData = {
+        labels: ['Jan', 'Feb'],
+        datasets: [{ label: 'Test', data: [100, 200] }]
+      };
+      component['createChart']('expense', mockData, 'line');
+      expect(mockSharedChartService.createChart).toHaveBeenCalled();
+    });
+
+    it('should not create chart when data is null', () => {
+      component['createChart']('expense', null as any, 'line');
+      expect(mockSharedChartService.createChart).not.toHaveBeenCalled();
+    });
+
+    it('should not create chart when data has no labels', () => {
+      const mockData = {
+        labels: [],
+        datasets: [{ label: 'Test', data: [100, 200] }]
+      };
+      component['createChart']('expense', mockData, 'line');
+      expect(mockSharedChartService.createChart).not.toHaveBeenCalled();
+    });
+
+    it('should not create chart when canvas ref is null', () => {
+      component.expenseChartRef = null as any;
+      const mockData = {
+        labels: ['Jan', 'Feb'],
+        datasets: [{ label: 'Test', data: [100, 200] }]
+      };
+      component['createChart']('expense', mockData, 'line');
+      expect(mockSharedChartService.createChart).not.toHaveBeenCalled();
+    });
+
+    it('should destroy existing chart before creating new one', () => {
+      (component as any).expenseChart = mockChart as any;
+      const mockData = {
+        labels: ['Jan', 'Feb'],
+        datasets: [{ label: 'Test', data: [100, 200] }]
+      };
+      component['createChart']('expense', mockData, 'line');
+      expect(mockChart.destroy).toHaveBeenCalled();
+    });
+
+
+    it('should return correct chart options for line type', () => {
+      const options = component['getChartOptionsForType']('line');
+      expect(options).toBe(component.chartOptions);
+    });
+
+    it('should return correct chart options for bar type', () => {
+      const options = component['getChartOptionsForType']('bar');
+      expect(options).toBe(component.barChartOptions);
+    });
+
+    it('should return correct chart options for pie type', () => {
+      const options = component['getChartOptionsForType']('pie');
+      expect(options).toBe(component.pieChartOptions);
+    });
+
+    it('should return correct chart options for doughnut type', () => {
+      const options = component['getChartOptionsForType']('doughnut');
+      expect(options).toBe(component.pieChartOptions);
+    });
+
+    it('should return correct chart options for scatter type', () => {
+      const options = component['getChartOptionsForType']('scatter');
+      expect(options).toBe(component.scatterChartOptions);
+    });
+
+    it('should return default chart options for unknown type', () => {
+      const options = component['getChartOptionsForType']('unknown' as any);
+      expect(options).toBe(component.chartOptions);
+    });
+  });
+
+  describe('Canvas Reference Methods', () => {
+    beforeEach(() => {
+      component.expenseChartRef = { nativeElement: document.createElement('canvas') } as any;
+      component.incomeChartRef = { nativeElement: document.createElement('canvas') } as any;
+      component.categoryChartRef = { nativeElement: document.createElement('canvas') } as any;
+      component.trendChartRef = { nativeElement: document.createElement('canvas') } as any;
+      component.savingsChartRef = { nativeElement: document.createElement('canvas') } as any;
+      component.scatterChartRef = { nativeElement: document.createElement('canvas') } as any;
+    });
+
+    it('should get expense canvas ref', () => {
+      const result = component['getCanvasRef']('expense');
+      expect(result).toBeTruthy();
+    });
+
+    it('should get income canvas ref', () => {
+      const result = component['getCanvasRef']('income');
+      expect(result).toBeTruthy();
+    });
+
+    it('should get category canvas ref', () => {
+      const result = component['getCanvasRef']('category');
+      expect(result).toBeTruthy();
+    });
+
+    it('should get trend canvas ref', () => {
+      const result = component['getCanvasRef']('trend');
+      expect(result).toBeTruthy();
+    });
+
+    it('should get savings canvas ref', () => {
+      const result = component['getCanvasRef']('savings');
+      expect(result).toBeTruthy();
+    });
+
+    it('should get scatter canvas ref', () => {
+      const result = component['getCanvasRef']('scatter');
+      expect(result).toBeTruthy();
+    });
+
+    it('should return null for unknown chart type', () => {
+      const result = component['getCanvasRef']('unknown');
+      expect(result).toBeNull();
+    });
+
+    it('should return null when canvas ref is null', () => {
+      component.expenseChartRef = null as any;
+      const result = component['getCanvasRef']('expense');
+      expect(result).toBeNull();
+    });
+  });
+
+  describe('Chart Instance Management', () => {
+    beforeEach(() => {
+      (component as any).expenseChart = mockChart as any;
+      (component as any).incomeChart = mockChart as any;
+    });
+
+    it('should get expense chart instance', () => {
+      const result = component['getChartInstance']('expense');
+      expect(result).toBe(mockChart as any);
+    });
+
+    it('should get income chart instance', () => {
+      const result = component['getChartInstance']('income');
+      expect(result).toBe(mockChart as any);
+    });
+
+    it('should return null for unknown chart type', () => {
+      const result = component['getChartInstance']('unknown');
+      expect(result).toBeNull();
+    });
+
+    it('should set expense chart instance', () => {
+      const newChart = { ...mockChart };
+      component['setChartInstance']('expense', newChart as any);
+      expect((component as any).expenseChart).toBe(newChart);
+    });
+
+    it('should set income chart instance', () => {
+      const newChart = { ...mockChart };
+      component['setChartInstance']('income', newChart as any);
+      expect((component as any).incomeChart).toBe(newChart);
+    });
+  });
+
+  describe('Financial Metrics Calculation', () => {
+    beforeEach(() => {
+      component.transactions = mockTransactions;
+      component.categories = mockCategories;
+    });
+
+    it('should calculate financial metrics correctly', () => {
+      component['calculateFinancialMetrics']();
+      expect(component.financialMetrics).toBeDefined();
+      expect(component.financialMetrics?.totalIncome).toBe(5000);
+      expect(component.financialMetrics?.totalExpenses).toBe(150);
+      expect(component.financialMetrics?.netIncome).toBe(4850);
+      expect(component.financialMetrics?.savingsRate).toBe(97);
+    });
+
+    it('should handle zero income in savings rate calculation', () => {
+      component.transactions = mockTransactions.filter(t => t.type === TransactionType.EXPENSE);
+      component['calculateFinancialMetrics']();
+      expect(component.financialMetrics?.savingsRate).toBe(0);
+    });
+
+    it('should handle empty category data', () => {
+      (mockChartService as any)['calculateCategorySpending'].and.returnValue([]);
+      component['calculateFinancialMetrics']();
+      expect(component.financialMetrics?.topCategory).toBe('None');
+      expect(component.financialMetrics?.topCategoryAmount).toBe(0);
+    });
+  });
+
+  describe('Chart Interaction', () => {
+    it('should handle chart click events', () => {
+      spyOn(console, 'log');
+      const mockEvent = { target: 'test' };
+      component.onChartClick(mockEvent);
+      expect(console.log).toHaveBeenCalledWith('Chart clicked:', mockEvent);
+    });
+
+    it('should handle chart hover events', () => {
+      const mockEvent = { target: 'test' };
+      expect(() => component.onChartHover(mockEvent)).not.toThrow();
+    });
+  });
+
+  describe('Export Functionality', () => {
+    it('should export chart data as CSV when data is available', () => {
+      component.expenseChartData = {
+        labels: ['Jan', 'Feb'],
+        datasets: [{ label: 'Expenses', data: [100, 200] }]
+      };
+      
+      component.exportChartData();
+      expect(mockChartService.exportChartDataToCSV).toHaveBeenCalled();
+    });
+
+    it('should not export chart data when data is null', () => {
+      component.expenseChartData = null;
+      component.exportChartData();
+      expect(mockChartService.exportChartDataToCSV).not.toHaveBeenCalled();
+    });
+
+    it('should export chart as image when canvas ref is available', () => {
+      component.expenseChartRef = { nativeElement: document.createElement('canvas') } as any;
+      component.exportChartAsImage('expense');
+      expect(mockChartService.exportChartAsImage).toHaveBeenCalled();
+    });
+
+    it('should not export chart as image when canvas ref is null', () => {
+      component.expenseChartRef = null as any;
+      component.exportChartAsImage('expense');
+      expect(mockChartService.exportChartAsImage).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Chart Refresh', () => {
+    it('should refresh charts', () => {
+      spyOn(component, 'updateCharts' as any);
+      component.refreshCharts();
+      expect(component['updateCharts']).toHaveBeenCalled();
+    });
+
+    it('should change period and update charts', () => {
+      spyOn(component, 'updateCharts' as any);
+      component.onPeriodChange('year');
+      expect(component.period).toBe('year');
+      expect(component['updateCharts']).toHaveBeenCalled();
+    });
+  });
+
+  describe('Error Handling', () => {
+    it('should handle empty transactions gracefully', () => {
+      component.transactions = [];
+      expect(() => component.ngOnInit()).not.toThrow();
+    });
+
+    it('should handle null transactions gracefully', () => {
+      component.transactions = null as any;
+      expect(() => component.ngOnInit()).not.toThrow();
+    });
+
+    it('should handle non-array transactions gracefully', () => {
+      component.transactions = 'invalid' as any;
+      expect(() => component.ngOnInit()).not.toThrow();
+    });
+
+    it('should not update charts when transactions are invalid', () => {
       spyOn(component, 'generateExpenseChart' as any);
       spyOn(component, 'generateIncomeChart' as any);
       spyOn(component, 'generateCategoryChart' as any);
       spyOn(component, 'generateTrendChart' as any);
+      spyOn(component, 'generateSavingsChart' as any);
+      spyOn(component, 'generateScatterChart' as any);
+      spyOn(component, 'calculateFinancialMetrics' as any);
       
+      component.transactions = [];
       component['updateCharts']();
       
-      expect(component['generateExpenseChart']).toHaveBeenCalled();
-      expect(component['generateIncomeChart']).toHaveBeenCalled();
-      expect(component['generateCategoryChart']).toHaveBeenCalled();
-      expect(component['generateTrendChart']).toHaveBeenCalled();
-    });
-
-    it('should generate expense chart correctly', () => {
-      component['generateExpenseChart']();
-      
-      expect(component.expenseChartData).toBeTruthy();
-      expect(component.expenseChartData!.datasets[0].label).toBe('Monthly Expenses');
-      expect(component.expenseChartData!.datasets[0].backgroundColor).toBe('rgba(220, 53, 69, 0.8)');
-      expect(component.expenseChartData!.datasets[0].borderColor).toBe('rgba(220, 53, 69, 1)');
-      expect(component.expenseChartData!.datasets[0].fill).toBe(false);
-      expect(component.expenseChartData!.datasets[0].tension).toBe(0.4);
-    });
-
-    it('should generate income chart correctly', () => {
-      component['generateIncomeChart']();
-      
-      expect(component.incomeChartData).toBeTruthy();
-      expect(component.incomeChartData!.datasets[0].label).toBe('Monthly Income');
-      expect(component.incomeChartData!.datasets[0].backgroundColor).toBe('rgba(40, 167, 69, 0.8)');
-      expect(component.incomeChartData!.datasets[0].borderColor).toBe('rgba(40, 167, 69, 1)');
-      expect(component.incomeChartData!.datasets[0].fill).toBe(false);
-      expect(component.incomeChartData!.datasets[0].tension).toBe(0.4);
-    });
-
-    it('should generate category chart correctly', () => {
-      component['generateCategoryChart']();
-      
-      expect(component.categoryChartData).toBeTruthy();
-      expect(component.categoryChartData!.datasets[0].label).toBe('Spending by Category');
-      expect(component.categoryChartData!.datasets[0].borderWidth).toBe(2);
-      expect(component.categoryChartData!.datasets[0].borderColor).toBe('#ffffff');
-      expect(Array.isArray(component.categoryChartData!.datasets[0].backgroundColor)).toBe(true);
-    });
-
-    it('should generate trend chart correctly', () => {
-      component['generateTrendChart']();
-      
-      expect(component.trendChartData).toBeTruthy();
-      expect(component.trendChartData!.datasets.length).toBe(3);
-      expect(component.trendChartData!.datasets[0].label).toBe('Net Income');
-      expect(component.trendChartData!.datasets[1].label).toBe('Income');
-      expect(component.trendChartData!.datasets[2].label).toBe('Expenses');
-      
-      // Check colors
-      expect(component.trendChartData!.datasets[0].borderColor).toBe('rgba(0, 123, 255, 1)');
-      expect(component.trendChartData!.datasets[1].borderColor).toBe('rgba(40, 167, 69, 1)');
-      expect(component.trendChartData!.datasets[2].borderColor).toBe('rgba(220, 53, 69, 1)');
+      expect(component['generateExpenseChart']).not.toHaveBeenCalled();
+      expect(component['generateIncomeChart']).not.toHaveBeenCalled();
+      expect(component['generateCategoryChart']).not.toHaveBeenCalled();
+      expect(component['generateTrendChart']).not.toHaveBeenCalled();
+      expect(component['generateSavingsChart']).not.toHaveBeenCalled();
+      expect(component['generateScatterChart']).not.toHaveBeenCalled();
+      expect(component['calculateFinancialMetrics']).not.toHaveBeenCalled();
     });
   });
 
-  describe('Data Processing Methods', () => {
-    beforeEach(() => {
-      component.transactions = mockTransactions;
-      component.categories = mockCategories;
-    });
-
-    it('should group transactions by month correctly', () => {
-      const expenses = mockTransactions.filter(t => t.type === TransactionType.EXPENSE);
-      const result = component['groupTransactionsByMonth'](expenses);
+  describe('Component Lifecycle', () => {
+    it('should complete destroy subject on ngOnDestroy', () => {
+      spyOn(component['destroy$'], 'next');
+      spyOn(component['destroy$'], 'complete');
       
-      expect(result).toBeDefined();
-      expect(result.length).toBeGreaterThan(0);
-      expect(result[0].month).toBeDefined();
-      expect(result[0].amount).toBeDefined();
-      expect(typeof result[0].amount).toBe('number');
-    });
-
-    it('should calculate category totals correctly', () => {
-      const result = component['calculateCategoryTotals']();
+      component.ngOnDestroy();
       
-      expect(result).toBeDefined();
-      expect(result.length).toBeGreaterThan(0);
-      expect(result[0].name).toBeDefined();
-      expect(result[0].amount).toBeDefined();
-      
-      // Should be sorted by amount descending
-      if (result.length > 1) {
-        expect(result[0].amount).toBeGreaterThanOrEqual(result[1].amount);
-      }
-      
-      // Should limit to top 10
-      expect(result.length).toBeLessThanOrEqual(10);
-    });
-
-    it('should calculate monthly net correctly', () => {
-      const result = component['calculateMonthlyNet']();
-      
-      expect(result).toBeDefined();
-      expect(result.length).toBeGreaterThan(0);
-      expect(result[0].month).toBeDefined();
-      expect(result[0].income).toBeDefined();
-      expect(result[0].expenses).toBeDefined();
-      expect(result[0].net).toBeDefined();
-      
-      // Net should equal income minus expenses
-      expect(result[0].net).toBe(result[0].income - result[0].expenses);
-    });
-
-    it('should handle empty transactions in groupTransactionsByMonth', () => {
-      const result = component['groupTransactionsByMonth']([]);
-      
-      expect(result).toEqual([]);
-    });
-
-    it('should handle transactions without categoryId in calculateCategoryTotals', () => {
-      const transactionsWithoutCategory = [{
-        ...mockTransactions[0],
-        categoryId: ''
-      }];
-      component.transactions = transactionsWithoutCategory;
-      
-      const result = component['calculateCategoryTotals']();
-      
-      expect(result).toBeDefined();
-      // Should filter out transactions without categoryId
-    });
-
-    it('should sort monthly data chronologically', () => {
-      const result = component['calculateMonthlyNet']();
-      
-      if (result.length > 1) {
-        const firstDate = new Date(result[0].month);
-        const secondDate = new Date(result[1].month);
-        expect(firstDate.getTime()).toBeLessThanOrEqual(secondDate.getTime());
-      }
-    });
-  });
-
-  describe('Utility Methods', () => {
-    beforeEach(() => {
-      component.categories = mockCategories;
-    });
-
-    it('should get category name correctly', () => {
-      const categoryName = component['getCategoryName']('1');
-      expect(categoryName).toBe('Food & Dining');
-    });
-
-    it('should return "Unknown Category" for non-existent category', () => {
-      const categoryName = component['getCategoryName']('999');
-      expect(categoryName).toBe('Unknown Category');
-    });
-
-    it('should generate colors correctly', () => {
-      const colors = component['generateColors'](5);
-      
-      expect(colors.length).toBe(5);
-      expect(colors[0]).toBe('#FF6384');
-      expect(colors[1]).toBe('#36A2EB');
-      expect(colors[2]).toBe('#FFCE56');
-    });
-
-    it('should cycle colors when count exceeds available colors', () => {
-      const colors = component['generateColors'](12);
-      
-      expect(colors.length).toBe(12);
-      // Should cycle back to first color
-      expect(colors[10]).toBe(colors[0]);
-    });
-
-    it('should handle zero count in generateColors', () => {
-      const colors = component['generateColors'](0);
-      
-      expect(colors.length).toBe(0);
-    });
-  });
-
-  describe('Event Handlers', () => {
-    it('should handle chart click events', () => {
-      spyOn(console, 'log');
-      const mockEvent = { target: 'chart' };
-      
-      component.onChartClick(mockEvent);
-      
-      expect(console.log).toHaveBeenCalledWith('Chart clicked:', mockEvent);
-    });
-
-    it('should handle export chart data', () => {
-      spyOn(console, 'log');
-      
-      component.exportChartData();
-      
-      expect(console.log).toHaveBeenCalledWith('Exporting chart data...');
+      expect(component['destroy$'].next).toHaveBeenCalled();
+      expect(component['destroy$'].complete).toHaveBeenCalled();
     });
   });
 
   describe('Template Integration', () => {
-    it('should show charts when showCharts is true', () => {
-      component.showCharts = true;
+    it('should render chart containers when data is available', () => {
+      component.expenseChartData = {
+        labels: ['Jan', 'Feb'],
+        datasets: [{ label: 'Expenses', data: [100, 200] }]
+      };
+      
       fixture.detectChanges();
       
-      const chartsContainer = fixture.nativeElement.querySelector('.financial-charts-container');
-      expect(chartsContainer).toBeTruthy();
+      const chartContainer = fixture.nativeElement.querySelector('[data-chart="expense"]');
+      expect(chartContainer).toBeTruthy();
     });
 
-    it('should hide charts when showCharts is false', () => {
-      component.showCharts = false;
-      fixture.detectChanges();
-      
-      const chartsContainer = fixture.nativeElement.querySelector('.financial-charts-container');
-      expect(chartsContainer).toBeFalsy();
-    });
-
-    it('should show export button', () => {
-      component.showCharts = true;
-      fixture.detectChanges();
-      
-      const exportButton = fixture.nativeElement.querySelector('button');
-      expect(exportButton).toBeTruthy();
-      expect(exportButton.textContent).toContain('Export Data');
-    });
-
-    it('should call exportChartData when export button is clicked', () => {
-      spyOn(component, 'exportChartData');
-      component.showCharts = true;
-      fixture.detectChanges();
-      
-      const exportButton = fixture.nativeElement.querySelector('button');
-      exportButton.click();
-      
-      expect(component.exportChartData).toHaveBeenCalled();
-    });
-
-    it('should show chart cards when chart data exists', () => {
-      component.showCharts = true;
-      component.transactions = mockTransactions;
-      component.categories = mockCategories;
-      component['updateCharts']();
-      fixture.detectChanges();
-      
-      const chartCards = fixture.nativeElement.querySelectorAll('.chart-card');
-      expect(chartCards.length).toBeGreaterThan(0);
-    });
-
-    it('should show no data state when no chart data exists', () => {
-      component.showCharts = true;
+    it('should show no data state when no charts are available', () => {
       component.expenseChartData = null;
       component.incomeChartData = null;
       component.categoryChartData = null;
       component.trendChartData = null;
+      
       fixture.detectChanges();
       
       const noDataState = fixture.nativeElement.querySelector('.no-data-state');
@@ -534,144 +687,47 @@ describe('FinancialChartsComponent', () => {
     });
 
     it('should show loading state when transactions are empty', () => {
-      component.showCharts = true;
       component.transactions = [];
       fixture.detectChanges();
       
       const loadingState = fixture.nativeElement.querySelector('.loading-state');
       expect(loadingState).toBeTruthy();
     });
-
-    it('should display correct chart statistics', () => {
-      component.showCharts = true;
-      component.transactions = mockTransactions;
-      component.categories = mockCategories;
-      component['updateCharts']();
-      fixture.detectChanges();
-      
-      const statValues = fixture.nativeElement.querySelectorAll('.stat-value');
-      expect(statValues.length).toBeGreaterThan(0);
-    });
-
-    it('should handle chart click events from template', () => {
-      spyOn(component, 'onChartClick');
-      component.showCharts = true;
-      component.transactions = mockTransactions;
-      component.categories = mockCategories;
-      component['updateCharts']();
-      fixture.detectChanges();
-      
-      const canvas = fixture.nativeElement.querySelector('canvas');
-      if (canvas) {
-        canvas.click();
-        expect(component.onChartClick).toHaveBeenCalled();
-      }
-    });
   });
 
-  describe('Edge Cases and Error Handling', () => {
-    it('should handle null transactions gracefully', () => {
-      component.transactions = null as any;
-      
-      expect(() => component['updateCharts']()).not.toThrow();
-    });
-
-    it('should handle undefined categories gracefully', () => {
-      component.categories = undefined as any;
-      component.transactions = mockTransactions;
-      
-      expect(() => component['generateCategoryChart']()).not.toThrow();
-    });
-
-    it('should handle transactions with invalid dates', () => {
-      const invalidTransactions = [{
-        ...mockTransactions[0],
-        date: new Date('invalid-date')
-      }];
-      
-      // The method should handle invalid dates gracefully by returning an empty array
-      const result = component['groupTransactionsByMonth'](invalidTransactions);
-      expect(result).toBeDefined();
-      expect(Array.isArray(result)).toBe(true);
-    });
-
-    it('should handle transactions with zero amounts', () => {
-      const zeroAmountTransactions = [{
-        ...mockTransactions[0],
-        amount: 0
-      }];
-      
-      const result = component['groupTransactionsByMonth'](zeroAmountTransactions);
-      expect(result).toBeDefined();
-    });
-
-    it('should handle negative transaction amounts', () => {
-      const negativeAmountTransactions = [{
-        ...mockTransactions[0],
-        amount: -100
-      }];
-      
-      const result = component['groupTransactionsByMonth'](negativeAmountTransactions);
-      expect(result).toBeDefined();
-      expect(result[0].amount).toBe(-100);
-    });
-
-    it('should handle very large datasets', () => {
-      const largeTransactionSet = Array.from({ length: 1000 }, (_, i) => ({
-        ...mockTransactions[0],
-        _id: `transaction-${i}`,
-        amount: Math.random() * 1000,
-        date: new Date(2024, Math.floor(Math.random() * 12), Math.floor(Math.random() * 28) + 1)
-      }));
-      
-      component.transactions = largeTransactionSet;
-      
-      expect(() => component['updateCharts']()).not.toThrow();
-      
-      const categoryTotals = component['calculateCategoryTotals']();
-      expect(categoryTotals.length).toBeLessThanOrEqual(10); // Should still limit to top 10
-    });
-
-    it('should handle mixed transaction types correctly', () => {
-      const mixedTransactions = [
-        { ...mockTransactions[0], type: TransactionType.EXPENSE },
-        { ...mockTransactions[1], type: TransactionType.INCOME },
-        { ...mockTransactions[2], type: TransactionType.TRANSFER },
-        { ...mockTransactions[3], type: TransactionType.ADJUSTMENT }
-      ];
-      
-      component.transactions = mixedTransactions;
-      
-      expect(() => component['updateCharts']()).not.toThrow();
-    });
-  });
-
-  describe('Performance and Optimization', () => {
-    it('should not regenerate charts unnecessarily', () => {
-      spyOn(component, 'generateExpenseChart' as any);
-      
-      // First call should generate charts
-      component.transactions = mockTransactions;
-      component['updateCharts']();
-      expect(component['generateExpenseChart']).toHaveBeenCalledTimes(1);
-      
-      // Second call with same data should still generate (no caching implemented)
-      component['updateCharts']();
-      expect(component['generateExpenseChart']).toHaveBeenCalledTimes(2);
-    });
-
-    it('should handle rapid input changes', () => {
-      const changes1 = {
-        transactions: new SimpleChange([], mockTransactions, false)
+  describe('Financial Metrics Display', () => {
+    beforeEach(() => {
+      component.financialMetrics = {
+        totalIncome: 5000,
+        totalExpenses: 3000,
+        netIncome: 2000,
+        savingsRate: 40,
+        averageMonthlyIncome: 416.67,
+        averageMonthlyExpenses: 250,
+        topCategory: 'Food',
+        topCategoryAmount: 1500
       };
-      const changes2 = {
-        categories: new SimpleChange([], mockCategories, false)
-      };
+    });
+
+    it('should display financial metrics when available', () => {
+      fixture.detectChanges();
       
-      expect(() => {
-        component.ngOnChanges(changes1);
-        component.ngOnChanges(changes2);
-      }).not.toThrow();
+      const metricsContainer = fixture.nativeElement.querySelector('.metrics-summary');
+      expect(metricsContainer).toBeTruthy();
+    });
+
+    it('should apply correct CSS classes for positive net income', () => {
+      fixture.detectChanges();
+      
+      const netIncomeCard = fixture.nativeElement.querySelector('.metric-card.positive');
+      expect(netIncomeCard).toBeTruthy();
+    });
+
+    it('should apply correct CSS classes for savings rate', () => {
+      fixture.detectChanges();
+      
+      const savingsCard = fixture.nativeElement.querySelector('.metric-card.positive');
+      expect(savingsCard).toBeTruthy();
     });
   });
 });

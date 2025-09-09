@@ -10,11 +10,8 @@ import {
   TransactionStats
 } from '../../../../core/models/financial.model';
 import { ChartService, ChartData, ChartOptions, FinancialMetrics } from '../../../../core/services/chart.service';
-import { Chart, ChartConfiguration, ChartType, registerables } from 'chart.js';
-import 'chartjs-adapter-date-fns';
-
-// Register Chart.js components
-Chart.register(...registerables);
+import { SharedChartService } from '../../../../shared/chart/chart.service';
+import { Chart, ChartConfiguration, ChartType } from 'chart.js';
 
 @Component({
   selector: 'app-financial-charts',
@@ -39,6 +36,7 @@ export class FinancialChartsComponent implements OnInit, OnDestroy, OnChanges {
 
   private destroy$ = new Subject<void>();
   private chartService = inject(ChartService);
+  private sharedChartService = inject(SharedChartService);
 
   // Chart instances
   private expenseChart: Chart | null = null;
@@ -169,12 +167,12 @@ export class FinancialChartsComponent implements OnInit, OnDestroy, OnChanges {
       type,
       data: {
         labels: data.labels,
-        datasets: data.datasets
+        datasets: data.datasets as any
       },
-      options
+      options: options as any
     };
 
-    const chart = new Chart(canvasRef, config);
+    const chart = this.sharedChartService.createChart(canvasRef, config);
     this.setChartInstance(chartType, chart);
   }
 

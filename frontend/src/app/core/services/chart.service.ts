@@ -15,7 +15,7 @@ export interface ChartData {
 
 export interface ChartDataset {
   label: string;
-  data: number[];
+  data: number[] | { x: number; y: number }[] | { x: number; y: number; r: number }[];
   backgroundColor?: string | string[];
   borderColor?: string | string[];
   borderWidth?: number;
@@ -28,16 +28,19 @@ export interface ChartDataset {
   pointHoverBackgroundColor?: string | string[];
   pointHoverBorderColor?: string | string[];
   yAxisID?: string;
-  type?: string;
+  type?: 'line' | 'bar' | 'pie' | 'doughnut' | 'scatter' | 'bubble' | 'radar' | 'polarArea';
+  hoverOffset?: number;
+  borderRadius?: number;
+  borderSkipped?: boolean;
 }
 
 export interface ChartOptions {
   responsive: boolean;
   maintainAspectRatio: boolean;
-  plugins: {
-    legend: {
+  plugins?: {
+    legend?: {
       position: 'top' | 'bottom' | 'left' | 'right';
-      labels: {
+      labels?: {
         usePointStyle: boolean;
         padding: number;
         font: {
@@ -45,7 +48,7 @@ export interface ChartOptions {
         };
       };
     };
-    tooltip: {
+    tooltip?: {
       backgroundColor: string;
       titleColor: string;
       bodyColor: string;
@@ -60,7 +63,7 @@ export interface ChartOptions {
       text: string;
       font: {
         size: number;
-        weight: string;
+        weight: 'normal' | 'bold' | 'lighter' | 'bolder' | number;
       };
     };
   };
@@ -149,6 +152,13 @@ export class ChartService {
 
   // Generate expense trend chart data
   generateExpenseTrendChart(transactions: Transaction[], period: string = 'month'): ChartData {
+    if (!transactions || transactions.length === 0) {
+      return {
+        labels: [],
+        datasets: []
+      };
+    }
+    
     const expenses = transactions.filter(t => t.type === TransactionType.EXPENSE);
     const groupedData = this.groupTransactionsByPeriod(expenses, period);
     
@@ -174,6 +184,13 @@ export class ChartService {
 
   // Generate income trend chart data
   generateIncomeTrendChart(transactions: Transaction[], period: string = 'month'): ChartData {
+    if (!transactions || transactions.length === 0) {
+      return {
+        labels: [],
+        datasets: []
+      };
+    }
+    
     const income = transactions.filter(t => t.type === TransactionType.INCOME);
     const groupedData = this.groupTransactionsByPeriod(income, period);
     
@@ -199,6 +216,13 @@ export class ChartService {
 
   // Generate category spending pie chart data
   generateCategorySpendingChart(transactions: Transaction[], categories: Category[]): ChartData {
+    if (!transactions || transactions.length === 0) {
+      return {
+        labels: [],
+        datasets: []
+      };
+    }
+    
     const categoryData = this.calculateCategorySpending(transactions, categories);
     
     return {
@@ -216,6 +240,13 @@ export class ChartService {
 
   // Generate net income trend chart (multi-line)
   generateNetIncomeTrendChart(transactions: Transaction[], period: string = 'month'): ChartData {
+    if (!transactions || transactions.length === 0) {
+      return {
+        labels: [],
+        datasets: []
+      };
+    }
+    
     const groupedData = this.calculateNetIncomeByPeriod(transactions, period);
     
     return {
@@ -380,7 +411,7 @@ export class ChartService {
       labels: scatterData.map(d => d.period),
       datasets: [{
         label: 'Income vs Expenses',
-        data: scatterData.map(d => ({ x: d.income, y: d.expenses })),
+        data: scatterData.map(d => ({ x: d.income, y: d.expenses })) as { x: number; y: number }[],
         backgroundColor: 'rgba(0, 123, 255, 0.6)',
         borderColor: 'rgba(0, 123, 255, 1)',
         pointRadius: 8,
@@ -461,7 +492,13 @@ export class ChartService {
           plugins: {
             ...baseOptions.plugins,
             tooltip: {
-              ...baseOptions.plugins.tooltip,
+              backgroundColor: baseOptions.plugins?.tooltip?.backgroundColor || 'rgba(0,0,0,0.8)',
+              titleColor: baseOptions.plugins?.tooltip?.titleColor || '#fff',
+              bodyColor: baseOptions.plugins?.tooltip?.bodyColor || '#fff',
+              borderColor: baseOptions.plugins?.tooltip?.borderColor || '#fff',
+              borderWidth: baseOptions.plugins?.tooltip?.borderWidth || 1,
+              cornerRadius: baseOptions.plugins?.tooltip?.cornerRadius || 4,
+              displayColors: baseOptions.plugins?.tooltip?.displayColors || true,
               callbacks: {
                 label: function(context: any) {
                   const label = context.label || '';
@@ -650,7 +687,8 @@ export class ChartService {
 
   private calculateMonthlySpendingComparison(transactions: Transaction[]): { month: string; amount: number }[] {
     const expenses = transactions.filter(t => t.type === TransactionType.EXPENSE);
-    return this.groupTransactionsByPeriod(expenses, 'month');
+    const groupedData = this.groupTransactionsByPeriod(expenses, 'month');
+    return groupedData.map(item => ({ month: item.period, amount: item.amount }));
   }
 
   private calculateSavingsRateByPeriod(transactions: Transaction[], period: string): { period: string; savingsRate: number }[] {

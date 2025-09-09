@@ -8,11 +8,8 @@ import {
   FinancialDashboard
 } from '../../../../core/models/financial.model';
 import { ChartService, ChartData, ChartOptions } from '../../../../core/services/chart.service';
-import { Chart, ChartConfiguration, ChartType, registerables } from 'chart.js';
-import 'chartjs-adapter-date-fns';
-
-// Register Chart.js components
-Chart.register(...registerables);
+import { SharedChartService } from '../../../../shared/chart/chart.service';
+import { Chart, ChartConfiguration, ChartType } from 'chart.js';
 
 export interface RealTimeData {
   timestamp: Date;
@@ -52,6 +49,7 @@ export class DashboardChartsComponent implements OnInit, OnDestroy, OnChanges {
 
   private destroy$ = new Subject<void>();
   private chartService = inject(ChartService);
+  private sharedChartService = inject(SharedChartService);
   private refreshTimer$ = interval(this.refreshInterval);
 
   // Chart instances
@@ -161,7 +159,7 @@ export class DashboardChartsComponent implements OnInit, OnDestroy, OnChanges {
           borderColor: 'rgba(40, 167, 69, 1)',
           borderWidth: 2,
           borderRadius: 4,
-          borderSkipped: false
+          // borderSkipped: false // Not supported in Chart.js
         },
         {
           label: 'Expenses',
@@ -170,7 +168,7 @@ export class DashboardChartsComponent implements OnInit, OnDestroy, OnChanges {
           borderColor: 'rgba(220, 53, 69, 1)',
           borderWidth: 2,
           borderRadius: 4,
-          borderSkipped: false
+          // borderSkipped: false // Not supported in Chart.js
         }
       ]
     };
@@ -232,7 +230,7 @@ export class DashboardChartsComponent implements OnInit, OnDestroy, OnChanges {
 
     const config: ChartConfiguration = {
       type: 'line',
-      data: this.balanceChartData,
+      data: this.balanceChartData as any,
       options: {
         responsive: true,
         maintainAspectRatio: false,
@@ -271,7 +269,7 @@ export class DashboardChartsComponent implements OnInit, OnDestroy, OnChanges {
       }
     };
 
-    this.balanceChart = new Chart(canvasRef, config);
+    this.balanceChart = this.sharedChartService.createChart(canvasRef, config);
   }
 
   private createIncomeExpenseChart(): void {
@@ -286,7 +284,7 @@ export class DashboardChartsComponent implements OnInit, OnDestroy, OnChanges {
 
     const config: ChartConfiguration = {
       type: 'bar',
-      data: this.incomeExpenseChartData,
+      data: this.incomeExpenseChartData as any,
       options: {
         responsive: true,
         maintainAspectRatio: false,
@@ -318,7 +316,7 @@ export class DashboardChartsComponent implements OnInit, OnDestroy, OnChanges {
       }
     };
 
-    this.incomeExpenseChart = new Chart(canvasRef, config);
+    this.incomeExpenseChart = this.sharedChartService.createChart(canvasRef, config);
   }
 
   private createCategoryChart(): void {
@@ -333,7 +331,7 @@ export class DashboardChartsComponent implements OnInit, OnDestroy, OnChanges {
 
     const config: ChartConfiguration = {
       type: 'doughnut',
-      data: this.categoryChartData,
+      data: this.categoryChartData as any,
       options: {
         responsive: true,
         maintainAspectRatio: false,
@@ -349,7 +347,7 @@ export class DashboardChartsComponent implements OnInit, OnDestroy, OnChanges {
       }
     };
 
-    this.categoryChart = new Chart(canvasRef, config);
+    this.categoryChart = this.sharedChartService.createChart(canvasRef, config);
   }
 
   private createTrendChart(): void {
@@ -364,7 +362,7 @@ export class DashboardChartsComponent implements OnInit, OnDestroy, OnChanges {
 
     const config: ChartConfiguration = {
       type: 'line',
-      data: this.trendChartData,
+      data: this.trendChartData as any,
       options: {
         responsive: true,
         maintainAspectRatio: false,
@@ -396,7 +394,7 @@ export class DashboardChartsComponent implements OnInit, OnDestroy, OnChanges {
       }
     };
 
-    this.trendChart = new Chart(canvasRef, config);
+    this.trendChart = this.sharedChartService.createChart(canvasRef, config);
   }
 
   private createRealtimeChart(): void {
@@ -463,7 +461,7 @@ export class DashboardChartsComponent implements OnInit, OnDestroy, OnChanges {
       }
     };
 
-    this.realtimeChart = new Chart(canvasRef, config);
+    this.realtimeChart = this.sharedChartService.createChart(canvasRef, config);
   }
 
   // Helper methods

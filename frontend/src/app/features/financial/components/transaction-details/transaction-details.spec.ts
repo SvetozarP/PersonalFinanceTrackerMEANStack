@@ -234,7 +234,7 @@ describe('TransactionDetailsComponent', () => {
   describe('helper methods', () => {
     beforeEach(() => {
       // Create a fresh copy of the mock transaction for each test
-      component.transaction = {
+      const testTransaction = {
         ...mockTransaction,
         location: {
           name: 'Test Store',
@@ -243,8 +243,16 @@ describe('TransactionDetailsComponent', () => {
         },
         isRecurring: true,
         recurrencePattern: RecurrencePattern.MONTHLY,
+        recurrenceInterval: 1,
         nextOccurrence: new Date('2023-02-01')
       };
+      
+      // Set up mocks to prevent switchMap errors
+      transactionService.getTransactionById.and.returnValue(of(testTransaction));
+      categoryService.getCategoryById.and.returnValue(of(mockCategory));
+      
+      // Initialize the component
+      component.ngOnInit();
       fixture.detectChanges();
     });
 

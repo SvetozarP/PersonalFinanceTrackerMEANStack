@@ -38,6 +38,11 @@ export class ChartExportService {
 
   // Export chart as image
   exportChartAsImage(chart: Chart, options: ExportOptions = {}): void {
+    if (!chart) {
+      console.warn('Chart is null or undefined, cannot export');
+      return;
+    }
+    
     const defaultOptions: ExportOptions = {
       filename: `chart-${Date.now()}`,
       quality: 0.9,
@@ -113,7 +118,7 @@ export class ChartExportService {
       title.setAttribute('font-size', '16');
       title.setAttribute('font-weight', 'bold');
       title.setAttribute('fill', '#333');
-      title.textContent = chart.options.plugins.title.text || 'Chart';
+      title.textContent = (chart.options.plugins?.title?.text as string) || 'Chart';
       svg.insertBefore(title, img);
     }
     
@@ -359,7 +364,7 @@ export class ChartExportService {
   }
 
   private getChartTitle(chart: Chart): string | null {
-    return chart.options.plugins?.title?.text || null;
+    return (chart.options.plugins?.title?.text as string) || null;
   }
 
   // Utility method to create export options

@@ -306,19 +306,13 @@ export class ChartStylesService {
           borderWidth: 1,
           cornerRadius: 4,
           displayColors: true,
-          titleFont: {
-            size: this.getResponsiveFontSize(theme.fonts.sizes.tooltip)
-          },
-          bodyFont: {
-            size: this.getResponsiveFontSize(theme.fonts.sizes.tooltip)
-          }
         },
         title: {
           display: true,
           text: 'Chart',
           font: {
             size: this.getResponsiveFontSize(theme.fonts.sizes.title),
-            family: theme.fonts.family
+            weight: 'bold'
           }
         }
       },
@@ -350,19 +344,13 @@ export class ChartStylesService {
           borderWidth: 1,
           cornerRadius: 6,
           displayColors: true,
-          titleFont: {
-            size: this.getResponsiveFontSize(theme.fonts.sizes.tooltip)
-          },
-          bodyFont: {
-            size: this.getResponsiveFontSize(theme.fonts.sizes.tooltip)
-          }
         },
         title: {
           display: true,
           text: 'Chart',
           font: {
             size: this.getResponsiveFontSize(theme.fonts.sizes.title),
-            family: theme.fonts.family
+            weight: 'bold'
           }
         }
       },
@@ -394,19 +382,13 @@ export class ChartStylesService {
           borderWidth: 1,
           cornerRadius: 8,
           displayColors: true,
-          titleFont: {
-            size: this.getResponsiveFontSize(theme.fonts.sizes.tooltip)
-          },
-          bodyFont: {
-            size: this.getResponsiveFontSize(theme.fonts.sizes.tooltip)
-          }
         },
         title: {
           display: true,
           text: 'Chart',
           font: {
             size: this.getResponsiveFontSize(theme.fonts.sizes.title),
-            family: theme.fonts.family
+            weight: 'bold'
           }
         }
       },
@@ -522,13 +504,6 @@ export class ChartStylesService {
     }
   }
 
-  getResponsiveChartHeight(): number {
-    switch (this.currentBreakpoint) {
-      case 'mobile': return 250;
-      case 'tablet': return 300;
-      default: return 400;
-    }
-  }
 
   shouldShowLegend(): boolean {
     return this.currentBreakpoint !== 'mobile';

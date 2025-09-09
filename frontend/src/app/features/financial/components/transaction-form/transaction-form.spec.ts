@@ -109,6 +109,7 @@ describe('TransactionFormComponent', () => {
     mockCategoryService.getCategoriesByParent.and.returnValue(of([mockSubcategory]));
     
     // Set default return values for transaction service methods
+    mockTransactionService.getTransactionById.and.returnValue(of(mockTransaction));
     mockTransactionService.getUserTransactions.and.returnValue(of({ data: [mockTransaction], pagination: { page: 1, limit: 10, total: 1, totalPages: 1 } }));
     mockTransactionService.createTransaction.and.returnValue(of(mockTransaction));
     mockTransactionService.updateTransaction.and.returnValue(of(mockTransaction));

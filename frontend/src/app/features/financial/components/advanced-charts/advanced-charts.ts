@@ -9,11 +9,8 @@ import {
   FinancialDashboard
 } from '../../../../core/models/financial.model';
 import { ChartService, ChartData, ChartOptions, FinancialMetrics } from '../../../../core/services/chart.service';
-import { Chart, ChartConfiguration, ChartType, registerables } from 'chart.js';
-import 'chartjs-adapter-date-fns';
-
-// Register Chart.js components
-Chart.register(...registerables);
+import { SharedChartService } from '../../../../shared/chart/chart.service';
+import { Chart, ChartConfiguration, ChartType } from 'chart.js';
 
 export interface HeatmapData {
   date: string;
@@ -58,6 +55,7 @@ export class AdvancedChartsComponent implements OnInit, OnDestroy, OnChanges {
 
   private destroy$ = new Subject<void>();
   private chartService = inject(ChartService);
+  private sharedChartService = inject(SharedChartService);
 
   // Chart instances
   private heatmapChart: Chart | null = null;
@@ -354,7 +352,7 @@ export class AdvancedChartsComponent implements OnInit, OnDestroy, OnChanges {
       }
     };
 
-    this.heatmapChart = new Chart(canvasRef, config);
+    this.heatmapChart = this.sharedChartService.createChart(canvasRef, config);
   }
 
   private createGaugeChart(): void {
@@ -373,9 +371,9 @@ export class AdvancedChartsComponent implements OnInit, OnDestroy, OnChanges {
         labels: this.gaugeData.map(item => item.label),
         datasets: [{
           data: this.gaugeData.map(item => [item.value, item.max - item.value]),
-          backgroundColor: this.gaugeData.map(item => [item.color, '#e9ecef']),
+          backgroundColor: this.gaugeData.map(item => item.color),
           borderWidth: 0,
-          cutout: '70%'
+          // cutout: '70%' // Not supported in ChartDataset
         }]
       },
       options: {
@@ -387,17 +385,17 @@ export class AdvancedChartsComponent implements OnInit, OnDestroy, OnChanges {
           },
           tooltip: {
             callbacks: {
-              label: function(context: any) {
+              label: (context: any) => {
                 const item = this.gaugeData[context.dataIndex];
                 return `${item.label}: ${item.value.toFixed(1)}%`;
-              }.bind(this)
+              }
             }
           }
         }
       }
     };
 
-    this.gaugeChart = new Chart(canvasRef, config);
+    this.gaugeChart = this.sharedChartService.createChart(canvasRef, config);
   }
 
   private createIndicatorChart(): void {
@@ -450,7 +448,7 @@ export class AdvancedChartsComponent implements OnInit, OnDestroy, OnChanges {
       }
     };
 
-    this.indicatorChart = new Chart(canvasRef, config);
+    this.indicatorChart = this.sharedChartService.createChart(canvasRef, config);
   }
 
   private createWaterfallChart(): void {
@@ -465,7 +463,7 @@ export class AdvancedChartsComponent implements OnInit, OnDestroy, OnChanges {
 
     const config: ChartConfiguration = {
       type: 'bar',
-      data: this.waterfallData,
+      data: this.waterfallData as any,
       options: {
         responsive: true,
         maintainAspectRatio: false,
@@ -491,7 +489,7 @@ export class AdvancedChartsComponent implements OnInit, OnDestroy, OnChanges {
       }
     };
 
-    this.waterfallChart = new Chart(canvasRef, config);
+    this.waterfallChart = this.sharedChartService.createChart(canvasRef, config);
   }
 
   private createRadarChart(): void {
@@ -506,7 +504,7 @@ export class AdvancedChartsComponent implements OnInit, OnDestroy, OnChanges {
 
     const config: ChartConfiguration = {
       type: 'radar',
-      data: this.radarData,
+      data: this.radarData as any,
       options: {
         responsive: true,
         maintainAspectRatio: false,
@@ -528,7 +526,7 @@ export class AdvancedChartsComponent implements OnInit, OnDestroy, OnChanges {
       }
     };
 
-    this.radarChart = new Chart(canvasRef, config);
+    this.radarChart = this.sharedChartService.createChart(canvasRef, config);
   }
 
   private createBubbleChart(): void {
@@ -543,7 +541,7 @@ export class AdvancedChartsComponent implements OnInit, OnDestroy, OnChanges {
 
     const config: ChartConfiguration = {
       type: 'bubble',
-      data: this.bubbleData,
+      data: this.bubbleData as any,
       options: {
         responsive: true,
         maintainAspectRatio: false,
@@ -575,7 +573,7 @@ export class AdvancedChartsComponent implements OnInit, OnDestroy, OnChanges {
       }
     };
 
-    this.bubbleChart = new Chart(canvasRef, config);
+    this.bubbleChart = this.sharedChartService.createChart(canvasRef, config);
   }
 
   // Helper methods

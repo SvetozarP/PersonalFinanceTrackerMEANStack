@@ -305,7 +305,9 @@ describe('FinancialReportsComponent', () => {
     const categoryServiceSpy = jasmine.createSpyObj('CategoryService', ['getUserCategories']);
 
     // Configure default return values
-    transactionServiceSpy.getUserTransactions.and.returnValue(of(mockPaginatedResponse));
+    transactionServiceSpy.getUserTransactions.and.callFake((params: any) => {
+      return of(mockPaginatedResponse);
+    });
     categoryServiceSpy.getUserCategories.and.returnValue(of(mockCategories));
 
     await TestBed.configureTestingModule({
@@ -405,7 +407,9 @@ describe('FinancialReportsComponent', () => {
 
     it('should handle transaction loading error', () => {
       const consoleSpy = spyOn(console, 'error');
-      transactionService.getUserTransactions.and.returnValue(throwError(() => new Error('API Error')));
+      transactionService.getUserTransactions.and.callFake((params: any) => {
+        return throwError(() => new Error('API Error'));
+      });
       
       (component as any).loadData();
       

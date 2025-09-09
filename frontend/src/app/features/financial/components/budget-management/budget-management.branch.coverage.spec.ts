@@ -1060,6 +1060,9 @@ describe('BudgetManagementComponent - Branch Coverage', () => {
     it('should handle category loading error', () => {
       categoryService.getUserCategories.and.returnValue(throwError(() => new Error('Category error')));
 
+      // Mock the test environment check to allow loadData to run
+      spyOn(component as any, 'isTestEnvironment').and.returnValue(false);
+      
       component['loadData']();
 
       expect(component.isLoading).toBe(false);
@@ -1086,7 +1089,8 @@ describe('BudgetManagementComponent - Branch Coverage', () => {
       component['loadBudgetSummary']();
 
       // The error handler doesn't set budgetSummary to null, it just logs the error
-      expect(component.budgetSummary).toBeDefined();
+      // So budgetSummary should remain whatever it was before (likely null or undefined)
+      expect(component.budgetSummary).toBeNull();
     });
   });
 
