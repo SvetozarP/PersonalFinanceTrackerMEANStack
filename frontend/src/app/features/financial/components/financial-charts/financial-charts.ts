@@ -1,5 +1,6 @@
-import { Component, OnInit, OnDestroy, Input, OnChanges, SimpleChanges, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, Input, OnChanges, SimpleChanges, inject, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { Subject, takeUntil } from 'rxjs';
 import { 
   Transaction, 
@@ -8,27 +9,17 @@ import {
   FinancialDashboard,
   TransactionStats
 } from '../../../../core/models/financial.model';
+import { ChartService, ChartData, ChartOptions, FinancialMetrics } from '../../../../core/services/chart.service';
+import { Chart, ChartConfiguration, ChartType, registerables } from 'chart.js';
+import 'chartjs-adapter-date-fns';
 
-// Chart interfaces for this component
-interface ChartData {
-  labels: string[];
-  datasets: ChartDataset[];
-}
-
-interface ChartDataset {
-  label: string;
-  data: number[];
-  backgroundColor?: string | string[];
-  borderColor?: string | string[];
-  borderWidth?: number;
-  fill?: boolean;
-  tension?: number;
-}
+// Register Chart.js components
+Chart.register(...registerables);
 
 @Component({
   selector: 'app-financial-charts',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
   templateUrl: './financial-charts.html',
   styleUrls: ['./financial-charts.scss']
 })
@@ -39,40 +30,40 @@ export class FinancialChartsComponent implements OnInit, OnDestroy, OnChanges {
   @Input() period: string = 'month';
   @Input() showCharts: boolean = true;
 
+  @ViewChild('expenseChart', { static: false }) expenseChartRef!: ElementRef<HTMLCanvasElement>;
+  @ViewChild('incomeChart', { static: false }) incomeChartRef!: ElementRef<HTMLCanvasElement>;
+  @ViewChild('categoryChart', { static: false }) categoryChartRef!: ElementRef<HTMLCanvasElement>;
+  @ViewChild('trendChart', { static: false }) trendChartRef!: ElementRef<HTMLCanvasElement>;
+  @ViewChild('savingsChart', { static: false }) savingsChartRef!: ElementRef<HTMLCanvasElement>;
+  @ViewChild('scatterChart', { static: false }) scatterChartRef!: ElementRef<HTMLCanvasElement>;
+
   private destroy$ = new Subject<void>();
+  private chartService = inject(ChartService);
+
+  // Chart instances
+  private expenseChart: Chart | null = null;
+  private incomeChart: Chart | null = null;
+  private categoryChart: Chart | null = null;
+  private trendChart: Chart | null = null;
+  private savingsChart: Chart | null = null;
+  private scatterChart: Chart | null = null;
 
   // Chart data
   expenseChartData: ChartData | null = null;
   incomeChartData: ChartData | null = null;
   categoryChartData: ChartData | null = null;
   trendChartData: ChartData | null = null;
+  savingsChartData: ChartData | null = null;
+  scatterChartData: ChartData | null = null;
+
+  // Financial metrics
+  financialMetrics: FinancialMetrics | null = null;
 
   // Chart options
-  chartOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        position: 'top' as const,
-        labels: {
-          usePointStyle: true,
-          padding: 20,
-          font: {
-            size: 12
-          }
-        }
-      },
-      tooltip: {
-        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-        titleColor: 'white',
-        bodyColor: 'white',
-        borderColor: 'rgba(255, 255, 255, 0.2)',
-        borderWidth: 1,
-        cornerRadius: 8,
-        displayColors: true
-      }
-    }
-  };
+  chartOptions: ChartOptions = this.chartService.getChartOptions('line');
+  barChartOptions: ChartOptions = this.chartService.getChartOptions('bar');
+  pieChartOptions: ChartOptions = this.chartService.getChartOptions('pie');
+  scatterChartOptions: ChartOptions = this.chartService.getChartOptions('scatter');
 
   ngOnInit(): void {
     this.initializeCharts();
@@ -100,232 +91,171 @@ export class FinancialChartsComponent implements OnInit, OnDestroy, OnChanges {
     this.generateIncomeChart();
     this.generateCategoryChart();
     this.generateTrendChart();
+    this.generateSavingsChart();
+    this.generateScatterChart();
+    this.calculateFinancialMetrics();
   }
 
   private generateExpenseChart(): void {
-    if (!this.transactions || !Array.isArray(this.transactions)) {
-      this.expenseChartData = { labels: [], datasets: [] };
-      return;
-    }
-    
-    const expenses = this.transactions.filter(t => t.type === TransactionType.EXPENSE);
-    const monthlyData = this.groupTransactionsByMonth(expenses);
-    
-    this.expenseChartData = {
-      labels: monthlyData.map(d => d.month),
-      datasets: [{
-        label: 'Monthly Expenses',
-        data: monthlyData.map(d => d.amount),
-        backgroundColor: 'rgba(220, 53, 69, 0.8)',
-        borderColor: 'rgba(220, 53, 69, 1)',
-        borderWidth: 2,
-        fill: false,
-        tension: 0.4
-      }]
-    };
+    this.expenseChartData = this.chartService.generateExpenseTrendChart(this.transactions, this.period);
+    this.createChart('expense', this.expenseChartData, 'line');
   }
 
   private generateIncomeChart(): void {
-    if (!this.transactions || !Array.isArray(this.transactions)) {
-      this.incomeChartData = { labels: [], datasets: [] };
-      return;
-    }
-    
-    const income = this.transactions.filter(t => t.type === TransactionType.INCOME);
-    const monthlyData = this.groupTransactionsByMonth(income);
-    
-    this.incomeChartData = {
-      labels: monthlyData.map(d => d.month),
-      datasets: [{
-        label: 'Monthly Income',
-        data: monthlyData.map(d => d.amount),
-        backgroundColor: 'rgba(40, 167, 69, 0.8)',
-        borderColor: 'rgba(40, 167, 69, 1)',
-        borderWidth: 2,
-        fill: false,
-        tension: 0.4
-      }]
-    };
+    this.incomeChartData = this.chartService.generateIncomeTrendChart(this.transactions, this.period);
+    this.createChart('income', this.incomeChartData, 'line');
   }
 
   private generateCategoryChart(): void {
-    if (!this.transactions || !Array.isArray(this.transactions) || !this.categories || !Array.isArray(this.categories)) {
-      this.categoryChartData = { labels: [], datasets: [] };
-      return;
-    }
-    
-    const categoryTotals = this.calculateCategoryTotals();
-    
-    this.categoryChartData = {
-      labels: categoryTotals.map(c => c.name),
-      datasets: [{
-        label: 'Spending by Category',
-        data: categoryTotals.map(c => c.amount),
-        backgroundColor: this.generateColors(categoryTotals.length),
-        borderWidth: 2,
-        borderColor: '#ffffff'
-      }]
-    };
+    this.categoryChartData = this.chartService.generateCategorySpendingChart(this.transactions, this.categories);
+    this.createChart('category', this.categoryChartData, 'doughnut');
   }
 
   private generateTrendChart(): void {
-    if (!this.transactions || !Array.isArray(this.transactions)) {
-      this.trendChartData = { labels: [], datasets: [] };
-      return;
-    }
+    this.trendChartData = this.chartService.generateNetIncomeTrendChart(this.transactions, this.period);
+    this.createChart('trend', this.trendChartData, 'line');
+  }
+
+  private generateSavingsChart(): void {
+    this.savingsChartData = this.chartService.generateSavingsRateChart(this.transactions, this.period);
+    this.createChart('savings', this.savingsChartData, 'line');
+  }
+
+  private generateScatterChart(): void {
+    this.scatterChartData = this.chartService.generateIncomeExpenseScatter(this.transactions);
+    this.createChart('scatter', this.scatterChartData, 'scatter');
+  }
+
+  private calculateFinancialMetrics(): void {
+    const totalIncome = this.transactions
+      .filter(t => t.type === TransactionType.INCOME)
+      .reduce((sum, t) => sum + t.amount, 0);
     
-    const monthlyNet = this.calculateMonthlyNet();
+    const totalExpenses = this.transactions
+      .filter(t => t.type === TransactionType.EXPENSE)
+      .reduce((sum, t) => sum + t.amount, 0);
     
-    this.trendChartData = {
-      labels: monthlyNet.map(d => d.month),
-      datasets: [
-        {
-          label: 'Net Income',
-          data: monthlyNet.map(d => d.net),
-          backgroundColor: 'rgba(0, 123, 255, 0.1)',
-          borderWidth: 2,
-          borderColor: 'rgba(0, 123, 255, 1)',
-          fill: true,
-          tension: 0.4
-        },
-        {
-          label: 'Income',
-          data: monthlyNet.map(d => d.income),
-          backgroundColor: 'rgba(40, 167, 69, 0.1)',
-          borderColor: 'rgba(40, 167, 69, 1)',
-          borderWidth: 2,
-          fill: false,
-          tension: 0.4
-        },
-        {
-          label: 'Expenses',
-          data: monthlyNet.map(d => d.expenses),
-          backgroundColor: 'rgba(220, 53, 69, 0.1)',
-          borderColor: 'rgba(220, 53, 69, 1)',
-          borderWidth: 2,
-          fill: false,
-          tension: 0.4
-        }
-      ]
+    const netIncome = totalIncome - totalExpenses;
+    const savingsRate = totalIncome > 0 ? (netIncome / totalIncome) * 100 : 0;
+    
+    const categoryData = this.chartService['calculateCategorySpending'](this.transactions, this.categories);
+    const topCategory = categoryData.length > 0 ? categoryData[0] : { name: 'None', value: 0 };
+    
+    this.financialMetrics = {
+      totalIncome,
+      totalExpenses,
+      netIncome,
+      savingsRate,
+      averageMonthlyIncome: totalIncome / 12,
+      averageMonthlyExpenses: totalExpenses / 12,
+      topCategory: topCategory.name,
+      topCategoryAmount: topCategory.value
     };
   }
 
-  private groupTransactionsByMonth(transactions: Transaction[]): { month: string; amount: number }[] {
-    if (!transactions || !Array.isArray(transactions)) {
-      return [];
-    }
-    
-    const monthlyMap = new Map<string, number>();
-    
-    transactions.forEach(transaction => {
-      try {
-        const date = new Date(transaction.date);
-        // Check if the date is valid
-        if (isNaN(date.getTime())) {
-          return; // Skip invalid dates
-        }
-        const monthKey = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-        monthlyMap.set(monthKey, (monthlyMap.get(monthKey) || 0) + transaction.amount);
-      } catch (error) {
-        // Skip transactions with invalid dates
-        console.warn('Invalid date in transaction:', transaction.date);
-      }
-    });
+  private createChart(chartType: string, data: ChartData, type: ChartType): void {
+    if (!data || data.labels.length === 0) return;
 
-    return Array.from(monthlyMap.entries())
-      .map(([month, amount]) => ({ month, amount }))
-      .sort((a, b) => new Date(a.month).getTime() - new Date(b.month).getTime());
+    const canvasRef = this.getCanvasRef(chartType);
+    if (!canvasRef) return;
+
+    const existingChart = this.getChartInstance(chartType);
+    if (existingChart) {
+      existingChart.destroy();
+    }
+
+    const options = this.getChartOptionsForType(type);
+    const config: ChartConfiguration = {
+      type,
+      data: {
+        labels: data.labels,
+        datasets: data.datasets
+      },
+      options
+    };
+
+    const chart = new Chart(canvasRef, config);
+    this.setChartInstance(chartType, chart);
   }
 
-  private calculateCategoryTotals(): { name: string; amount: number }[] {
-    if (!this.transactions || !Array.isArray(this.transactions)) {
-      return [];
+  private getCanvasRef(chartType: string): HTMLCanvasElement | null {
+    switch (chartType) {
+      case 'expense': return this.expenseChartRef?.nativeElement || null;
+      case 'income': return this.incomeChartRef?.nativeElement || null;
+      case 'category': return this.categoryChartRef?.nativeElement || null;
+      case 'trend': return this.trendChartRef?.nativeElement || null;
+      case 'savings': return this.savingsChartRef?.nativeElement || null;
+      case 'scatter': return this.scatterChartRef?.nativeElement || null;
+      default: return null;
     }
-    
-    const categoryMap = new Map<string, number>();
-    
-    this.transactions
-      .filter(t => t.type === TransactionType.EXPENSE && t.categoryId)
-      .forEach(transaction => {
-        const categoryName = this.getCategoryName(transaction.categoryId);
-        categoryMap.set(categoryName, (categoryMap.get(categoryName) || 0) + transaction.amount);
-      });
-
-    return Array.from(categoryMap.entries())
-      .map(([name, amount]) => ({ name, amount }))
-      .sort((a, b) => b.amount - a.amount)
-      .slice(0, 10); // Top 10 categories
   }
 
-  private calculateMonthlyNet(): { month: string; income: number; expenses: number; net: number }[] {
-    if (!this.transactions || !Array.isArray(this.transactions)) {
-      return [];
+  private getChartInstance(chartType: string): Chart | null {
+    switch (chartType) {
+      case 'expense': return this.expenseChart;
+      case 'income': return this.incomeChart;
+      case 'category': return this.categoryChart;
+      case 'trend': return this.trendChart;
+      case 'savings': return this.savingsChart;
+      case 'scatter': return this.scatterChart;
+      default: return null;
     }
-    
-    const monthlyMap = new Map<string, { income: number; expenses: number }>();
-    
-    this.transactions.forEach(transaction => {
-      try {
-        const date = new Date(transaction.date);
-        // Check if the date is valid
-        if (isNaN(date.getTime())) {
-          return; // Skip invalid dates
-        }
-        const monthKey = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-        const current = monthlyMap.get(monthKey) || { income: 0, expenses: 0 };
-        
-        if (transaction.type === TransactionType.INCOME) {
-          current.income += transaction.amount;
-        } else {
-          current.expenses += transaction.amount;
-        }
-        
-        monthlyMap.set(monthKey, current);
-      } catch (error) {
-        // Skip transactions with invalid dates
-        console.warn('Invalid date in transaction:', transaction.date);
-      }
-    });
-
-    return Array.from(monthlyMap.entries())
-      .map(([month, data]) => ({
-        month,
-        income: data.income,
-        expenses: data.expenses,
-        net: data.income - data.expenses
-      }))
-      .sort((a, b) => new Date(a.month).getTime() - new Date(b.month).getTime());
   }
 
-  private getCategoryName(categoryId: string): string {
-    if (!this.categories || !Array.isArray(this.categories)) {
-      return 'Unknown Category';
+  private setChartInstance(chartType: string, chart: Chart): void {
+    switch (chartType) {
+      case 'expense': this.expenseChart = chart; break;
+      case 'income': this.incomeChart = chart; break;
+      case 'category': this.categoryChart = chart; break;
+      case 'trend': this.trendChart = chart; break;
+      case 'savings': this.savingsChart = chart; break;
+      case 'scatter': this.scatterChart = chart; break;
     }
-    
-    const category = this.categories.find(c => c._id === categoryId);
-    return category ? category.name : 'Unknown Category';
   }
 
-  private generateColors(count: number): string[] {
-    const colors = [
-      '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF',
-      '#FF9F40', '#FF6384', '#C9CBCF', '#4BC0C0', '#FF6384'
-    ];
-    
-    const result: string[] = [];
-    for (let i = 0; i < count; i++) {
-      result.push(colors[i % colors.length]);
+  private getChartOptionsForType(type: ChartType): ChartOptions {
+    switch (type) {
+      case 'line': return this.chartOptions;
+      case 'bar': return this.barChartOptions;
+      case 'pie':
+      case 'doughnut': return this.pieChartOptions;
+      case 'scatter': return this.scatterChartOptions;
+      default: return this.chartOptions;
     }
-    return result;
   }
 
+  // Chart interaction methods
   onChartClick(event: any): void {
-    // Handle chart click events if needed
     console.log('Chart clicked:', event);
   }
 
-  exportChartData(): void {
-    // Export chart data functionality
-    console.log('Exporting chart data...');
+  onChartHover(event: any): void {
+    // Handle chart hover events if needed
   }
+
+  // Export functionality
+  exportChartData(): void {
+    if (this.expenseChartData) {
+      this.chartService.exportChartDataToCSV(this.expenseChartData, 'expense-data.csv');
+    }
+  }
+
+  exportChartAsImage(chartType: string): void {
+    const canvasRef = this.getCanvasRef(chartType);
+    if (canvasRef) {
+      this.chartService.exportChartAsImage(canvasRef, `${chartType}-chart.png`);
+    }
+  }
+
+  // Chart refresh
+  refreshCharts(): void {
+    this.updateCharts();
+  }
+
+  // Period change
+  onPeriodChange(newPeriod: string): void {
+    this.period = newPeriod;
+    this.updateCharts();
+  }
+
 }

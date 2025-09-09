@@ -1,0 +1,514 @@
+.advanced-charts-container {
+  padding: 24px;
+  background-color: #f8f9fa;
+  min-height: 100vh;
+
+  // Charts Header
+  .charts-header {
+    background: white;
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 24px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    text-align: center;
+
+    h2 {
+      margin: 0 0 8px 0;
+      font-size: 28px;
+      font-weight: 700;
+      color: #2c3e50;
+    }
+
+    .subtitle {
+      margin: 0 0 20px 0;
+      color: #6c757d;
+      font-size: 16px;
+    }
+
+    .chart-controls {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 24px;
+      flex-wrap: wrap;
+
+      .control-group {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+
+        label {
+          font-weight: 500;
+          color: #495057;
+          margin: 0;
+          white-space: nowrap;
+        }
+
+        .form-select {
+          padding: 6px 12px;
+          border: 1px solid #ced4da;
+          border-radius: 6px;
+          font-size: 14px;
+          background-color: white;
+          min-width: 120px;
+
+          &:focus {
+            border-color: #007bff;
+            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+          }
+        }
+      }
+
+      .action-buttons {
+        display: flex;
+        gap: 12px;
+      }
+
+      .btn {
+        padding: 8px 16px;
+        border-radius: 6px;
+        font-size: 14px;
+        font-weight: 500;
+        transition: all 0.2s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+
+        &:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        &.btn-outline-primary {
+          color: #007bff;
+          border-color: #007bff;
+          background-color: transparent;
+
+          &:hover {
+            background-color: #007bff;
+            color: white;
+          }
+
+          &:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+          }
+        }
+      }
+    }
+  }
+
+  // Loading State
+  .loading-state {
+    background: white;
+    border-radius: 12px;
+    padding: 60px 24px;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+
+    .loading-content {
+      .spinner {
+        width: 40px;
+        height: 40px;
+        border: 4px solid #e9ecef;
+        border-top: 4px solid #007bff;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 16px;
+      }
+
+      p {
+        margin: 0;
+        color: #6c757d;
+        font-size: 16px;
+      }
+    }
+  }
+
+  // Advanced Charts Grid
+  .advanced-charts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+    gap: 24px;
+    margin-bottom: 24px;
+
+    @media (max-width: 768px) {
+      grid-template-columns: 1fr;
+      gap: 16px;
+    }
+  }
+
+  // Chart Card
+  .chart-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    transition: all 0.3s ease;
+
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    }
+
+    &.large {
+      grid-column: 1 / -1;
+    }
+
+    .chart-header {
+      padding: 20px 24px 16px;
+      border-bottom: 1px solid #e9ecef;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+
+      h3 {
+        margin: 0 0 8px 0;
+        font-size: 20px;
+        font-weight: 600;
+        color: #2c3e50;
+        flex: 1;
+      }
+
+      .chart-description {
+        margin: 0;
+        color: #6c757d;
+        font-size: 14px;
+        line-height: 1.4;
+        flex: 1;
+      }
+
+      .chart-actions {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+
+        .btn {
+          padding: 4px 8px;
+          font-size: 12px;
+          border-radius: 4px;
+          min-width: auto;
+        }
+      }
+    }
+
+    .chart-container {
+      position: relative;
+      height: 300px;
+      padding: 20px;
+      background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+
+      canvas {
+        width: 100% !important;
+        height: 100% !important;
+        cursor: pointer;
+        transition: opacity 0.2s ease;
+
+        &:hover {
+          opacity: 0.9;
+        }
+      }
+    }
+
+    // Indicators Summary
+    .indicators-summary {
+      padding: 20px;
+      background: #f8f9fa;
+      border-top: 1px solid #e9ecef;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+
+      .indicator-item {
+        background: white;
+        border-radius: 8px;
+        padding: 16px;
+        text-align: center;
+        border: 2px solid transparent;
+        transition: all 0.3s ease;
+
+        &:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .indicator-name {
+          font-size: 14px;
+          color: #6c757d;
+          margin-bottom: 8px;
+          font-weight: 500;
+        }
+
+        .indicator-value {
+          font-size: 24px;
+          font-weight: 700;
+          margin-bottom: 4px;
+
+          &.status-excellent { color: #28a745; }
+          &.status-good { color: #20c997; }
+          &.status-warning { color: #ffc107; }
+          &.status-critical { color: #dc3545; }
+        }
+
+        .indicator-target {
+          font-size: 12px;
+          color: #6c757d;
+          margin-bottom: 8px;
+        }
+
+        .indicator-trend {
+          font-size: 16px;
+
+          &.trend-up { color: #28a745; }
+          &.trend-down { color: #dc3545; }
+          &.trend-stable { color: #6c757d; }
+        }
+      }
+    }
+
+    // Heatmap Legend
+    .heatmap-legend {
+      padding: 16px 20px;
+      background: #f8f9fa;
+      border-top: 1px solid #e9ecef;
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      flex-wrap: wrap;
+
+      .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+
+        .legend-color {
+          width: 16px;
+          height: 16px;
+          border-radius: 3px;
+          border: 1px solid #dee2e6;
+        }
+
+        .legend-label {
+          font-size: 12px;
+          color: #6c757d;
+          font-weight: 500;
+        }
+      }
+    }
+
+    // Gauges Summary
+    .gauges-summary {
+      padding: 20px;
+      background: #f8f9fa;
+      border-top: 1px solid #e9ecef;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 16px;
+
+      .gauge-item {
+        background: white;
+        border-radius: 8px;
+        padding: 16px;
+        text-align: center;
+
+        .gauge-label {
+          font-size: 14px;
+          color: #6c757d;
+          margin-bottom: 8px;
+          font-weight: 500;
+        }
+
+        .gauge-value {
+          font-size: 20px;
+          font-weight: 700;
+        }
+      }
+    }
+
+    // Bubble Legend
+    .bubble-legend {
+      padding: 16px 20px;
+      background: #f8f9fa;
+      border-top: 1px solid #e9ecef;
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      flex-wrap: wrap;
+
+      .legend-item {
+        .legend-label {
+          font-size: 12px;
+          color: #6c757d;
+          font-weight: 500;
+        }
+      }
+    }
+  }
+
+  // No Data State
+  .no-data-state {
+    background: white;
+    border-radius: 12px;
+    padding: 60px 24px;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+
+    .no-data-content {
+      max-width: 400px;
+      margin: 0 auto;
+
+      i {
+        font-size: 48px;
+        color: #dee2e6;
+        margin-bottom: 16px;
+      }
+
+      h3 {
+        margin: 0 0 12px 0;
+        font-size: 20px;
+        font-weight: 600;
+        color: #6c757d;
+      }
+
+      p {
+        margin: 0 0 24px 0;
+        color: #6c757d;
+        line-height: 1.5;
+      }
+
+      .btn {
+        padding: 12px 24px;
+        border-radius: 8px;
+        font-weight: 500;
+        transition: all 0.2s ease;
+
+        &:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+      }
+    }
+  }
+
+  // Responsive Design
+  @media (max-width: 1200px) {
+    .advanced-charts-grid {
+      grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    }
+  }
+
+  @media (max-width: 768px) {
+    padding: 16px;
+
+    .charts-header {
+      padding: 20px 16px;
+      margin-bottom: 16px;
+
+      h2 {
+        font-size: 24px;
+      }
+
+      .subtitle {
+        font-size: 14px;
+      }
+
+      .chart-controls {
+        flex-direction: column;
+        gap: 16px;
+
+        .control-group {
+          width: 100%;
+          justify-content: center;
+        }
+      }
+    }
+
+    .advanced-charts-grid {
+      gap: 16px;
+    }
+
+    .chart-card {
+      .chart-header {
+        padding: 16px 20px 12px;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+
+        h3 {
+          font-size: 18px;
+        }
+      }
+
+      .chart-container {
+        height: 250px;
+        padding: 16px;
+      }
+
+      .indicators-summary {
+        grid-template-columns: 1fr;
+        gap: 12px;
+        padding: 16px;
+      }
+
+      .gauges-summary {
+        grid-template-columns: 1fr;
+        gap: 12px;
+        padding: 16px;
+      }
+    }
+  }
+
+  @media (max-width: 480px) {
+    .advanced-charts-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .chart-card {
+      .chart-container {
+        height: 200px;
+      }
+    }
+  }
+}
+
+// Spinner Animation
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+// Button Styles
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &.btn-primary {
+    background-color: #007bff;
+    color: white;
+
+    &:hover {
+      background-color: #0056b3;
+    }
+  }
+
+  &.btn-outline-secondary {
+    background-color: transparent;
+    color: #6c757d;
+    border: 1px solid #6c757d;
+
+    &:hover {
+      background-color: #6c757d;
+      color: white;
+    }
+  }
+}
