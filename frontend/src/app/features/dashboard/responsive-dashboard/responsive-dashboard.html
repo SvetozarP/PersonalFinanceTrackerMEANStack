@@ -1,0 +1,273 @@
+<app-responsive-layout
+  [navigationItems]="navigationItems"
+  [userInfo]="userInfo()"
+  [headerTitle]="'Financial Dashboard'"
+  [showSidebar]="true"
+  [showHeader]="true"
+  [showFooter]="false"
+  (sidebarToggle)="onSidebarToggle($event)"
+  (navigationClick)="onNavigationClick($event)"
+  (logout)="onLogout()"
+>
+  <!-- Loading State -->
+  <div *ngIf="isLoading" class="loading-container">
+    <app-loading-spinner [size]="'large'" [message]="'Loading dashboard...'"></app-loading-spinner>
+  </div>
+
+  <!-- Error State -->
+  <div *ngIf="error && !isLoading" class="error-container">
+    <div class="error-message">
+      <i class="fas fa-exclamation-triangle"></i>
+      <span>{{ error }}</span>
+      <button class="btn btn-primary" (click)="refreshDashboard()">
+        <i class="fas fa-redo"></i>
+        Retry
+      </button>
+    </div>
+  </div>
+
+  <!-- Dashboard Content -->
+  <div *ngIf="isDataLoaded" class="dashboard-content">
+    <!-- Key Metrics Section -->
+    <section class="metrics-section">
+      <div class="section-header">
+        <h2>Financial Overview</h2>
+        <button class="btn btn-secondary" (click)="refreshDashboard()" [disabled]="isLoading">
+          <i class="fas fa-redo"></i>
+          Refresh
+        </button>
+      </div>
+      
+      <div class="metrics-grid">
+        <!-- Total Balance -->
+        <div class="metric-card balance">
+          <div class="metric-icon">
+            <i class="fas fa-wallet"></i>
+          </div>
+          <div class="metric-content">
+            <div class="metric-label">Total Balance</div>
+            <div class="metric-value">{{ getTotalBalance() | currency }}</div>
+            <div class="metric-change positive">
+              <i class="fas fa-arrow-up"></i>
+              +{{ getSavingsRate() | number:'1.1-1' }}%
+            </div>
+          </div>
+        </div>
+
+        <!-- Total Income -->
+        <div class="metric-card income">
+          <div class="metric-icon">
+            <i class="fas fa-arrow-down"></i>
+          </div>
+          <div class="metric-content">
+            <div class="metric-label">Total Income</div>
+            <div class="metric-value">{{ getTotalIncome() | currency }}</div>
+            <div class="metric-period">This Month</div>
+          </div>
+        </div>
+
+        <!-- Total Expenses -->
+        <div class="metric-card expenses">
+          <div class="metric-icon">
+            <i class="fas fa-arrow-up"></i>
+          </div>
+          <div class="metric-content">
+            <div class="metric-label">Total Expenses</div>
+            <div class="metric-value">{{ getTotalExpenses() | currency }}</div>
+            <div class="metric-period">This Month</div>
+          </div>
+        </div>
+
+        <!-- Net Worth -->
+        <div class="metric-card networth">
+          <div class="metric-icon">
+            <i class="fas fa-chart-line"></i>
+          </div>
+          <div class="metric-content">
+            <div class="metric-label">Net Worth</div>
+            <div class="metric-value">{{ getNetWorth() | currency }}</div>
+            <div class="metric-period">Current</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Charts Section -->
+    <section class="charts-section">
+      <div class="section-header">
+        <h2>Financial Trends</h2>
+        <div class="chart-controls">
+          <button class="btn btn-sm btn-secondary" (click)="refreshDashboard()" [disabled]="isLoading">
+            <i class="fas fa-redo"></i>
+            Refresh All
+          </button>
+        </div>
+      </div>
+
+      <div class="charts-grid">
+        <!-- Spending Trend Chart -->
+        <div class="chart-card">
+          <div class="chart-header">
+            <h3>Spending Trend</h3>
+            <div class="chart-actions">
+              <button class="btn btn-sm btn-secondary" (click)="refreshDashboard()" [disabled]="isLoading">
+                <i class="fas fa-redo"></i>
+                Refresh
+              </button>
+            </div>
+          </div>
+          <div class="chart-content">
+            <div *ngIf="isLoading" class="chart-loading">
+              <app-loading-spinner [size]="'medium'" [message]="'Loading chart...'"></app-loading-spinner>
+            </div>
+            <div *ngIf="!isLoading && spendingChartData && spendingChartData.length > 0" class="chart-container">
+              <div class="chart-placeholder">
+                <i class="fas fa-chart-area"></i>
+                <p>Spending trend chart</p>
+              </div>
+            </div>
+            <div *ngIf="!isLoading && (!spendingChartData || spendingChartData.length === 0)" class="chart-empty">
+              <i class="fas fa-chart-area"></i>
+              <p>No spending data available</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Income Trend Chart -->
+        <div class="chart-card">
+          <div class="chart-header">
+            <h3>Income Trend</h3>
+            <div class="chart-actions">
+              <button class="btn btn-sm btn-secondary" (click)="refreshDashboard()" [disabled]="isLoading">
+                <i class="fas fa-redo"></i>
+                Refresh
+              </button>
+            </div>
+          </div>
+          <div class="chart-content">
+            <div *ngIf="isLoading" class="chart-loading">
+              <app-loading-spinner [size]="'medium'" [message]="'Loading chart...'"></app-loading-spinner>
+            </div>
+            <div *ngIf="!isLoading && incomeChartData && incomeChartData.length > 0" class="chart-container">
+              <div class="chart-placeholder">
+                <i class="fas fa-chart-line"></i>
+                <p>Income trend chart</p>
+              </div>
+            </div>
+            <div *ngIf="!isLoading && (!incomeChartData || incomeChartData.length === 0)" class="chart-empty">
+              <i class="fas fa-chart-line"></i>
+              <p>No income data available</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Category Spending Chart -->
+        <div class="chart-card full-width">
+          <div class="chart-header">
+            <h3>Spending by Category</h3>
+            <div class="chart-actions">
+              <button class="btn btn-sm btn-secondary" (click)="refreshCategoryStats()" [disabled]="isCategoryStatsLoading()">
+                <i class="fas fa-redo"></i>
+                Refresh
+              </button>
+            </div>
+          </div>
+          <div class="chart-content">
+            <div *ngIf="isCategoryStatsLoading()" class="chart-loading">
+              <app-loading-spinner [size]="'medium'" [message]="'Loading category data...'"></app-loading-spinner>
+            </div>
+            <div *ngIf="!isCategoryStatsLoading() && categoryChartData && categoryChartData.length > 0" class="chart-container">
+              <div class="chart-placeholder">
+                <i class="fas fa-chart-pie"></i>
+                <p>Category spending chart</p>
+              </div>
+            </div>
+            <div *ngIf="!isCategoryStatsLoading() && (!categoryChartData || categoryChartData.length === 0)" class="chart-empty">
+              <i class="fas fa-chart-pie"></i>
+              <p>No category data available</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Recent Transactions Section -->
+    <section class="recent-transactions-section">
+      <div class="section-header">
+        <h2>Recent Transactions</h2>
+        <div class="section-actions">
+          <button class="btn btn-sm btn-secondary" (click)="refreshTransactions()" [disabled]="isRecentTransactionsLoading()">
+            <i class="fas fa-redo"></i>
+            Refresh
+          </button>
+          <button class="btn btn-sm btn-primary" routerLink="/financial/transactions">
+            View All
+          </button>
+        </div>
+      </div>
+      
+      <div class="transactions-content">
+        <div *ngIf="isRecentTransactionsLoading()" class="transactions-loading">
+          <app-loading-spinner [size]="'medium'" [message]="'Loading transactions...'"></app-loading-spinner>
+        </div>
+        
+        <div *ngIf="!isRecentTransactionsLoading() && recentTransactions && recentTransactions.length > 0" class="transactions-list">
+          <div *ngFor="let transaction of recentTransactions" class="transaction-item">
+            <div class="transaction-icon">
+              <i class="fas fa-credit-card"></i>
+            </div>
+            <div class="transaction-details">
+              <div class="transaction-title">{{ transaction.title }}</div>
+              <div class="transaction-category">{{ transaction.categoryId ? getCategoryName(transaction.categoryId) : 'Unknown' }}</div>
+              <div class="transaction-date">{{ transaction.date | date:'shortDate' }}</div>
+            </div>
+            <div class="transaction-amount" [class.negative]="transaction.type === 'expense'" [class.positive]="transaction.type === 'income'">
+              {{ transaction.amount | currency }}
+            </div>
+          </div>
+        </div>
+        
+        <div *ngIf="!isRecentTransactionsLoading() && (!recentTransactions || recentTransactions.length === 0)" class="transactions-empty">
+          <i class="fas fa-receipt"></i>
+          <p>No recent transactions</p>
+          <button class="btn btn-primary" routerLink="/financial/transactions/new">
+            Add First Transaction
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Quick Actions Section -->
+    <section class="quick-actions-section">
+      <div class="section-header">
+        <h2>Quick Actions</h2>
+      </div>
+      <div class="actions-grid">
+        <button class="action-card" routerLink="/financial/transactions/new">
+          <div class="action-icon">
+            <i class="fas fa-plus"></i>
+          </div>
+          <div class="action-label">New Transaction</div>
+        </button>
+        <button class="action-card" routerLink="/financial/categories/new">
+          <div class="action-icon">
+            <i class="fas fa-tags"></i>
+          </div>
+          <div class="action-label">New Category</div>
+        </button>
+        <button class="action-card" routerLink="/financial/reports">
+          <div class="action-icon">
+            <i class="fas fa-chart-bar"></i>
+          </div>
+          <div class="action-label">View Reports</div>
+        </button>
+        <button class="action-card" routerLink="/financial/budgets">
+          <div class="action-icon">
+            <i class="fas fa-piggy-bank"></i>
+          </div>
+          <div class="action-label">Manage Budgets</div>
+        </button>
+      </div>
+    </section>
+  </div>
+</app-responsive-layout>

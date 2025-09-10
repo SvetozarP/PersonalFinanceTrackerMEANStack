@@ -1,0 +1,160 @@
+<div class="responsive-layout" [class.mobile]="isMobile()" [class.tablet]="isTablet()" [class.desktop]="isDesktop()">
+  <!-- Mobile Overlay -->
+  <div 
+    *ngIf="shouldShowMobileOverlay" 
+    class="mobile-overlay"
+    (click)="closeSidebar()"
+    [@fadeInOut]
+  ></div>
+
+  <!-- Sidebar -->
+  <aside 
+    *ngIf="showSidebar" 
+    [class]="sidebarClasses"
+    [@slideInOut]
+  >
+    <div class="sidebar-header">
+      <div class="sidebar-brand">
+        <i class="fas fa-wallet"></i>
+        <span *ngIf="!sidebarCollapsed || isMobile()" class="brand-text">Finance Tracker</span>
+      </div>
+      <button 
+        *ngIf="isMobile()" 
+        class="sidebar-close"
+        (click)="closeSidebar()"
+        aria-label="Close sidebar"
+      >
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <nav class="sidebar-nav">
+      <ul class="nav-list">
+        <li 
+          *ngFor="let item of navigationItems" 
+          class="nav-item"
+          [class.nav-item-active]="isActiveRoute(item.route)"
+        >
+          <a 
+            [routerLink]="item.route"
+            [routerLinkActive]="'active'"
+            class="nav-link"
+            (click)="onNavigationClick(item)"
+            [title]="sidebarCollapsed && isDesktop() ? item.label : ''"
+          >
+            <i [class]="item.icon" class="nav-icon"></i>
+            <span *ngIf="!sidebarCollapsed || isMobile()" class="nav-label">{{ item.label }}</span>
+            <span 
+              *ngIf="item.badge && (!sidebarCollapsed || isMobile())" 
+              class="nav-badge"
+            >
+              {{ item.badge }}
+            </span>
+          </a>
+        </li>
+      </ul>
+    </nav>
+
+    <div class="sidebar-footer" *ngIf="!sidebarCollapsed || isMobile()">
+      <div class="user-info" *ngIf="userInfo">
+        <div class="user-avatar">
+          <img 
+            *ngIf="userInfo.avatar" 
+            [src]="userInfo.avatar" 
+            [alt]="userInfo.name"
+            class="avatar-img"
+          >
+          <i *ngIf="!userInfo.avatar" class="fas fa-user avatar-placeholder"></i>
+        </div>
+        <div class="user-details">
+          <div class="user-name">{{ userInfo.name }}</div>
+          <div class="user-email">{{ userInfo.email }}</div>
+        </div>
+      </div>
+      <button class="logout-btn" (click)="onLogout()">
+        <i class="fas fa-sign-out-alt"></i>
+        <span>Logout</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- Main Content Area -->
+  <main [class]="mainContentClasses">
+    <!-- Header -->
+    <header *ngIf="showHeader" class="main-header">
+      <div class="header-left">
+        <button 
+          *ngIf="showSidebar" 
+          class="sidebar-toggle"
+          (click)="toggleSidebar()"
+          [attr.aria-label]="sidebarOpen() ? 'Close sidebar' : 'Open sidebar'"
+        >
+          <i class="fas fa-bars"></i>
+        </button>
+        <h1 class="header-title">{{ headerTitle }}</h1>
+      </div>
+      
+      <div class="header-right">
+        <!-- Search Bar (Desktop) -->
+        <div class="search-container" *ngIf="isDesktop()">
+          <div class="search-input-wrapper">
+            <i class="fas fa-search search-icon"></i>
+            <input 
+              type="text" 
+              placeholder="Search transactions, categories..."
+              class="search-input"
+            >
+          </div>
+        </div>
+
+        <!-- Notifications -->
+        <button class="notification-btn" [class.has-notifications]="hasNotifications()">
+          <i class="fas fa-bell"></i>
+          <span *ngIf="hasNotifications()" class="notification-badge">3</span>
+        </button>
+
+        <!-- User Menu (Desktop) -->
+        <div class="user-menu" *ngIf="isDesktop() && userInfo">
+          <div class="user-menu-trigger">
+            <img 
+              *ngIf="userInfo.avatar" 
+              [src]="userInfo.avatar" 
+              [alt]="userInfo.name"
+              class="user-avatar-small"
+            >
+            <i *ngIf="!userInfo.avatar" class="fas fa-user user-avatar-small"></i>
+            <span class="user-name-small">{{ userInfo.name }}</span>
+            <i class="fas fa-chevron-down"></i>
+          </div>
+        </div>
+
+        <!-- Mobile Menu Button -->
+        <button 
+          *ngIf="isMobile()" 
+          class="mobile-menu-btn"
+          (click)="toggleSidebar()"
+          aria-label="Open menu"
+        >
+          <i class="fas fa-bars"></i>
+        </button>
+      </div>
+    </header>
+
+    <!-- Page Content -->
+    <div class="page-content">
+      <router-outlet></router-outlet>
+    </div>
+
+    <!-- Footer -->
+    <footer *ngIf="showFooter" class="main-footer">
+      <div class="footer-content">
+        <p>&copy; 2024 Finance Tracker. All rights reserved.</p>
+        <div class="footer-links">
+          <a href="#" class="footer-link">Privacy Policy</a>
+          <a href="#" class="footer-link">Terms of Service</a>
+          <a href="#" class="footer-link">Support</a>
+        </div>
+      </div>
+    </footer>
+  </main>
+</div>

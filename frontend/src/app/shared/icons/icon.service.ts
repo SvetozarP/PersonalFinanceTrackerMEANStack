@@ -89,3 +89,4 @@ export class IconService {
     return this.iconMap.has(iconName);
   }
 }
+

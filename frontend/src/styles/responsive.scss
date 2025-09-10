@@ -1,0 +1,329 @@
+// Responsive Design System
+// Mobile-first approach with consistent breakpoints
+
+// Breakpoint definitions
+$breakpoints: (
+  xs: 0,
+  sm: 576px,
+  md: 768px,
+  lg: 992px,
+  xl: 1200px,
+  xxl: 1400px
+);
+
+// Media query mixins
+@mixin respond-to($breakpoint) {
+  @if map-has-key($breakpoints, $breakpoint) {
+    $value: map-get($breakpoints, $breakpoint);
+    @if $value == 0 {
+      @content;
+    } @else {
+      @media (min-width: $value) {
+        @content;
+      }
+    }
+  } @else {
+    @warn "Breakpoint #{$breakpoint} not found in $breakpoints map.";
+  }
+}
+
+@mixin respond-below($breakpoint) {
+  @if map-has-key($breakpoints, $breakpoint) {
+    $value: map-get($breakpoints, $breakpoint);
+    @media (max-width: $value - 1px) {
+      @content;
+    }
+  } @else {
+    @warn "Breakpoint #{$breakpoint} not found in $breakpoints map.";
+  }
+}
+
+@mixin respond-between($min-breakpoint, $max-breakpoint) {
+  @if map-has-key($breakpoints, $min-breakpoint) and map-has-key($breakpoints, $max-breakpoint) {
+    $min-value: map-get($breakpoints, $min-breakpoint);
+    $max-value: map-get($breakpoints, $max-breakpoint);
+    @media (min-width: $min-value) and (max-width: $max-value - 1px) {
+      @content;
+    }
+  } @else {
+    @warn "One or both breakpoints not found in $breakpoints map.";
+  }
+}
+
+// Container mixins
+@mixin container {
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1rem;
+  padding-right: 1rem;
+
+  @include respond-to(sm) {
+    max-width: 540px;
+  }
+
+  @include respond-to(md) {
+    max-width: 720px;
+  }
+
+  @include respond-to(lg) {
+    max-width: 960px;
+  }
+
+  @include respond-to(xl) {
+    max-width: 1140px;
+  }
+
+  @include respond-to(xxl) {
+    max-width: 1320px;
+  }
+}
+
+@mixin container-fluid {
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+// Grid system
+@mixin make-grid-columns($columns: 12, $gutter: 1.5rem) {
+  %grid-column {
+    position: relative;
+    width: 100%;
+    padding-right: $gutter / 2;
+    padding-left: $gutter / 2;
+  }
+
+  @for $i from 1 through $columns {
+    .col-#{$i} {
+      @extend %grid-column;
+      flex: 0 0 percentage($i / $columns);
+      max-width: percentage($i / $columns);
+    }
+  }
+
+  .col {
+    @extend %grid-column;
+    flex-basis: 0;
+    flex-grow: 1;
+    max-width: 100%;
+  }
+
+  .col-auto {
+    @extend %grid-column;
+    flex: 0 0 auto;
+    width: auto;
+    max-width: none;
+  }
+}
+
+// Responsive grid columns
+@mixin make-responsive-grid-columns($columns: 12, $gutter: 1.5rem) {
+  @each $breakpoint, $value in $breakpoints {
+    @if $value > 0 {
+      @include respond-to($breakpoint) {
+        @for $i from 1 through $columns {
+          .col-#{$breakpoint}-#{$i} {
+            flex: 0 0 percentage($i / $columns);
+            max-width: percentage($i / $columns);
+          }
+        }
+      }
+    }
+  }
+}
+
+// Flexbox utilities
+@mixin flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@mixin flex-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+@mixin flex-column {
+  display: flex;
+  flex-direction: column;
+}
+
+@mixin flex-wrap {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+// Spacing utilities
+@mixin spacing-utilities {
+  $spacers: (
+    0: 0,
+    1: 0.25rem,
+    2: 0.5rem,
+    3: 0.75rem,
+    4: 1rem,
+    5: 1.25rem,
+    6: 1.5rem,
+    7: 1.75rem,
+    8: 2rem,
+    9: 2.25rem,
+    10: 2.5rem
+  );
+
+  @each $size, $value in $spacers {
+    .m-#{$size} { margin: $value !important; }
+    .mt-#{$size} { margin-top: $value !important; }
+    .mr-#{$size} { margin-right: $value !important; }
+    .mb-#{$size} { margin-bottom: $value !important; }
+    .ml-#{$size} { margin-left: $value !important; }
+    .mx-#{$size} { margin-left: $value !important; margin-right: $value !important; }
+    .my-#{$size} { margin-top: $value !important; margin-bottom: $value !important; }
+    
+    .p-#{$size} { padding: $value !important; }
+    .pt-#{$size} { padding-top: $value !important; }
+    .pr-#{$size} { padding-right: $value !important; }
+    .pb-#{$size} { padding-bottom: $value !important; }
+    .pl-#{$size} { padding-left: $value !important; }
+    .px-#{$size} { padding-left: $value !important; padding-right: $value !important; }
+    .py-#{$size} { padding-top: $value !important; padding-bottom: $value !important; }
+  }
+}
+
+// Typography utilities
+@mixin typography-utilities {
+  .text-xs { font-size: 0.75rem; line-height: 1rem; }
+  .text-sm { font-size: 0.875rem; line-height: 1.25rem; }
+  .text-base { font-size: 1rem; line-height: 1.5rem; }
+  .text-lg { font-size: 1.125rem; line-height: 1.75rem; }
+  .text-xl { font-size: 1.25rem; line-height: 1.75rem; }
+  .text-2xl { font-size: 1.5rem; line-height: 2rem; }
+  .text-3xl { font-size: 1.875rem; line-height: 2.25rem; }
+  .text-4xl { font-size: 2.25rem; line-height: 2.5rem; }
+  .text-5xl { font-size: 3rem; line-height: 1; }
+  .text-6xl { font-size: 3.75rem; line-height: 1; }
+
+  .font-thin { font-weight: 100; }
+  .font-light { font-weight: 300; }
+  .font-normal { font-weight: 400; }
+  .font-medium { font-weight: 500; }
+  .font-semibold { font-weight: 600; }
+  .font-bold { font-weight: 700; }
+  .font-extrabold { font-weight: 800; }
+  .font-black { font-weight: 900; }
+
+  .text-left { text-align: left; }
+  .text-center { text-align: center; }
+  .text-right { text-align: right; }
+  .text-justify { text-align: justify; }
+}
+
+// Display utilities
+@mixin display-utilities {
+  .d-none { display: none !important; }
+  .d-inline { display: inline !important; }
+  .d-inline-block { display: inline-block !important; }
+  .d-block { display: block !important; }
+  .d-table { display: table !important; }
+  .d-table-row { display: table-row !important; }
+  .d-table-cell { display: table-cell !important; }
+  .d-flex { display: flex !important; }
+  .d-inline-flex { display: inline-flex !important; }
+  .d-grid { display: grid !important; }
+
+  // Responsive display utilities
+  @each $breakpoint, $value in $breakpoints {
+    @if $value > 0 {
+      @include respond-to($breakpoint) {
+        .d-#{$breakpoint}-none { display: none !important; }
+        .d-#{$breakpoint}-inline { display: inline !important; }
+        .d-#{$breakpoint}-inline-block { display: inline-block !important; }
+        .d-#{$breakpoint}-block { display: block !important; }
+        .d-#{$breakpoint}-table { display: table !important; }
+        .d-#{$breakpoint}-table-row { display: table-row !important; }
+        .d-#{$breakpoint}-table-cell { display: table-cell !important; }
+        .d-#{$breakpoint}-flex { display: flex !important; }
+        .d-#{$breakpoint}-inline-flex { display: inline-flex !important; }
+        .d-#{$breakpoint}-grid { display: grid !important; }
+      }
+    }
+  }
+}
+
+// Position utilities
+@mixin position-utilities {
+  .position-static { position: static !important; }
+  .position-relative { position: relative !important; }
+  .position-absolute { position: absolute !important; }
+  .position-fixed { position: fixed !important; }
+  .position-sticky { position: sticky !important; }
+
+  .top-0 { top: 0 !important; }
+  .right-0 { right: 0 !important; }
+  .bottom-0 { bottom: 0 !important; }
+  .left-0 { left: 0 !important; }
+}
+
+// Width and height utilities
+@mixin sizing-utilities {
+  .w-25 { width: 25% !important; }
+  .w-50 { width: 50% !important; }
+  .w-75 { width: 75% !important; }
+  .w-100 { width: 100% !important; }
+  .w-auto { width: auto !important; }
+
+  .h-25 { height: 25% !important; }
+  .h-50 { height: 50% !important; }
+  .h-75 { height: 75% !important; }
+  .h-100 { height: 100% !important; }
+  .h-auto { height: auto !important; }
+
+  .mw-100 { max-width: 100% !important; }
+  .mh-100 { max-height: 100% !important; }
+
+  .min-vh-100 { min-height: 100vh !important; }
+  .min-vw-100 { min-width: 100vw !important; }
+  .vh-100 { height: 100vh !important; }
+  .vw-100 { width: 100vw !important; }
+}
+
+// Border utilities
+@mixin border-utilities {
+  .border { border: 1px solid #dee2e6 !important; }
+  .border-0 { border: 0 !important; }
+  .border-top { border-top: 1px solid #dee2e6 !important; }
+  .border-right { border-right: 1px solid #dee2e6 !important; }
+  .border-bottom { border-bottom: 1px solid #dee2e6 !important; }
+  .border-left { border-left: 1px solid #dee2e6 !important; }
+
+  .rounded { border-radius: 0.25rem !important; }
+  .rounded-0 { border-radius: 0 !important; }
+  .rounded-sm { border-radius: 0.125rem !important; }
+  .rounded-lg { border-radius: 0.5rem !important; }
+  .rounded-xl { border-radius: 0.75rem !important; }
+  .rounded-2xl { border-radius: 1rem !important; }
+  .rounded-full { border-radius: 50% !important; }
+}
+
+// Shadow utilities
+@mixin shadow-utilities {
+  .shadow-none { box-shadow: none !important; }
+  .shadow-sm { box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05) !important; }
+  .shadow { box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06) !important; }
+  .shadow-md { box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important; }
+  .shadow-lg { box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important; }
+  .shadow-xl { box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important; }
+  .shadow-2xl { box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important; }
+}
+
+// Generate all utility classes
+@include spacing-utilities;
+@include typography-utilities;
+@include display-utilities;
+@include position-utilities;
+@include sizing-utilities;
+@include border-utilities;
+@include shadow-utilities;

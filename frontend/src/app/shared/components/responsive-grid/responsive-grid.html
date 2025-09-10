@@ -1,0 +1,12 @@
+<div 
+  [class]="getGridClasses()"
+  [style]="getGridStyle()"
+>
+  <div
+    *ngFor="let item of items; trackBy: trackByItemId"
+    [class]="getItemClasses(item)"
+    [style]="getItemStyle(item)"
+  >
+    <ng-container [ngTemplateOutlet]="item.content"></ng-container>
+  </div>
+</div>

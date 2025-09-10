@@ -1,0 +1,201 @@
+<app-responsive-layout
+  [navigationItems]="navigationItems"
+  [userInfo]="userInfo()"
+  [headerTitle]="'Responsive Dashboard Demo'"
+  [showSidebar]="true"
+  [showHeader]="true"
+  [showFooter]="false"
+  (sidebarToggle)="onSidebarToggle($event)"
+  (navigationClick)="onNavigationClick($event)"
+  (logout)="onLogout()"
+>
+  <!-- Responsive Info Section -->
+  <section class="responsive-info-section">
+    <div class="info-card">
+      <div class="info-header">
+        <h1>Responsive Dashboard Demo</h1>
+        <p class="subtitle">Experience the power of responsive design across all devices</p>
+      </div>
+      
+      <div class="screen-info">
+        <div class="info-item">
+          <i class="fas fa-desktop"></i>
+          <span>Current Screen: {{ getScreenInfo() }}</span>
+        </div>
+        <div class="info-item">
+          <i class="fas fa-expand-arrows-alt"></i>
+          <span>Resize your browser to see the responsive behavior</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Charts Section -->
+  <section class="charts-section">
+    <h2>Responsive Charts</h2>
+    <p class="section-description">Charts that adapt to different screen sizes and orientations</p>
+    
+    <div class="charts-grid">
+      <!-- Spending Chart -->
+      <div class="chart-card">
+        <app-responsive-chart
+          [data]="spendingData"
+          [config]="spendingChartConfig"
+          title="Spending by Category"
+          subtitle="Monthly expense breakdown"
+          className="spending-chart"
+        ></app-responsive-chart>
+      </div>
+
+      <!-- Income Chart -->
+      <div class="chart-card">
+        <app-responsive-chart
+          [data]="incomeData"
+          [config]="incomeChartConfig"
+          title="Income Sources"
+          subtitle="Revenue streams analysis"
+          className="income-chart"
+        ></app-responsive-chart>
+      </div>
+
+      <!-- Trend Chart -->
+      <div class="chart-card full-width">
+        <app-responsive-chart
+          [data]="trendData"
+          [config]="trendChartConfig"
+          title="Monthly Trends"
+          subtitle="6-month financial trend analysis"
+          className="trend-chart"
+        ></app-responsive-chart>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features Grid -->
+  <section class="features-section">
+    <h2>Responsive Features</h2>
+    <p class="section-description">Key responsive design features implemented in this dashboard</p>
+    
+    <div class="features-grid">
+      <div 
+        *ngFor="let feature of getResponsiveFeatures()" 
+        class="feature-card"
+      >
+        <div class="feature-icon">
+          <i [class]="feature.icon"></i>
+        </div>
+        <div class="feature-content">
+          <h3>{{ feature.title }}</h3>
+          <p>{{ feature.description }}</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Responsive Grid Demo -->
+  <section class="grid-demo-section">
+    <h2>Responsive Grid System</h2>
+    <p class="section-description">Flexible grid that adapts to different screen sizes</p>
+    
+    <div class="grid-demo">
+      <div class="grid-item" [class]="'item-' + currentBreakpoint()">
+        <div class="grid-content">
+          <h4>Grid Item 1</h4>
+          <p>This item adapts to screen size: {{ currentBreakpoint().toUpperCase() }}</p>
+        </div>
+      </div>
+      <div class="grid-item" [class]="'item-' + currentBreakpoint()">
+        <div class="grid-content">
+          <h4>Grid Item 2</h4>
+          <p>Responsive behavior based on breakpoints</p>
+        </div>
+      </div>
+      <div class="grid-item" [class]="'item-' + currentBreakpoint()">
+        <div class="grid-content">
+          <h4>Grid Item 3</h4>
+          <p>Auto-adjusting layout system</p>
+        </div>
+      </div>
+      <div class="grid-item" [class]="'item-' + currentBreakpoint()">
+        <div class="grid-content">
+          <h4>Grid Item 4</h4>
+          <p>Mobile-first approach</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Breakpoint Information -->
+  <section class="breakpoint-info-section">
+    <h2>Breakpoint Information</h2>
+    <div class="breakpoint-cards">
+      <div class="breakpoint-card" [class.active]="currentBreakpoint() === 'xs'">
+        <div class="breakpoint-name">XS</div>
+        <div class="breakpoint-range">0 - 575px</div>
+        <div class="breakpoint-description">Mobile phones</div>
+      </div>
+      <div class="breakpoint-card" [class.active]="currentBreakpoint() === 'sm'">
+        <div class="breakpoint-name">SM</div>
+        <div class="breakpoint-range">576 - 767px</div>
+        <div class="breakpoint-description">Large phones</div>
+      </div>
+      <div class="breakpoint-card" [class.active]="currentBreakpoint() === 'md'">
+        <div class="breakpoint-name">MD</div>
+        <div class="breakpoint-range">768 - 991px</div>
+        <div class="breakpoint-description">Tablets</div>
+      </div>
+      <div class="breakpoint-card" [class.active]="currentBreakpoint() === 'lg'">
+        <div class="breakpoint-name">LG</div>
+        <div class="breakpoint-range">992 - 1199px</div>
+        <div class="breakpoint-description">Small desktops</div>
+      </div>
+      <div class="breakpoint-card" [class.active]="currentBreakpoint() === 'xl'">
+        <div class="breakpoint-name">XL</div>
+        <div class="breakpoint-range">1200 - 1399px</div>
+        <div class="breakpoint-description">Desktops</div>
+      </div>
+      <div class="breakpoint-card" [class.active]="currentBreakpoint() === 'xxl'">
+        <div class="breakpoint-name">XXL</div>
+        <div class="breakpoint-range">1400px+</div>
+        <div class="breakpoint-description">Large desktops</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Testing Instructions -->
+  <section class="testing-section">
+    <h2>Testing Instructions</h2>
+    <div class="testing-card">
+      <div class="testing-steps">
+        <div class="step">
+          <div class="step-number">1</div>
+          <div class="step-content">
+            <h4>Resize Browser Window</h4>
+            <p>Drag the browser window edges to see how the layout adapts</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-number">2</div>
+          <div class="step-content">
+            <h4>Test Mobile View</h4>
+            <p>Use browser dev tools to simulate mobile devices</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-number">3</div>
+          <div class="step-content">
+            <h4>Rotate Device</h4>
+            <p>On mobile devices, rotate to test landscape/portrait modes</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-number">4</div>
+          <div class="step-content">
+            <h4>Test Touch Interactions</h4>
+            <p>Try swiping, tapping, and other touch gestures</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</app-responsive-layout>

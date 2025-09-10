@@ -13,6 +13,18 @@ export const routes: Routes = [
     title: 'Dashboard - Finance Tracker'
   },
   {
+    path: 'responsive-dashboard',
+    loadComponent: () => import('./features/dashboard/responsive-dashboard/responsive-dashboard').then(m => m.ResponsiveDashboardComponent),
+    canActivate: [AuthGuard],
+    title: 'Responsive Dashboard - Finance Tracker'
+  },
+  {
+    path: 'responsive-demo',
+    loadComponent: () => import('./features/dashboard/responsive-demo/responsive-demo').then(m => m.ResponsiveDemoComponent),
+    canActivate: [AuthGuard],
+    title: 'Responsive Demo - Finance Tracker'
+  },
+  {
     path: 'financial',
     loadChildren: () => import('./features/financial/financial.routes').then(m => m.FINANCIAL_ROUTES)
   },

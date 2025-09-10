@@ -1,0 +1,155 @@
+@import '../../../styles/responsive.scss';
+
+.responsive-grid {
+  display: grid;
+  width: 100%;
+  min-height: 0;
+
+  // Grid item base styles
+  .grid-item {
+    min-width: 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  // Auto-fit and auto-fill specific styles
+  &.grid-auto-fit,
+  &.grid-auto-fill {
+    .grid-item {
+      min-width: 0;
+    }
+  }
+
+  // Responsive breakpoint classes
+  &.grid-xs {
+    gap: 0.75rem;
+  }
+
+  &.grid-sm {
+    gap: 1rem;
+  }
+
+  &.grid-md {
+    gap: 1.25rem;
+  }
+
+  &.grid-lg {
+    gap: 1.5rem;
+  }
+
+  &.grid-xl {
+    gap: 1.5rem;
+  }
+
+  &.grid-xxl {
+    gap: 2rem;
+  }
+
+  // Item span classes for different breakpoints
+  @each $breakpoint, $value in (xs: 0, sm: 576px, md: 768px, lg: 992px, xl: 1200px, xxl: 1400px) {
+    @if $value > 0 {
+      @include respond-to($breakpoint) {
+        @for $i from 1 through 12 {
+          .item-#{$breakpoint}-#{$i} {
+            grid-column: span #{$i};
+          }
+        }
+      }
+    }
+  }
+
+  // Special grid layouts
+  &.grid-masonry {
+    grid-template-rows: masonry;
+  }
+
+  &.grid-dense {
+    grid-auto-flow: dense;
+  }
+
+  // Grid item animations
+  .grid-item {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+  }
+
+  // Loading state
+  &.grid-loading {
+    .grid-item {
+      opacity: 0.6;
+      pointer-events: none;
+    }
+  }
+
+  // Empty state
+  &.grid-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 200px;
+    color: #6b7280;
+    font-style: italic;
+  }
+}
+
+// Responsive grid utilities
+.grid-container {
+  @include container;
+}
+
+.grid-container-fluid {
+  @include container-fluid;
+}
+
+// Grid item utilities
+.grid-item-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.grid-item-stretch {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.grid-item-fill {
+  flex: 1;
+  min-height: 0;
+}
+
+// Print styles
+@media print {
+  .responsive-grid {
+    display: block !important;
+    
+    .grid-item {
+      break-inside: avoid;
+      margin-bottom: 1rem;
+    }
+  }
+}
+
+// High contrast mode
+@media (prefers-contrast: high) {
+  .responsive-grid {
+    .grid-item {
+      border: 1px solid #000;
+    }
+  }
+}
+
+// Reduced motion
+@media (prefers-reduced-motion: reduce) {
+  .responsive-grid {
+    .grid-item {
+      transition: none;
+    }
+  }
+}

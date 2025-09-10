@@ -1,0 +1,100 @@
+<div [class]="getChartClasses()">
+  <!-- Chart Header -->
+  <div *ngIf="title || subtitle" class="chart-header">
+    <h3 *ngIf="title" class="chart-title">{{ title }}</h3>
+    <p *ngIf="subtitle" class="chart-subtitle">{{ subtitle }}</p>
+  </div>
+
+  <!-- Chart Container -->
+  <div class="chart-wrapper">
+    <!-- Loading State -->
+    <div *ngIf="isLoading" class="chart-loading-state">
+      <div class="loading-spinner">
+        <div class="spinner"></div>
+      </div>
+      <p class="loading-message">Loading chart...</p>
+    </div>
+
+    <!-- Error State -->
+    <div *ngIf="hasError" class="chart-error-state">
+      <div class="error-icon">
+        <i class="fas fa-exclamation-triangle"></i>
+      </div>
+      <p class="error-message">{{ errorMessage }}</p>
+      <button class="retry-btn" (click)="initializeChart()">
+        <i class="fas fa-redo"></i>
+        Retry
+      </button>
+    </div>
+
+    <!-- Empty State -->
+    <div *ngIf="isEmpty && !isLoading && !hasError" class="chart-empty-state">
+      <div class="empty-icon">
+        <i class="fas fa-chart-{{ config.type }}"></i>
+      </div>
+      <p class="empty-message">{{ emptyMessage }}</p>
+    </div>
+
+    <!-- Chart Content -->
+    <div 
+      *ngIf="!isLoading && !hasError && !isEmpty" 
+      class="chart-content"
+      [style]="getChartContainerStyle()"
+    >
+      <!-- Chart Canvas/Container -->
+      <div 
+        #chartContainer
+        class="chart-container"
+        [style]="getChartStyle()"
+        (click)="onChartClick($event)"
+        (mouseover)="onChartHover($event)"
+      >
+        <!-- Placeholder for actual chart implementation -->
+        <div class="chart-placeholder">
+          <div class="chart-type-indicator">
+            <i class="fas fa-chart-{{ config.type }}"></i>
+          </div>
+          <div class="chart-info">
+            <h4>{{ config.type | titlecase }} Chart</h4>
+            <p>{{ data.length }} data points</p>
+            <div class="chart-stats" *ngIf="data.length > 0">
+              <span class="stat">
+                <strong>Total:</strong> {{ getTotalValue() | number:'1.2-2' }}
+              </span>
+              <span class="stat">
+                <strong>Max:</strong> {{ getMaxValue() | number:'1.2-2' }}
+              </span>
+              <span class="stat">
+                <strong>Min:</strong> {{ getMinValue() | number:'1.2-2' }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Chart Legend -->
+      <div *ngIf="config.showLegend && data.length > 0" class="chart-legend" [class]="'legend-' + getLegendPosition()">
+        <div class="legend-title">Legend</div>
+        <div class="legend-items">
+          <div 
+            *ngFor="let item of getProcessedData(); let i = index" 
+            class="legend-item"
+            [style.color]="item.color"
+          >
+            <div class="legend-color" [style.background-color]="item.color"></div>
+            <span class="legend-label">{{ item.label }}</span>
+            <span class="legend-value">{{ item.value | number:'1.2-2' }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Chart Footer -->
+  <div *ngIf="config.showTooltips && data.length > 0" class="chart-footer">
+    <div class="chart-tooltip-info">
+      <i class="fas fa-info-circle"></i>
+      <span>Hover over chart elements for details</span>
+    </div>
+  </div>
+</div>
