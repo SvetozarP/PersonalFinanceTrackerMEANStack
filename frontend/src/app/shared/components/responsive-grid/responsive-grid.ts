@@ -183,3 +183,4 @@ export class ResponsiveGridComponent implements OnInit, OnDestroy {
     return item.id;
   }
 }
+
