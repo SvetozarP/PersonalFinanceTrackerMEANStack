@@ -1,6 +1,6 @@
 <div class="advanced-filter-container" [class.compact]="compact">
   <!-- Filter Toggle Button -->
-  <div class="filter-toggle" *ngIf="!isExpanded()">
+  <div class="filter-toggle" *ngIf="!isExpanded">
     <button 
       class="btn btn-outline-primary filter-toggle-btn"
       (click)="toggleExpanded()"
@@ -8,7 +8,7 @@
     >
       <i class="fas fa-filter"></i>
       <span *ngIf="!compact">Advanced Filters</span>
-      <span *ngIf="hasActiveFilters()" class="filter-count">({{ activeFilterCount() }})</span>
+      <span *ngIf="hasActiveFilters()" class="filter-count">({{ activeFilterCount()() }})</span>
     </button>
     
     <!-- Quick Filter Summary -->
@@ -28,7 +28,7 @@
       <div class="header-left">
         <h3>Advanced Filters</h3>
         <span class="filter-count" *ngIf="hasActiveFilters()">
-          {{ activeFilterCount() }} filter{{ activeFilterCount() !== 1 ? 's' : '' }} applied
+          {{ activeFilterCount()() }} filter{{ activeFilterCount()() !== 1 ? 's' : '' }} applied
         </span>
       </div>
       <div class="header-right">
@@ -47,7 +47,7 @@
             type="text"
             class="form-control search-input"
             placeholder="Search and filter..."
-            [value]="searchForm.get('searchQuery')?.value || ''"
+            formControlName="searchQuery"
             (input)="onSearchInput($event)"
             (focus)="onSearchFocus()"
             (blur)="onSearchBlur()"
@@ -107,8 +107,8 @@
             <div class="saved-filter-name">{{ savedFilter.name }}</div>
             <div class="saved-filter-meta">
               <span class="usage-count">{{ savedFilter.usageCount }} uses</span>
-              <span class="last-used" *ngIf="savedFilter.lastUsed">
-                Last used: {{ savedFilter.lastUsed | date:'short' }}
+              <span class="last-used" *ngIf="savedFilter.updatedAt">
+                Last used: {{ savedFilter.updatedAt | date:'short' }}
               </span>
             </div>
           </div>
@@ -182,7 +182,7 @@
 
               <div class="condition-operator">
                 <select class="form-control" formControlName="operator">
-                  <option *ngFor="let op of getOperatorsForField(condition.get('field')?.value)" [value]="op">
+                  <option *ngFor="let op of getOperatorsForField(condition.get('field')?.value || '')" [value]="op">
                     {{ op | titlecase }}
                   </option>
                 </select>
@@ -191,16 +191,16 @@
               <div class="condition-value">
                 <!-- Text input -->
                 <input 
-                  *ngIf="getConditionValueType(condition.get('field')?.value, condition.get('operator')?.value) === 'text'"
+                  *ngIf="getConditionValueType(condition.get('field')?.value || '', condition.get('operator')?.value || '') === 'text'"
                   type="text" 
                   class="form-control"
                   formControlName="value"
-                  [placeholder]="getFieldPlaceholder(condition.get('field')?.value)"
+                  [placeholder]="getFieldPlaceholder(condition.get('field')?.value || '')"
                 >
 
                 <!-- Number input -->
                 <input 
-                  *ngIf="getConditionValueType(condition.get('field')?.value, condition.get('operator')?.value) === 'number'"
+                  *ngIf="getConditionValueType(condition.get('field')?.value || '', condition.get('operator')?.value || '') === 'number'"
                   type="number" 
                   class="form-control"
                   formControlName="value"
@@ -209,7 +209,7 @@
 
                 <!-- Date input -->
                 <input 
-                  *ngIf="getConditionValueType(condition.get('field')?.value, condition.get('operator')?.value) === 'date'"
+                  *ngIf="getConditionValueType(condition.get('field')?.value || '', condition.get('operator')?.value || '') === 'date'"
                   type="date" 
                   class="form-control"
                   formControlName="value"
@@ -217,18 +217,18 @@
 
                 <!-- Select input -->
                 <select 
-                  *ngIf="getConditionValueType(condition.get('field')?.value, condition.get('operator')?.value) === 'select'"
+                  *ngIf="getConditionValueType(condition.get('field')?.value || '', condition.get('operator')?.value || '') === 'select'"
                   class="form-control"
                   formControlName="value">
                   <option value="">Select value...</option>
-                  <option *ngFor="let option of getFieldOptions(condition.get('field')?.value)" [value]="option.value">
+                  <option *ngFor="let option of getFieldOptions(condition.get('field')?.value || '')" [value]="option.value">
                     {{ option.label }}
                   </option>
                 </select>
 
                 <!-- Checkbox input -->
                 <input 
-                  *ngIf="getConditionValueType(condition.get('field')?.value, condition.get('operator')?.value) === 'checkbox'"
+                  *ngIf="getConditionValueType(condition.get('field')?.value || '', condition.get('operator')?.value || '') === 'checkbox'"
                   type="checkbox" 
                   class="form-check-input"
                   formControlName="value"
@@ -236,7 +236,7 @@
 
                 <!-- Second value for between operator -->
                 <input 
-                  *ngIf="shouldShowValue2(condition.get('operator')?.value)"
+                  *ngIf="shouldShowValue2(condition.get('operator')?.value || '')"
                   type="text" 
                   class="form-control condition-value2"
                   formControlName="value2"

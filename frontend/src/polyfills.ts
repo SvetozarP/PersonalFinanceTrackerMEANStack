@@ -19,10 +19,9 @@
  */
 
 /***************************************************************************************************
- * Zone JS is required by default for Angular itself.
+ * Zone JS is NOT required for Angular applications using zoneless change detection.
+ * This application uses zoneless change detection, so Zone.js is not imported here.
  */
-import 'zone.js';
-import 'zone.js/testing';
 
 /***************************************************************************************************
  * APPLICATION IMPORTS

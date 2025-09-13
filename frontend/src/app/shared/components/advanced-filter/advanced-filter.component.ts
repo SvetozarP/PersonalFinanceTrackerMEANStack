@@ -59,11 +59,16 @@ export class AdvancedFilterComponent implements OnInit, OnDestroy {
   public selectedSavedFilter = this._selectedSavedFilter.asReadonly();
 
   // Computed properties
-  public hasActiveFilters = computed(() => this.advancedFilterService.hasActiveFilters());
-  public activeFilterCount = computed(() => this.advancedFilterService.activeFilterCount());
-  public filterSummary = computed(() => this.advancedFilterService.filterSummary());
+  public hasActiveFilters = computed(() => this.advancedFilterService.hasActiveFilters);
+  public activeFilterCount = computed(() => this.advancedFilterService.activeFilterCount);
+  public filterSummary = computed(() => this.advancedFilterService.filterSummary);
   public availablePresets = computed(() => this.advancedFilterService.getFilterPresets(this.category));
   public savedFilters = computed(() => this.advancedFilterService.savedFilters());
+
+  constructor(
+    private fb: FormBuilder,
+    private advancedFilterService: AdvancedFilterService
+  ) {}
 
   // Filter operators
   readonly OPERATORS = {
@@ -78,17 +83,11 @@ export class AdvancedFilterComponent implements OnInit, OnDestroy {
     tags: ['contains', 'not_contains', 'in', 'not_in']
   };
 
-  constructor(
-    private fb: FormBuilder,
-    private advancedFilterService: AdvancedFilterService
-  ) {
-    this.initializeForms();
-    this.setupSearchDebounce();
-  }
-
   ngOnInit(): void {
+    this.initializeForms();
     this.loadActiveFilters();
     this.setupFilterFormSubscriptions();
+    this.setupSearchDebounce();
   }
 
   ngOnDestroy(): void {
@@ -177,44 +176,74 @@ export class AdvancedFilterComponent implements OnInit, OnDestroy {
   }
 
   addFilterGroup(): void {
-    const newGroup: Omit<FilterGroup, 'id' | 'createdAt' | 'updatedAt'> = {
-      name: 'New Filter Group',
-      conditions: [],
-      logic: 'AND',
-      isActive: true
-    };
+    try {
+      const newGroup: Omit<FilterGroup, 'id' | 'createdAt' | 'updatedAt'> = {
+        name: 'New Filter Group',
+        conditions: [],
+        logic: 'AND',
+        isActive: true
+      };
 
-    const groupId = this.advancedFilterService.addFilterGroup(newGroup);
-    this.loadActiveFilters();
+      const groupId = this.advancedFilterService.addFilterGroup(newGroup);
+      this.loadActiveFilters();
+    } catch (error) {
+      console.warn('Error adding filter group:', error);
+    }
   }
 
   removeFilterGroup(groupIndex: number): void {
-    const filterGroupsArray = this.filterForm.get('filterGroups') as FormArray;
-    const groupForm = filterGroupsArray.at(groupIndex);
-    const groupId = groupForm.get('id')?.value;
-
-    if (groupId) {
-      this.advancedFilterService.removeFilterGroup(groupId);
+    if (!this.filterForm) {
+      return;
     }
+    
+    const filterGroupsArray = this.filterForm.get('filterGroups') as FormArray;
+    if (!filterGroupsArray || groupIndex < 0 || groupIndex >= filterGroupsArray.length) {
+      return;
+    }
+    
+    try {
+      const groupForm = filterGroupsArray.at(groupIndex);
+      const groupId = groupForm.get('id')?.value;
 
-    filterGroupsArray.removeAt(groupIndex);
-    this.emitFiltersChanged();
+      if (groupId) {
+        this.advancedFilterService.removeFilterGroup(groupId);
+      }
+
+      filterGroupsArray.removeAt(groupIndex);
+      this.emitFiltersChanged();
+    } catch (error) {
+      // Handle any errors gracefully
+      console.warn('Error removing filter group:', error);
+    }
   }
 
   addCondition(groupIndex: number): void {
+    if (!this.filterForm) {
+      return;
+    }
+    
     const filterGroupsArray = this.filterForm.get('filterGroups') as FormArray;
-    const groupForm = filterGroupsArray.at(groupIndex);
-    const conditionsArray = groupForm.get('conditions') as FormArray;
+    if (!filterGroupsArray || groupIndex < 0 || groupIndex >= filterGroupsArray.length) {
+      return;
+    }
+    
+    try {
+      const groupForm = filterGroupsArray.at(groupIndex);
+      const conditionsArray = groupForm.get('conditions') as FormArray;
 
-    const newCondition = this.createConditionForm({
-      field: '',
-      operator: 'equals',
-      value: '',
-      value2: ''
-    });
+      const newCondition = this.createConditionForm({
+        field: '',
+        operator: 'equals',
+        value: '',
+        value2: ''
+      });
 
-    conditionsArray.push(newCondition);
-    this.emitFiltersChanged();
+      conditionsArray.push(newCondition);
+      this.emitFiltersChanged();
+    } catch (error) {
+      // Handle any errors gracefully
+      console.warn('Error adding condition:', error);
+    }
   }
 
   removeCondition(groupIndex: number, conditionIndex: number): void {
@@ -241,12 +270,33 @@ export class AdvancedFilterComponent implements OnInit, OnDestroy {
 
   onSearchInput(event: Event): void {
     const target = event.target as HTMLInputElement;
-    const query = target.value;
+    if (!target) return;
+    
+    const query = target.value || '';
     this.searchForm.patchValue({ searchQuery: query });
     this.searchSubject.next(query);
   }
 
+  onSearch(query: string): void {
+    this._isSearching.set(true);
+    if (query && query.length > 2) {
+      this.advancedFilterService.searchWithSuggestions(query)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe(suggestions => {
+          this._searchSuggestions.set(suggestions);
+          this._showSuggestions.set(true);
+          this._isSearching.set(false);
+        });
+    } else {
+      this._searchSuggestions.set([]);
+      this._showSuggestions.set(false);
+      this._isSearching.set(false);
+    }
+    this.searchQuery.emit(query);
+  }
+
   onSearchFocus(): void {
+    this._isSearching.set(true);
     this._showSuggestions.set(true);
     if (this.searchForm.get('searchQuery')?.value) {
       this.performSearch(this.searchForm.get('searchQuery')?.value);
@@ -257,10 +307,13 @@ export class AdvancedFilterComponent implements OnInit, OnDestroy {
     // Delay hiding suggestions to allow for clicks
     setTimeout(() => {
       this._showSuggestions.set(false);
+      this._isSearching.set(false);
     }, 200);
   }
 
   onSuggestionClick(suggestion: SearchSuggestion): void {
+    if (!suggestion || !suggestion.text) return;
+    
     this.searchForm.patchValue({ searchQuery: suggestion.text });
     this._showSuggestions.set(false);
     this.addToSearchHistory(suggestion.text);
@@ -279,7 +332,7 @@ export class AdvancedFilterComponent implements OnInit, OnDestroy {
 
   onSavedFilterSelect(savedFilterId: string): void {
     this._selectedSavedFilter.set(savedFilterId);
-    const savedFilter = this.savedFilters().find(sf => sf.id === savedFilterId);
+    const savedFilter = this.savedFilters().find((sf: SavedFilter) => sf.id === savedFilterId);
     if (savedFilter) {
       this.advancedFilterService.loadSavedFilter(savedFilterId);
       this.loadActiveFilters();
@@ -394,11 +447,15 @@ export class AdvancedFilterComponent implements OnInit, OnDestroy {
 
   getFieldPlaceholder(fieldKey: string): string {
     const field = this.fields.find(f => f.key === fieldKey);
-    return field?.placeholder || '';
+    if (field?.placeholder) {
+      return field.placeholder;
+    }
+    // Generate a default placeholder based on field key
+    return `Enter ${fieldKey}...`;
   }
 
   isConditionValid(condition: any): boolean {
-    return condition.field && condition.operator && condition.value !== '';
+    return !!(condition && condition.field && condition.operator && condition.value !== '');
   }
 
   shouldShowValue2(operator: string): boolean {
@@ -440,22 +497,51 @@ export class AdvancedFilterComponent implements OnInit, OnDestroy {
   }
 
   onFieldChange(groupIndex: number, conditionIndex: number, field: string): void {
-    // Reset operator and value when field changes
-    const filterGroupsArray = this.filterForm.get('filterGroups') as FormArray;
-    const groupForm = filterGroupsArray.at(groupIndex);
-    const conditionsArray = groupForm.get('conditions') as FormArray;
-    const conditionForm = conditionsArray.at(conditionIndex);
+    if (!this.filterForm) {
+      return;
+    }
     
-    conditionForm.patchValue({
-      operator: 'equals',
-      value: '',
-      value2: ''
-    });
+    try {
+      // Reset operator and value when field changes
+      const filterGroupsArray = this.filterForm.get('filterGroups') as FormArray;
+      if (!filterGroupsArray || groupIndex < 0 || groupIndex >= filterGroupsArray.length) {
+        return;
+      }
+      
+      const groupForm = filterGroupsArray.at(groupIndex);
+      const conditionsArray = groupForm.get('conditions') as FormArray;
+      if (!conditionsArray || conditionIndex < 0 || conditionIndex >= conditionsArray.length) {
+        return;
+      }
+      
+      const conditionForm = conditionsArray.at(conditionIndex);
+      conditionForm.patchValue({
+        operator: 'equals',
+        value: '',
+        value2: ''
+      });
+    } catch (error) {
+      console.warn('Error handling field change:', error);
+    }
   }
 
+
   getConditionControls(groupIndex: number): FormArray {
-    const filterGroupsArray = this.filterForm.get('filterGroups') as FormArray;
-    const groupForm = filterGroupsArray.at(groupIndex);
-    return groupForm.get('conditions') as FormArray;
+    if (!this.filterForm) {
+      return this.fb.array([]);
+    }
+    
+    try {
+      const filterGroupsArray = this.filterForm.get('filterGroups') as FormArray;
+      if (!filterGroupsArray || groupIndex < 0 || groupIndex >= filterGroupsArray.length) {
+        return this.fb.array([]);
+      }
+      
+      const groupForm = filterGroupsArray.at(groupIndex);
+      return groupForm.get('conditions') as FormArray || this.fb.array([]);
+    } catch (error) {
+      console.warn('Error getting condition controls:', error);
+      return this.fb.array([]);
+    }
   }
 }

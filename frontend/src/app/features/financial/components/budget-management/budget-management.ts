@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, inject, ViewChild } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, ViewChild, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
@@ -50,6 +50,12 @@ export class BudgetManagementComponent implements OnInit, OnDestroy {
   private budgetService = inject(BudgetService);
   private advancedFilterService = inject(AdvancedFilterService);
   private fb = inject(FormBuilder);
+
+  // Setup advanced filters effect in field initializer
+  private filterEffect = effect(() => {
+    const filters = this.advancedFilterService.activeFilters();
+    this.applyAdvancedFilters(filters);
+  });
 
   // Data
   budgets: Budget[] = [];
@@ -157,7 +163,6 @@ export class BudgetManagementComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.initializeForms();
-    this.setupAdvancedFilters();
     // Only load data if not in test environment
     if (!this.isTestEnvironment()) {
       this.loadData();
@@ -239,14 +244,6 @@ export class BudgetManagementComponent implements OnInit, OnDestroy {
     });
   }
 
-  private setupAdvancedFilters(): void {
-    // Subscribe to filter changes from the advanced filter service
-    this.advancedFilterService.activeFilters
-      .pipe(takeUntil(this.destroy$))
-      .subscribe(filters => {
-        this.applyAdvancedFilters(filters);
-      });
-  }
 
   private applyAdvancedFilters(filterGroups: FilterGroup[]): void {
     if (filterGroups.length === 0) {

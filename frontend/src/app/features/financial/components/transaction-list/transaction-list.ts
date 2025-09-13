@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
@@ -30,6 +30,12 @@ export class TransactionListComponent implements OnInit, OnDestroy {
   private transactionService = inject(TransactionService);
   private categoryService = inject(CategoryService);
   private advancedFilterService = inject(AdvancedFilterService);
+
+  // Setup advanced filters effect in field initializer
+  private filterEffect = effect(() => {
+    const filters = this.advancedFilterService.activeFilters();
+    this.applyAdvancedFilters(filters);
+  });
 
   transactions: Transaction[] = [];
   filteredTransactions: Transaction[] = [];
@@ -144,7 +150,6 @@ export class TransactionListComponent implements OnInit, OnDestroy {
     this.loadCategories();
     this.loadTransactions();
     this.setupSearchDebounce();
-    this.setupAdvancedFilters();
   }
 
   ngOnDestroy(): void {
@@ -187,14 +192,6 @@ export class TransactionListComponent implements OnInit, OnDestroy {
     }
   }
 
-  private setupAdvancedFilters(): void {
-    // Subscribe to filter changes from the advanced filter service
-    this.advancedFilterService.activeFilters
-      .pipe(takeUntil(this.destroy$))
-      .subscribe(filters => {
-        this.applyAdvancedFilters(filters);
-      });
-  }
 
   private applyAdvancedFilters(filterGroups: FilterGroup[]): void {
     if (filterGroups.length === 0) {

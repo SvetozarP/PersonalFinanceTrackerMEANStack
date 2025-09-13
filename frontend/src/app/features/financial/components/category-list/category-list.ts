@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
@@ -27,6 +27,12 @@ export class CategoryListComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
   private categoryService = inject(CategoryService);
   private advancedFilterService = inject(AdvancedFilterService);
+
+  // Setup advanced filters effect in field initializer
+  private filterEffect = effect(() => {
+    const filters = this.advancedFilterService.activeFilters();
+    this.applyAdvancedFilters(filters);
+  });
 
   categories: Category[] = [];
   filteredCategories: Category[] = [];
@@ -132,7 +138,6 @@ export class CategoryListComponent implements OnInit, OnDestroy {
     this.loadCategories();
     this.loadCategoryStats();
     this.loadCategoryTree();
-    this.setupAdvancedFilters();
   }
 
   ngOnDestroy(): void {
@@ -319,12 +324,6 @@ export class CategoryListComponent implements OnInit, OnDestroy {
   }
 
   // Advanced filter methods
-  private setupAdvancedFilters(): void {
-    // Subscribe to filter changes from the advanced filter service
-    this.advancedFilterService.activeFilters
-      .pipe(takeUntil(this.destroy$))
-      .subscribe(filters => this.applyAdvancedFilters(filters));
-  }
 
   private applyAdvancedFilters(filterGroups: FilterGroup[]): void {
     if (!filterGroups || filterGroups.length === 0) {

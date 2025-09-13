@@ -1,4 +1,4 @@
-import { Injectable, signal, computed } from '@angular/core';
+import { Injectable, signal, computed, inject } from '@angular/core';
 import { BehaviorSubject, Observable, combineLatest, map, debounceTime, distinctUntilChanged } from 'rxjs';
 import { StorageService } from './storage.service';
 
@@ -55,7 +55,7 @@ export interface SearchSuggestion {
   providedIn: 'root'
 })
 export class AdvancedFilterService {
-  private storageService = new StorageService();
+  private storageService = inject(StorageService);
   
   // State management
   private _activeFilters = signal<FilterGroup[]>([]);
@@ -192,6 +192,14 @@ export class AdvancedFilterService {
   constructor() {
     this.loadSavedFilters();
     this.loadSearchHistory();
+  }
+
+  /**
+   * Update all active filters
+   */
+  updateFilters(filterGroups: FilterGroup[]): void {
+    this._activeFilters.set(filterGroups);
+    this.saveActiveFilters();
   }
 
   /**
@@ -382,7 +390,7 @@ export class AdvancedFilterService {
    * Add search to history
    */
   addToSearchHistory(query: string): void {
-    if (!query.trim()) return;
+    if (!query || !query.trim()) return;
 
     this._searchHistory.update(history => {
       const filtered = history.filter(h => h !== query);

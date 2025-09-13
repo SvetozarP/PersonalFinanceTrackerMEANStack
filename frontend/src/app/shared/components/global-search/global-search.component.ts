@@ -1,5 +1,5 @@
 import { Component, OnInit, OnDestroy, Output, EventEmitter, signal, computed } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { CommonModule, CurrencyPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Subject, takeUntil, debounceTime, distinctUntilChanged, switchMap } from 'rxjs';
 import { Router } from '@angular/router';
@@ -89,7 +89,7 @@ export class GlobalSearchComponent implements OnInit, OnDestroy {
     setTimeout(() => {
       this._showSuggestions.set(false);
       this._isOpen.set(false);
-    }, 200);
+    }, 250);
   }
 
   onSearchSubmit(event: Event): void {
@@ -165,16 +165,22 @@ export class GlobalSearchComponent implements OnInit, OnDestroy {
   formatResultMetadata(result: SearchResult): string {
     if (!result.metadata) return '';
 
+    const currencyPipe = new CurrencyPipe('en-US');
+
     switch (result.type) {
       case 'transaction':
         const amount = result.metadata.amount;
-        const date = new Date(result.metadata.date).toLocaleDateString();
-        return `${amount | currency} • ${date}`;
+        const date = new Date(result.metadata.date).toLocaleDateString('en-US', {
+          month: 'numeric',
+          day: 'numeric',
+          year: 'numeric'
+        });
+        return `${currencyPipe.transform(amount)} • ${date}`;
       
       case 'budget':
         const budgetAmount = result.metadata.amount;
         const period = result.metadata.period;
-        return `${budgetAmount | currency} • ${period}`;
+        return `${currencyPipe.transform(budgetAmount)} • ${period}`;
       
       case 'category':
         const color = result.metadata.color;

@@ -1,5 +1,5 @@
 import { Injectable, signal, computed } from '@angular/core';
-import { BehaviorSubject, Observable, combineLatest, map, debounceTime, distinctUntilChanged, switchMap, of } from 'rxjs';
+import { BehaviorSubject, Observable, combineLatest, map, debounceTime, distinctUntilChanged, switchMap, of, catchError, defer } from 'rxjs';
 import { StorageService } from './storage.service';
 import { TransactionService } from './transaction.service';
 import { BudgetService } from './budget.service';
@@ -107,17 +107,17 @@ export class GlobalSearchService {
 
     // Search transactions
     if (currentFilters.types.includes('transaction')) {
-      searchObservables.push(this.searchTransactions(query, currentFilters));
+      searchObservables.push(defer(() => this.searchTransactions(query, currentFilters)));
     }
 
     // Search budgets
     if (currentFilters.types.includes('budget')) {
-      searchObservables.push(this.searchBudgets(query, currentFilters));
+      searchObservables.push(defer(() => this.searchBudgets(query, currentFilters)));
     }
 
     // Search categories
     if (currentFilters.types.includes('category')) {
-      searchObservables.push(this.searchCategories(query, currentFilters));
+      searchObservables.push(defer(() => this.searchCategories(query, currentFilters)));
     }
 
     // Combine all search results
@@ -129,6 +129,12 @@ export class GlobalSearchService {
         this._isSearching.set(false);
         this.addToSearchHistory(query);
         return sortedResults;
+      }),
+      catchError(error => {
+        console.error('Search error:', error);
+        this._isSearching.set(false);
+        this._searchResults.set([]);
+        return of([]);
       })
     );
   }
@@ -137,7 +143,7 @@ export class GlobalSearchService {
    * Get search suggestions based on query
    */
   getSuggestions(query: string): Observable<SearchSuggestion[]> {
-    if (!query.trim()) {
+    if (!query.trim() || query.trim().length < 2) {
       this._searchSuggestions.set([]);
       return of([]);
     }

@@ -1,4 +1,4 @@
-import { Component, Input } from '@angular/core';
+import { Component, Input, ChangeDetectionStrategy, TrackByFunction } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { SkeletonLoaderComponent } from './skeleton-loader';
 
@@ -8,11 +8,12 @@ export type SkeletonLayout = 'card' | 'list' | 'form' | 'table' | 'chart' | 'met
   selector: 'app-skeleton-content-loader',
   standalone: true,
   imports: [CommonModule, SkeletonLoaderComponent],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="skeleton-content-loader" [class]="'layout-' + layout">
+    <div class="skeleton-content-loader" [ngClass]="'layout-' + layout">
       <!-- Card Layout -->
       <div *ngIf="layout === 'card'" class="skeleton-card-layout">
-        <div class="skeleton-card" *ngFor="let item of [].constructor(count)">
+        <div class="skeleton-card" *ngFor="let item of skeletonItems; trackBy: trackByIndex">
           <div class="skeleton-card-header">
             <app-skeleton-loader type="avatar" width="3rem" height="3rem"></app-skeleton-loader>
             <div class="skeleton-card-title-group">
@@ -34,7 +35,7 @@ export type SkeletonLayout = 'card' | 'list' | 'form' | 'table' | 'chart' | 'met
 
       <!-- List Layout -->
       <div *ngIf="layout === 'list'" class="skeleton-list-layout">
-        <div class="skeleton-list-item" *ngFor="let item of [].constructor(count)">
+        <div class="skeleton-list-item" *ngFor="let item of skeletonItems; trackBy: trackByIndex">
           <app-skeleton-loader type="avatar" width="2.5rem" height="2.5rem"></app-skeleton-loader>
           <div class="skeleton-list-content">
             <app-skeleton-loader type="title" width="70%" height="1rem"></app-skeleton-loader>
@@ -46,7 +47,7 @@ export type SkeletonLayout = 'card' | 'list' | 'form' | 'table' | 'chart' | 'met
 
       <!-- Form Layout -->
       <div *ngIf="layout === 'form'" class="skeleton-form-layout">
-        <div class="skeleton-form-group" *ngFor="let item of [].constructor(count)">
+        <div class="skeleton-form-group" *ngFor="let item of skeletonItems; trackBy: trackByIndex">
           <app-skeleton-loader type="text" width="30%" height="0.875rem"></app-skeleton-loader>
           <app-skeleton-loader type="button" width="100%" height="2.5rem"></app-skeleton-loader>
         </div>
@@ -64,7 +65,7 @@ export type SkeletonLayout = 'card' | 'list' | 'form' | 'table' | 'chart' | 'met
           <app-skeleton-loader type="text" width="25%" height="1rem"></app-skeleton-loader>
           <app-skeleton-loader type="text" width="25%" height="1rem"></app-skeleton-loader>
         </div>
-        <div class="skeleton-table-row" *ngFor="let item of [].constructor(count)">
+        <div class="skeleton-table-row" *ngFor="let item of skeletonItems; trackBy: trackByIndex">
           <app-skeleton-loader type="text" width="20%" height="0.875rem"></app-skeleton-loader>
           <app-skeleton-loader type="text" width="30%" height="0.875rem"></app-skeleton-loader>
           <app-skeleton-loader type="text" width="25%" height="0.875rem"></app-skeleton-loader>
@@ -83,7 +84,7 @@ export type SkeletonLayout = 'card' | 'list' | 'form' | 'table' | 'chart' | 'met
 
       <!-- Metrics Layout -->
       <div *ngIf="layout === 'metrics'" class="skeleton-metrics-layout">
-        <div class="skeleton-metric" *ngFor="let item of [].constructor(count)">
+        <div class="skeleton-metric" *ngFor="let item of skeletonItems; trackBy: trackByIndex">
           <app-skeleton-loader type="text" width="60%" height="0.875rem"></app-skeleton-loader>
           <app-skeleton-loader type="title" width="80%" height="1.5rem"></app-skeleton-loader>
           <app-skeleton-loader type="text" width="40%" height="0.75rem"></app-skeleton-loader>
@@ -96,4 +97,15 @@ export type SkeletonLayout = 'card' | 'list' | 'form' | 'table' | 'chart' | 'met
 export class SkeletonContentLoaderComponent {
   @Input() layout: SkeletonLayout = 'card';
   @Input() count: number = 3;
+
+  get safeCount(): number {
+    return this.count && this.count > 0 ? this.count : 0;
+  }
+
+  get skeletonItems(): number[] {
+    const count = this.safeCount;
+    return Array.from({ length: count }, (_, i) => i);
+  }
+
+  trackByIndex: TrackByFunction<number> = (index: number) => index;
 }

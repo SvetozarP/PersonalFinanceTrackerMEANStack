@@ -11,6 +11,7 @@ module.exports = function (config) {
       require('karma-jasmine-html-reporter'),
       require('karma-coverage'),
       require('karma-spec-reporter'),
+      require('karma-verbose-reporter'),
       require('@angular-devkit/build-angular/plugins/karma')
     ],
 
@@ -23,6 +24,10 @@ module.exports = function (config) {
       },
       clearContext: false // leave Jasmine Spec Runner output visible in browser
     },
+    // Zone.js is required for testing even in zoneless applications
+    files: [
+      'src/polyfills-test.ts'
+    ],
     jasmineHtmlReporter: {
       suppressAll: true // removes the duplicated traces
     },
@@ -34,7 +39,7 @@ module.exports = function (config) {
         { type: 'text-summary' }
       ]
     },
-    reporters: ['spec', 'progress'],
+    reporters: ['verbose', 'progress'],
     port: 9876,
     colors: true,
     logLevel: config.LOG_INFO,
@@ -43,9 +48,9 @@ module.exports = function (config) {
     singleRun: true,
     restartOnFileChange: false,
     concurrency: 1,
-    browserDisconnectTimeout: 10000,
-    browserDisconnectTolerance: 3,
-    browserNoActivityTimeout: 30000,
+    browserDisconnectTimeout: 30000,
+    browserDisconnectTolerance: 5,
+    browserNoActivityTimeout: 60000,
     // Angular 20 specific configuration
     customLaunchers: {
       ChromeHeadless: {
