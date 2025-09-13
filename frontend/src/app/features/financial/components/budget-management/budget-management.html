@@ -78,8 +78,24 @@
       </div>
     </div>
   
-    <!-- Filters and Controls -->
-    <div class="budget-controls">
+    <!-- Advanced Filters Section -->
+    <div class="advanced-filters-section">
+      <app-advanced-filter
+        [fields]="filterFields"
+        category="budgets"
+        [showPresets]="true"
+        [showSavedFilters]="true"
+        [showSearchSuggestions]="true"
+        [compact]="false"
+        (filtersChanged)="onAdvancedFiltersChanged($event)"
+        (searchQuery)="onAdvancedSearchQuery($event)"
+        (presetApplied)="onPresetApplied($event)"
+        (savedFilterLoaded)="onSavedFilterLoaded($event)">
+      </app-advanced-filter>
+    </div>
+
+    <!-- Legacy Filters and Controls (Hidden by default) -->
+    <div class="legacy-budget-controls" style="display: none;">
       <div class="control-group">
         <label for="periodFilter">Period:</label>
         <select id="periodFilter" [(ngModel)]="selectedPeriod" (change)="onPeriodChange(selectedPeriod)" class="form-control">
@@ -191,7 +207,7 @@
         <div class="list-stats">
           <span class="stat-item">
             <i class="fas fa-list"></i>
-            {{ budgets.length }} budgets
+            {{ filteredBudgets.length }} budgets
           </span>
           <span class="stat-item">
             <i class="fas fa-check-circle"></i>
@@ -213,11 +229,11 @@
       </div>
   
       <!-- No Budgets State -->
-      <div class="no-budgets" *ngIf="!isLoading && budgets.length === 0">
+      <div class="no-budgets" *ngIf="!isLoading && filteredBudgets.length === 0">
         <div class="no-budgets-content">
           <i class="fas fa-chart-pie"></i>
-          <h3>No Budgets Set</h3>
-          <p>Start by creating your first budget to track your spending</p>
+          <h3>No Budgets Found</h3>
+          <p>No budgets match your current filters. Try adjusting your search criteria or create a new budget.</p>
           <button class="btn btn-primary" (click)="showAddBudgetForm()">
             <i class="fas fa-plus"></i>
             Create Budget
@@ -226,8 +242,8 @@
       </div>
   
       <!-- Budget Items -->
-      <div class="budget-items" *ngIf="!isLoading && budgets.length > 0">
-        <div class="budget-item" *ngFor="let budget of budgets" [id]="'budget-' + budget._id">
+      <div class="budget-items" *ngIf="!isLoading && filteredBudgets.length > 0">
+        <div class="budget-item" *ngFor="let budget of filteredBudgets" [id]="'budget-' + budget._id">
           <div class="budget-header-row">
             <div class="budget-info">
               <h4>{{ budget.name }}</h4>

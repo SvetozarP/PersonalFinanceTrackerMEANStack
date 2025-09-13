@@ -1,0 +1,283 @@
+<div class="advanced-filter-container" [class.compact]="compact">
+  <!-- Filter Toggle Button -->
+  <div class="filter-toggle" *ngIf="!isExpanded()">
+    <button 
+      class="btn btn-outline-primary filter-toggle-btn"
+      (click)="toggleExpanded()"
+      [class.has-filters]="hasActiveFilters()"
+    >
+      <i class="fas fa-filter"></i>
+      <span *ngIf="!compact">Advanced Filters</span>
+      <span *ngIf="hasActiveFilters()" class="filter-count">({{ activeFilterCount() }})</span>
+    </button>
+    
+    <!-- Quick Filter Summary -->
+    <div class="filter-summary" *ngIf="hasActiveFilters() && !compact">
+      <span class="summary-text">{{ filterSummary() }}</span>
+      <button class="btn btn-sm btn-outline-secondary" (click)="clearAllFilters()">
+        <i class="fas fa-times"></i>
+        Clear
+      </button>
+    </div>
+  </div>
+
+  <!-- Expanded Filter Panel -->
+  <div class="filter-panel" *ngIf="isExpanded()" [style.max-height]="maxHeight">
+    <!-- Panel Header -->
+    <div class="panel-header">
+      <div class="header-left">
+        <h3>Advanced Filters</h3>
+        <span class="filter-count" *ngIf="hasActiveFilters()">
+          {{ activeFilterCount() }} filter{{ activeFilterCount() !== 1 ? 's' : '' }} applied
+        </span>
+      </div>
+      <div class="header-right">
+        <button class="btn btn-sm btn-outline-secondary" (click)="toggleExpanded()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Search Section -->
+    <div class="search-section" *ngIf="showSearchSuggestions">
+      <div class="search-container">
+        <div class="search-input-wrapper">
+          <i class="fas fa-search search-icon"></i>
+          <input
+            type="text"
+            class="form-control search-input"
+            placeholder="Search and filter..."
+            [value]="searchForm.get('searchQuery')?.value || ''"
+            (input)="onSearchInput($event)"
+            (focus)="onSearchFocus()"
+            (blur)="onSearchBlur()"
+          >
+          <div class="search-loading" *ngIf="isSearching()">
+            <i class="fas fa-spinner fa-spin"></i>
+          </div>
+        </div>
+        
+        <!-- Search Suggestions -->
+        <div class="search-suggestions" *ngIf="showSuggestions() && searchSuggestions().length > 0">
+          <div class="suggestion-item" 
+               *ngFor="let suggestion of searchSuggestions()" 
+               (click)="onSuggestionClick(suggestion)">
+            <i class="fas" [class]="getSuggestionIcon(suggestion)"></i>
+            <span class="suggestion-text">{{ suggestion.text }}</span>
+            <span class="suggestion-type">{{ suggestion.type }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Presets Section -->
+    <div class="presets-section" *ngIf="showPresets && availablePresets().length > 0">
+      <div class="section-header">
+        <h4>Quick Filters</h4>
+        <span class="section-subtitle">Apply common filter combinations</span>
+      </div>
+      <div class="presets-grid">
+        <button 
+          class="preset-btn"
+          *ngFor="let preset of availablePresets()"
+          [class.selected]="selectedPreset() === preset.id"
+          (click)="onPresetSelect(preset.id)"
+        >
+          <i [class]="preset.icon" [style.color]="preset.color"></i>
+          <div class="preset-content">
+            <div class="preset-name">{{ preset.name }}</div>
+            <div class="preset-description">{{ preset.description }}</div>
+          </div>
+        </button>
+      </div>
+    </div>
+
+    <!-- Saved Filters Section -->
+    <div class="saved-filters-section" *ngIf="showSavedFilters && savedFilters().length > 0">
+      <div class="section-header">
+        <h4>Saved Filters</h4>
+        <span class="section-subtitle">Load previously saved filter configurations</span>
+      </div>
+      <div class="saved-filters-list">
+        <div class="saved-filter-item"
+             *ngFor="let savedFilter of savedFilters()"
+             [class.selected]="selectedSavedFilter() === savedFilter.id"
+             (click)="onSavedFilterSelect(savedFilter.id)">
+          <div class="saved-filter-info">
+            <div class="saved-filter-name">{{ savedFilter.name }}</div>
+            <div class="saved-filter-meta">
+              <span class="usage-count">{{ savedFilter.usageCount }} uses</span>
+              <span class="last-used" *ngIf="savedFilter.lastUsed">
+                Last used: {{ savedFilter.lastUsed | date:'short' }}
+              </span>
+            </div>
+          </div>
+          <div class="saved-filter-actions">
+            <button class="btn btn-sm btn-outline-danger" 
+                    (click)="deleteSavedFilter(savedFilter.id); $event.stopPropagation()"
+                    title="Delete saved filter">
+              <i class="fas fa-trash"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filter Groups -->
+    <div class="filter-groups-section">
+      <div class="section-header">
+        <h4>Filter Groups</h4>
+        <div class="section-actions">
+          <button class="btn btn-sm btn-primary" (click)="addFilterGroup()">
+            <i class="fas fa-plus"></i>
+            Add Group
+          </button>
+        </div>
+      </div>
+
+      <div class="filter-groups" formArrayName="filterGroups">
+        <div class="filter-group" 
+             *ngFor="let group of filterGroupsArray.controls; let groupIndex = index"
+             [formGroupName]="groupIndex">
+          
+          <!-- Group Header -->
+          <div class="group-header">
+            <div class="group-info">
+              <input 
+                type="text" 
+                class="form-control group-name"
+                formControlName="name"
+                placeholder="Filter group name"
+              >
+              <select class="form-control group-logic" formControlName="logic">
+                <option value="AND">AND</option>
+                <option value="OR">OR</option>
+              </select>
+            </div>
+            <div class="group-actions">
+              <button class="btn btn-sm btn-outline-primary" (click)="addCondition(groupIndex)">
+                <i class="fas fa-plus"></i>
+                Add Condition
+              </button>
+              <button class="btn btn-sm btn-outline-danger" (click)="removeFilterGroup(groupIndex)">
+                <i class="fas fa-trash"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Group Conditions -->
+          <div class="group-conditions" formArrayName="conditions">
+            <div class="condition" 
+                 *ngFor="let condition of getConditionControls(groupIndex).controls; let conditionIndex = index"
+                 [formGroupName]="conditionIndex">
+              
+              <div class="condition-field">
+                <select class="form-control" formControlName="field" (change)="onFieldChange(groupIndex, conditionIndex, $any($event.target).value)">
+                  <option value="">Select field...</option>
+                  <option *ngFor="let field of fields" [value]="field.key">
+                    {{ field.label }}
+                  </option>
+                </select>
+              </div>
+
+              <div class="condition-operator">
+                <select class="form-control" formControlName="operator">
+                  <option *ngFor="let op of getOperatorsForField(condition.get('field')?.value)" [value]="op">
+                    {{ op | titlecase }}
+                  </option>
+                </select>
+              </div>
+
+              <div class="condition-value">
+                <!-- Text input -->
+                <input 
+                  *ngIf="getConditionValueType(condition.get('field')?.value, condition.get('operator')?.value) === 'text'"
+                  type="text" 
+                  class="form-control"
+                  formControlName="value"
+                  [placeholder]="getFieldPlaceholder(condition.get('field')?.value)"
+                >
+
+                <!-- Number input -->
+                <input 
+                  *ngIf="getConditionValueType(condition.get('field')?.value, condition.get('operator')?.value) === 'number'"
+                  type="number" 
+                  class="form-control"
+                  formControlName="value"
+                  step="0.01"
+                >
+
+                <!-- Date input -->
+                <input 
+                  *ngIf="getConditionValueType(condition.get('field')?.value, condition.get('operator')?.value) === 'date'"
+                  type="date" 
+                  class="form-control"
+                  formControlName="value"
+                >
+
+                <!-- Select input -->
+                <select 
+                  *ngIf="getConditionValueType(condition.get('field')?.value, condition.get('operator')?.value) === 'select'"
+                  class="form-control"
+                  formControlName="value">
+                  <option value="">Select value...</option>
+                  <option *ngFor="let option of getFieldOptions(condition.get('field')?.value)" [value]="option.value">
+                    {{ option.label }}
+                  </option>
+                </select>
+
+                <!-- Checkbox input -->
+                <input 
+                  *ngIf="getConditionValueType(condition.get('field')?.value, condition.get('operator')?.value) === 'checkbox'"
+                  type="checkbox" 
+                  class="form-check-input"
+                  formControlName="value"
+                >
+
+                <!-- Second value for between operator -->
+                <input 
+                  *ngIf="shouldShowValue2(condition.get('operator')?.value)"
+                  type="text" 
+                  class="form-control condition-value2"
+                  formControlName="value2"
+                  placeholder="To..."
+                >
+              </div>
+
+              <div class="condition-actions">
+                <button class="btn btn-sm btn-outline-danger" (click)="removeCondition(groupIndex, conditionIndex)">
+                  <i class="fas fa-times"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Panel Actions -->
+    <div class="panel-actions">
+      <div class="actions-left">
+        <button class="btn btn-outline-secondary" (click)="clearAllFilters()">
+          <i class="fas fa-times"></i>
+          Clear All
+        </button>
+        <button class="btn btn-outline-primary" (click)="saveCurrentFilters()">
+          <i class="fas fa-save"></i>
+          Save Filters
+        </button>
+      </div>
+      <div class="actions-right">
+        <button class="btn btn-outline-secondary" (click)="exportFilters()">
+          <i class="fas fa-download"></i>
+          Export
+        </button>
+        <label class="btn btn-outline-secondary">
+          <i class="fas fa-upload"></i>
+          Import
+          <input type="file" accept=".json" (change)="importFilters($event)" style="display: none;">
+        </label>
+      </div>
+    </div>
+  </div>
+</div>

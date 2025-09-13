@@ -5,7 +5,9 @@ import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { Subject, takeUntil, switchMap, of } from 'rxjs';
 import { Category, CategoryStats, QueryOptions } from '../../../../core/models/financial.model';
 import { CategoryService } from '../../../../core/services/category.service';
+import { AdvancedFilterService, FilterGroup } from '../../../../core/services/advanced-filter.service';
 import { LoadingSpinnerComponent } from '../../../../shared/components/loading-spinner/loading-spinner';
+import { AdvancedFilterComponent, FilterField } from '../../../../shared/components/advanced-filter/advanced-filter.component';
 
 @Component({
   selector: 'app-category-list',
@@ -15,7 +17,8 @@ import { LoadingSpinnerComponent } from '../../../../shared/components/loading-s
     RouterModule,
     FormsModule,
     ReactiveFormsModule,
-    LoadingSpinnerComponent
+    LoadingSpinnerComponent,
+    AdvancedFilterComponent
   ],
   templateUrl: './category-list.html',
   styleUrls: ['./category-list.scss']
@@ -23,8 +26,10 @@ import { LoadingSpinnerComponent } from '../../../../shared/components/loading-s
 export class CategoryListComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
   private categoryService = inject(CategoryService);
+  private advancedFilterService = inject(AdvancedFilterService);
 
   categories: Category[] = [];
+  filteredCategories: Category[] = [];
   categoryTree: Category[] = [];
   stats: CategoryStats | null = null;
   
@@ -61,10 +66,73 @@ export class CategoryListComponent implements OnInit, OnDestroy {
   // Category levels for filter dropdown
   categoryLevels = [0, 1, 2, 3, 4, 5];
 
+  // Advanced filter configuration
+  filterFields: FilterField[] = [
+    {
+      key: 'name',
+      label: 'Category Name',
+      type: 'text',
+      operators: ['contains', 'equals', 'startsWith', 'endsWith']
+    },
+    {
+      key: 'level',
+      label: 'Category Level',
+      type: 'select',
+      operators: ['equals', 'in'],
+      options: [
+        { value: 0, label: 'Root (0)' },
+        { value: 1, label: 'Level 1' },
+        { value: 2, label: 'Level 2' },
+        { value: 3, label: 'Level 3' },
+        { value: 4, label: 'Level 4' },
+        { value: 5, label: 'Level 5' }
+      ]
+    },
+    {
+      key: 'isActive',
+      label: 'Status',
+      type: 'select',
+      operators: ['equals'],
+      options: [
+        { value: true, label: 'Active' },
+        { value: false, label: 'Inactive' }
+      ]
+    },
+    {
+      key: 'isSystem',
+      label: 'Type',
+      type: 'select',
+      operators: ['equals'],
+      options: [
+        { value: true, label: 'System Category' },
+        { value: false, label: 'Custom Category' }
+      ]
+    },
+    {
+      key: 'color',
+      label: 'Color',
+      type: 'text',
+      operators: ['contains', 'equals']
+    },
+    {
+      key: 'createdAt',
+      label: 'Created Date',
+      type: 'date',
+      operators: ['equals', 'after', 'before', 'between']
+    },
+    {
+      key: 'updatedAt',
+      label: 'Updated Date',
+      type: 'date',
+      operators: ['equals', 'after', 'before', 'between']
+    }
+  ];
+
   ngOnInit(): void {
     this.loadCategories();
     this.loadCategoryStats();
     this.loadCategoryTree();
+    this.setupAdvancedFilters();
   }
 
   ngOnDestroy(): void {
@@ -96,6 +164,7 @@ export class CategoryListComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (categories) => {
           this.categories = categories;
+          this.filteredCategories = [...categories]; // Initialize filtered categories
           this.totalItems = categories.length; // Assuming no pagination from service
           this.totalPages = Math.ceil(this.totalItems / this.pageSize);
           this.isCategoriesLoading = false;
@@ -247,6 +316,149 @@ export class CategoryListComponent implements OnInit, OnDestroy {
     this.showSystemCategories = false;
     this.currentPage = 1;
     this.onSearch();
+  }
+
+  // Advanced filter methods
+  private setupAdvancedFilters(): void {
+    // Subscribe to filter changes from the advanced filter service
+    this.advancedFilterService.activeFilters
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(filters => this.applyAdvancedFilters(filters));
+  }
+
+  private applyAdvancedFilters(filterGroups: FilterGroup[]): void {
+    if (!filterGroups || filterGroups.length === 0) {
+      this.filteredCategories = [...this.categories];
+      return;
+    }
+
+    // Build query from filter groups
+    const query = this.buildQueryFromFilterGroups(filterGroups);
+    
+    // Apply filters to categories
+    this.filteredCategories = this.categories.filter(category => 
+      this.evaluateCategoryAgainstQuery(category, query)
+    );
+  }
+
+  private buildQueryFromFilterGroups(filterGroups: FilterGroup[]): any {
+    const conditions: any[] = [];
+    
+    filterGroups.forEach(group => {
+      if (group.conditions && group.conditions.length > 0) {
+        const groupConditions = group.conditions.map(condition => ({
+          field: condition.field,
+          operator: condition.operator,
+          value: condition.value
+        }));
+        
+        if (group.logic === 'OR') {
+          conditions.push({ $or: groupConditions });
+        } else {
+          conditions.push(...groupConditions);
+        }
+      }
+    });
+    
+    return conditions.length > 0 ? { $and: conditions } : {};
+  }
+
+  private evaluateCategoryAgainstQuery(category: Category, query: any): boolean {
+    if (!query || Object.keys(query).length === 0) {
+      return true;
+    }
+
+    if (query.$and) {
+      return query.$and.every((condition: any) => 
+        this.evaluateFieldCondition(category, condition)
+      );
+    }
+
+    if (query.$or) {
+      return query.$or.some((condition: any) => 
+        this.evaluateFieldCondition(category, condition)
+      );
+    }
+
+    return this.evaluateFieldCondition(category, query);
+  }
+
+  private evaluateFieldCondition(category: Category, condition: any): boolean {
+    const fieldValue = this.getCategoryFieldValue(category, condition.field);
+    return this.evaluateOperator(fieldValue, condition.operator, condition.value);
+  }
+
+  private evaluateOperator(fieldValue: any, operator: string, conditionValue: any): boolean {
+    switch (operator) {
+      case 'equals':
+        return fieldValue === conditionValue;
+      case 'contains':
+        return String(fieldValue).toLowerCase().includes(String(conditionValue).toLowerCase());
+      case 'startsWith':
+        return String(fieldValue).toLowerCase().startsWith(String(conditionValue).toLowerCase());
+      case 'endsWith':
+        return String(fieldValue).toLowerCase().endsWith(String(conditionValue).toLowerCase());
+      case 'in':
+        return Array.isArray(conditionValue) && conditionValue.includes(fieldValue);
+      case 'after':
+        return new Date(fieldValue) > new Date(conditionValue);
+      case 'before':
+        return new Date(fieldValue) < new Date(conditionValue);
+      case 'between':
+        if (Array.isArray(conditionValue) && conditionValue.length === 2) {
+          const [start, end] = conditionValue;
+          return new Date(fieldValue) >= new Date(start) && new Date(fieldValue) <= new Date(end);
+        }
+        return false;
+      default:
+        return true;
+    }
+  }
+
+  private getCategoryFieldValue(category: Category, field: string): any {
+    switch (field) {
+      case 'name':
+        return category.name;
+      case 'level':
+        return category.level;
+      case 'isActive':
+        return category.isActive;
+      case 'isSystem':
+        return category.isSystem;
+      case 'color':
+        return category.color;
+      case 'createdAt':
+        return category.createdAt;
+      case 'updatedAt':
+        return category.updatedAt;
+      default:
+        return '';
+    }
+  }
+
+  // Event handlers for advanced filter component
+  onAdvancedFiltersChanged(filterGroups: FilterGroup[]): void {
+    this.advancedFilterService.updateFilters(filterGroups);
+  }
+
+  onAdvancedSearchQuery(query: string): void {
+    this.searchTerm = query;
+    this.onSearch();
+  }
+
+  onPresetApplied(preset: any): void {
+    console.log('Preset applied:', preset);
+    // Handle preset application
+  }
+
+  onSavedFilterLoaded(filter: any): void {
+    console.log('Saved filter loaded:', filter);
+    // Handle saved filter loading
+  }
+
+  addToSearchHistory(query: string): void {
+    // Add to search history if needed
+    console.log('Adding to search history:', query);
   }
 
   // Helper methods

@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 import { Subject, takeUntil, fromEvent } from 'rxjs';
 import { debounceTime } from 'rxjs/operators';
+import { GlobalSearchComponent } from '../global-search/global-search.component';
 
 export interface NavigationItem {
   label: string;
@@ -15,7 +16,7 @@ export interface NavigationItem {
 @Component({
   selector: 'app-responsive-layout',
   standalone: true,
-  imports: [CommonModule, RouterOutlet, RouterLink, RouterLinkActive],
+  imports: [CommonModule, RouterOutlet, RouterLink, RouterLinkActive, GlobalSearchComponent],
   templateUrl: './responsive-layout.html',
   styleUrls: ['./responsive-layout.scss']
 })
@@ -155,6 +156,18 @@ export class ResponsiveLayoutComponent implements OnInit, OnDestroy {
 
   onLogout(): void {
     this.logout.emit();
+  }
+
+  // Global search event handlers
+  onGlobalSearch(result: any): void {
+    // Handle search result - navigate to the result URL
+    console.log('Global search result:', result);
+    // In a real implementation, this would navigate to the result URL
+  }
+
+  onSearchHistoryCleared(): void {
+    console.log('Search history cleared');
+    // Handle history clearing
   }
 
   // Helper methods for template

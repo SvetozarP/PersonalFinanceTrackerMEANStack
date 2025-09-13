@@ -6,7 +6,9 @@ import { Subject, takeUntil, debounceTime, distinctUntilChanged } from 'rxjs';
 import { Transaction, TransactionType, TransactionStatus, PaymentMethod, QueryOptions } from '../../../../core/models/financial.model';
 import { TransactionService } from '../../../../core/services/transaction.service';
 import { CategoryService } from '../../../../core/services/category.service';
+import { AdvancedFilterService, FilterGroup } from '../../../../core/services/advanced-filter.service';
 import { SkeletonContentLoaderComponent } from '../../../../shared';
+import { AdvancedFilterComponent, FilterField } from '../../../../shared/components/advanced-filter/advanced-filter.component';
 
 
 @Component({
@@ -18,6 +20,7 @@ import { SkeletonContentLoaderComponent } from '../../../../shared';
     FormsModule,
     ReactiveFormsModule,
     SkeletonContentLoaderComponent,
+    AdvancedFilterComponent,
   ],
   templateUrl: './transaction-list.html',
   styleUrls: ['./transaction-list.scss']
@@ -26,6 +29,7 @@ export class TransactionListComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
   private transactionService = inject(TransactionService);
   private categoryService = inject(CategoryService);
+  private advancedFilterService = inject(AdvancedFilterService);
 
   transactions: Transaction[] = [];
   filteredTransactions: Transaction[] = [];
@@ -62,10 +66,85 @@ export class TransactionListComponent implements OnInit, OnDestroy {
   transactionStatuses = Object.values(TransactionStatus);
   paymentMethods = Object.values(PaymentMethod);
 
+  // Advanced filter configuration
+  filterFields: FilterField[] = [
+    {
+      key: 'title',
+      label: 'Description',
+      type: 'text',
+      placeholder: 'Search in transaction descriptions...',
+      operators: ['contains', 'not_contains', 'starts_with', 'ends_with', 'equals', 'not_equals']
+    },
+    {
+      key: 'amount',
+      label: 'Amount',
+      type: 'number',
+      placeholder: 'Enter amount...',
+      operators: ['equals', 'not_equals', 'gt', 'gte', 'lt', 'lte', 'between']
+    },
+    {
+      key: 'type',
+      label: 'Transaction Type',
+      type: 'select',
+      options: Object.values(TransactionType).map(type => ({
+        value: type,
+        label: type.charAt(0).toUpperCase() + type.slice(1)
+      })),
+      operators: ['equals', 'not_equals', 'in', 'not_in']
+    },
+    {
+      key: 'status',
+      label: 'Status',
+      type: 'select',
+      options: Object.values(TransactionStatus).map(status => ({
+        value: status,
+        label: status.charAt(0).toUpperCase() + status.slice(1)
+      })),
+      operators: ['equals', 'not_equals', 'in', 'not_in']
+    },
+    {
+      key: 'categoryId',
+      label: 'Category',
+      type: 'select',
+      options: [],
+      operators: ['equals', 'not_equals', 'in', 'not_in']
+    },
+    {
+      key: 'date',
+      label: 'Date',
+      type: 'date',
+      operators: ['equals', 'not_equals', 'gt', 'gte', 'lt', 'lte', 'between']
+    },
+    {
+      key: 'paymentMethod',
+      label: 'Payment Method',
+      type: 'select',
+      options: Object.values(PaymentMethod).map(method => ({
+        value: method,
+        label: method.charAt(0).toUpperCase() + method.slice(1)
+      })),
+      operators: ['equals', 'not_equals', 'in', 'not_in']
+    },
+    {
+      key: 'tags',
+      label: 'Tags',
+      type: 'tags',
+      placeholder: 'Enter tags...',
+      operators: ['contains', 'not_contains', 'in', 'not_in']
+    },
+    {
+      key: 'isRecurring',
+      label: 'Recurring',
+      type: 'boolean',
+      operators: ['equals', 'not_equals']
+    }
+  ];
+
   ngOnInit(): void {
     this.loadCategories();
     this.loadTransactions();
     this.setupSearchDebounce();
+    this.setupAdvancedFilters();
   }
 
   ngOnDestroy(): void {
@@ -87,12 +166,150 @@ export class TransactionListComponent implements OnInit, OnDestroy {
         next: (categories) => {
           this.categories = categories;
           this.isCategoriesLoading = false;
+          
+          // Update filter fields with category options
+          this.updateCategoryFilterOptions(categories);
         },
         error: (error) => {
           console.error('Error loading categories:', error);
           this.isCategoriesLoading = false;
         }
       });
+  }
+
+  private updateCategoryFilterOptions(categories: any[]): void {
+    const categoryField = this.filterFields.find(field => field.key === 'categoryId');
+    if (categoryField) {
+      categoryField.options = categories.map(category => ({
+        value: category._id,
+        label: category.name
+      }));
+    }
+  }
+
+  private setupAdvancedFilters(): void {
+    // Subscribe to filter changes from the advanced filter service
+    this.advancedFilterService.activeFilters
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(filters => {
+        this.applyAdvancedFilters(filters);
+      });
+  }
+
+  private applyAdvancedFilters(filterGroups: FilterGroup[]): void {
+    if (filterGroups.length === 0) {
+      this.filteredTransactions = this.transactions;
+      return;
+    }
+
+    // Build query from filter groups
+    const query = this.advancedFilterService.buildQuery();
+    
+    // Apply filters to local transactions
+    this.filteredTransactions = this.transactions.filter(transaction => {
+      return this.evaluateTransactionAgainstQuery(transaction, query);
+    });
+  }
+
+  private evaluateTransactionAgainstQuery(transaction: Transaction, query: any): boolean {
+    // This is a simplified evaluation - in a real app, you'd want to use a proper query engine
+    // or send the query to the backend for server-side filtering
+    
+    if (!query || Object.keys(query).length === 0) {
+      return true;
+    }
+
+    // Handle $and conditions
+    if (query.$and) {
+      return query.$and.every((condition: any) => 
+        this.evaluateTransactionAgainstQuery(transaction, condition)
+      );
+    }
+
+    // Handle $or conditions
+    if (query.$or) {
+      return query.$or.some((condition: any) => 
+        this.evaluateTransactionAgainstQuery(transaction, condition)
+      );
+    }
+
+    // Handle individual field conditions
+    for (const [field, condition] of Object.entries(query)) {
+      if (!this.evaluateFieldCondition(transaction, field, condition)) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  private evaluateFieldCondition(transaction: Transaction, field: string, condition: any): boolean {
+    const value = this.getTransactionFieldValue(transaction, field);
+    
+    if (typeof condition === 'object' && condition !== null) {
+      // Handle MongoDB-style operators
+      for (const [operator, operatorValue] of Object.entries(condition)) {
+        if (!this.evaluateOperator(value, operator, operatorValue)) {
+          return false;
+        }
+      }
+      return true;
+    } else {
+      // Direct equality
+      return value === condition;
+    }
+  }
+
+  private evaluateOperator(value: any, operator: string, operatorValue: any): boolean {
+    switch (operator) {
+      case '$eq':
+        return value === operatorValue;
+      case '$ne':
+        return value !== operatorValue;
+      case '$gt':
+        return value > operatorValue;
+      case '$gte':
+        return value >= operatorValue;
+      case '$lt':
+        return value < operatorValue;
+      case '$lte':
+        return value <= operatorValue;
+      case '$in':
+        return Array.isArray(operatorValue) && operatorValue.includes(value);
+      case '$nin':
+        return Array.isArray(operatorValue) && !operatorValue.includes(value);
+      case '$regex':
+        return new RegExp(operatorValue, 'i').test(String(value));
+      case '$not':
+        return !new RegExp(operatorValue, 'i').test(String(value));
+      default:
+        return true;
+    }
+  }
+
+  private getTransactionFieldValue(transaction: Transaction, field: string): any {
+    switch (field) {
+      case 'title':
+        return transaction.title;
+      case 'amount':
+        return transaction.amount;
+      case 'type':
+        return transaction.type;
+      case 'status':
+        return transaction.status;
+      case 'categoryId':
+        return transaction.categoryId;
+      case 'date':
+        return transaction.date;
+      case 'paymentMethod':
+        return transaction.paymentMethod;
+      case 'tags':
+        return transaction.tags;
+      case 'isRecurring':
+        return transaction.isRecurring;
+      default:
+        return (transaction as any)[field];
+    }
   }
 
   private loadTransactions(): void {
@@ -409,5 +626,30 @@ export class TransactionListComponent implements OnInit, OnDestroy {
           }
         });
     }
+  }
+
+  // Advanced filter event handlers
+  onAdvancedFiltersChanged(filterGroups: FilterGroup[]): void {
+    this.applyAdvancedFilters(filterGroups);
+  }
+
+  onAdvancedSearchQuery(query: string): void {
+    this.searchTerm = query;
+    this.addToSearchHistory(query);
+    this.onSearch();
+  }
+
+  onPresetApplied(preset: any): void {
+    console.log('Filter preset applied:', preset);
+    // The filters are already applied by the advanced filter service
+  }
+
+  onSavedFilterLoaded(savedFilter: any): void {
+    console.log('Saved filter loaded:', savedFilter);
+    // The filters are already applied by the advanced filter service
+  }
+
+  private addToSearchHistory(query: string): void {
+    this.advancedFilterService.addToSearchHistory(query);
   }
 }

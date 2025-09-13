@@ -17,8 +17,10 @@ import { FinancialService } from '../../../../core/services/financial.service';
 import { TransactionService } from '../../../../core/services/transaction.service';
 import { CategoryService } from '../../../../core/services/category.service';
 import { BudgetService } from '../../../../core/services/budget.service';
+import { AdvancedFilterService, FilterGroup } from '../../../../core/services/advanced-filter.service';
 import { BudgetWizardComponent } from '../budget-wizard/budget-wizard';
 import { OptimizedRealtimeBudgetProgressComponent } from '../realtime-budget-progress/optimized-realtime-budget-progress.component';
+import { AdvancedFilterComponent, FilterField } from '../../../../shared/components/advanced-filter/advanced-filter.component';
 
 interface BudgetProgress {
   categoryId: string;
@@ -34,7 +36,7 @@ interface BudgetProgress {
 @Component({
   selector: 'app-budget-management',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule, ReactiveFormsModule, BudgetWizardComponent, OptimizedRealtimeBudgetProgressComponent],
+  imports: [CommonModule, RouterModule, FormsModule, ReactiveFormsModule, BudgetWizardComponent, OptimizedRealtimeBudgetProgressComponent, AdvancedFilterComponent],
   templateUrl: './budget-management.html',
   styleUrls: ['./budget-management.scss']
 })
@@ -46,10 +48,12 @@ export class BudgetManagementComponent implements OnInit, OnDestroy {
   private transactionService = inject(TransactionService);
   private categoryService = inject(CategoryService);
   private budgetService = inject(BudgetService);
+  private advancedFilterService = inject(AdvancedFilterService);
   private fb = inject(FormBuilder);
 
   // Data
   budgets: Budget[] = [];
+  filteredBudgets: Budget[] = [];
   categories: Category[] = [];
   transactions: Transaction[] = [];
   budgetProgress: BudgetProgress[] = [];
@@ -80,8 +84,80 @@ export class BudgetManagementComponent implements OnInit, OnDestroy {
     { value: 'yearly', label: 'Yearly' }
   ];
 
+  // Advanced filter configuration
+  filterFields: FilterField[] = [
+    {
+      key: 'name',
+      label: 'Budget Name',
+      type: 'text',
+      placeholder: 'Search budget names...',
+      operators: ['contains', 'not_contains', 'starts_with', 'ends_with', 'equals', 'not_equals']
+    },
+    {
+      key: 'period',
+      label: 'Period',
+      type: 'select',
+      options: [
+        { value: 'monthly', label: 'Monthly' },
+        { value: 'quarterly', label: 'Quarterly' },
+        { value: 'yearly', label: 'Yearly' }
+      ],
+      operators: ['equals', 'not_equals', 'in', 'not_in']
+    },
+    {
+      key: 'status',
+      label: 'Status',
+      type: 'select',
+      options: [
+        { value: 'active', label: 'Active' },
+        { value: 'inactive', label: 'Inactive' },
+        { value: 'completed', label: 'Completed' },
+        { value: 'cancelled', label: 'Cancelled' }
+      ],
+      operators: ['equals', 'not_equals', 'in', 'not_in']
+    },
+    {
+      key: 'totalAmount',
+      label: 'Budget Amount',
+      type: 'number',
+      placeholder: 'Enter amount...',
+      operators: ['equals', 'not_equals', 'gt', 'gte', 'lt', 'lte', 'between']
+    },
+    {
+      key: 'startDate',
+      label: 'Start Date',
+      type: 'date',
+      operators: ['equals', 'not_equals', 'gt', 'gte', 'lt', 'lte', 'between']
+    },
+    {
+      key: 'endDate',
+      label: 'End Date',
+      type: 'date',
+      operators: ['equals', 'not_equals', 'gt', 'gte', 'lt', 'lte', 'between']
+    },
+    {
+      key: 'isActive',
+      label: 'Active Status',
+      type: 'boolean',
+      operators: ['equals', 'not_equals']
+    },
+    {
+      key: 'currency',
+      label: 'Currency',
+      type: 'select',
+      options: [
+        { value: 'USD', label: 'USD' },
+        { value: 'EUR', label: 'EUR' },
+        { value: 'GBP', label: 'GBP' },
+        { value: 'CAD', label: 'CAD' }
+      ],
+      operators: ['equals', 'not_equals', 'in', 'not_in']
+    }
+  ];
+
   ngOnInit(): void {
     this.initializeForms();
+    this.setupAdvancedFilters();
     // Only load data if not in test environment
     if (!this.isTestEnvironment()) {
       this.loadData();
@@ -149,6 +225,7 @@ export class BudgetManagementComponent implements OnInit, OnDestroy {
     ).subscribe({
       next: (response) => {
         this.budgets = response.budgets || [];
+        this.filteredBudgets = [...this.budgets];
         this.loadBudgetSummary();
         this.loadTransactions();
       },
@@ -156,9 +233,130 @@ export class BudgetManagementComponent implements OnInit, OnDestroy {
         console.error('Error loading budgets:', error);
         // Fallback to mock data for development
         this.budgets = this.createMockBudgets();
+        this.filteredBudgets = [...this.budgets];
         this.loadTransactions();
       }
     });
+  }
+
+  private setupAdvancedFilters(): void {
+    // Subscribe to filter changes from the advanced filter service
+    this.advancedFilterService.activeFilters
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(filters => {
+        this.applyAdvancedFilters(filters);
+      });
+  }
+
+  private applyAdvancedFilters(filterGroups: FilterGroup[]): void {
+    if (filterGroups.length === 0) {
+      this.filteredBudgets = [...this.budgets];
+      return;
+    }
+
+    // Build query from filter groups
+    const query = this.advancedFilterService.buildQuery();
+    
+    // Apply filters to local budgets
+    this.filteredBudgets = this.budgets.filter(budget => {
+      return this.evaluateBudgetAgainstQuery(budget, query);
+    });
+  }
+
+  private evaluateBudgetAgainstQuery(budget: Budget, query: any): boolean {
+    if (!query || Object.keys(query).length === 0) {
+      return true;
+    }
+
+    // Handle $and conditions
+    if (query.$and) {
+      return query.$and.every((condition: any) => 
+        this.evaluateBudgetAgainstQuery(budget, condition)
+      );
+    }
+
+    // Handle $or conditions
+    if (query.$or) {
+      return query.$or.some((condition: any) => 
+        this.evaluateBudgetAgainstQuery(budget, condition)
+      );
+    }
+
+    // Handle individual field conditions
+    for (const [field, condition] of Object.entries(query)) {
+      if (!this.evaluateFieldCondition(budget, field, condition)) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  private evaluateFieldCondition(budget: Budget, field: string, condition: any): boolean {
+    const value = this.getBudgetFieldValue(budget, field);
+    
+    if (typeof condition === 'object' && condition !== null) {
+      // Handle MongoDB-style operators
+      for (const [operator, operatorValue] of Object.entries(condition)) {
+        if (!this.evaluateOperator(value, operator, operatorValue)) {
+          return false;
+        }
+      }
+      return true;
+    } else {
+      // Direct equality
+      return value === condition;
+    }
+  }
+
+  private evaluateOperator(value: any, operator: string, operatorValue: any): boolean {
+    switch (operator) {
+      case '$eq':
+        return value === operatorValue;
+      case '$ne':
+        return value !== operatorValue;
+      case '$gt':
+        return value > operatorValue;
+      case '$gte':
+        return value >= operatorValue;
+      case '$lt':
+        return value < operatorValue;
+      case '$lte':
+        return value <= operatorValue;
+      case '$in':
+        return Array.isArray(operatorValue) && operatorValue.includes(value);
+      case '$nin':
+        return Array.isArray(operatorValue) && !operatorValue.includes(value);
+      case '$regex':
+        return new RegExp(operatorValue, 'i').test(String(value));
+      case '$not':
+        return !new RegExp(operatorValue, 'i').test(String(value));
+      default:
+        return true;
+    }
+  }
+
+  private getBudgetFieldValue(budget: Budget, field: string): any {
+    switch (field) {
+      case 'name':
+        return budget.name;
+      case 'period':
+        return budget.period;
+      case 'status':
+        return budget.status;
+      case 'totalAmount':
+        return budget.totalAmount;
+      case 'startDate':
+        return budget.startDate;
+      case 'endDate':
+        return budget.endDate;
+      case 'isActive':
+        return budget.isActive;
+      case 'currency':
+        return budget.currency;
+      default:
+        return (budget as any)[field];
+    }
   }
 
   private loadBudgetSummary(): void {
@@ -513,5 +711,29 @@ export class BudgetManagementComponent implements OnInit, OnDestroy {
       element.classList.add('highlight');
       setTimeout(() => element.classList.remove('highlight'), 2000);
     }
+  }
+
+  // Advanced filter event handlers
+  onAdvancedFiltersChanged(filterGroups: FilterGroup[]): void {
+    this.applyAdvancedFilters(filterGroups);
+  }
+
+  onAdvancedSearchQuery(query: string): void {
+    this.addToSearchHistory(query);
+    // You could implement search functionality here if needed
+  }
+
+  onPresetApplied(preset: any): void {
+    console.log('Filter preset applied:', preset);
+    // The filters are already applied by the advanced filter service
+  }
+
+  onSavedFilterLoaded(savedFilter: any): void {
+    console.log('Saved filter loaded:', savedFilter);
+    // The filters are already applied by the advanced filter service
+  }
+
+  private addToSearchHistory(query: string): void {
+    this.advancedFilterService.addToSearchHistory(query);
   }
 }

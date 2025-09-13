@@ -151,8 +151,13 @@
       }
     }
   
-    // Budget Controls
-    .budget-controls {
+    // Advanced Filters Section
+    .advanced-filters-section {
+      margin-bottom: 24px;
+    }
+
+    // Legacy Budget Controls
+    .legacy-budget-controls {
       background: white;
       border-radius: 12px;
       padding: 20px;
@@ -162,19 +167,19 @@
       gap: 24px;
       flex-wrap: wrap;
       align-items: end;
-  
+
       .control-group {
         display: flex;
         flex-direction: column;
         gap: 8px;
         min-width: 200px;
-  
+
         label {
           font-size: 14px;
           font-weight: 600;
           color: #495057;
         }
-  
+
         select {
           padding: 10px 12px;
           border-radius: 8px;
@@ -182,7 +187,7 @@
           background: white;
           font-size: 14px;
           transition: border-color 0.2s ease;
-  
+
           &:focus {
             outline: none;
             border-color: #007bff;
@@ -190,11 +195,11 @@
           }
         }
       }
-  
+
       @media (max-width: 768px) {
         flex-direction: column;
         gap: 16px;
-  
+
         .control-group {
           min-width: auto;
           width: 100%;

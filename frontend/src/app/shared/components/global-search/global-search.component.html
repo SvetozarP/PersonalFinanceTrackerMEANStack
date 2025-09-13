@@ -1,0 +1,95 @@
+<div class="global-search-container" [class.open]="isOpen()">
+  <!-- Search Input -->
+  <form class="search-form" (submit)="onSearchSubmit($event)">
+    <div class="search-input-wrapper">
+      <i class="fas fa-search search-icon"></i>
+      <input
+        type="text"
+        class="search-input"
+        placeholder="Search transactions, budgets, categories..."
+        [value]="searchQuery()"
+        (input)="onSearchInput($event)"
+        (focus)="onSearchFocus()"
+        (blur)="onSearchBlur()"
+        autocomplete="off"
+      >
+      <div class="search-actions">
+        <button
+          *ngIf="searchQuery()"
+          type="button"
+          class="clear-btn"
+          (click)="clearSearch()"
+          title="Clear search"
+        >
+          <i class="fas fa-times"></i>
+        </button>
+        <div class="search-loading" *ngIf="isSearching()">
+          <i class="fas fa-spinner fa-spin"></i>
+        </div>
+      </div>
+    </div>
+  </form>
+
+  <!-- Search Suggestions -->
+  <div class="search-suggestions" *ngIf="showSuggestions() && hasSuggestions()">
+    <div class="suggestions-header">
+      <span class="suggestions-title">Suggestions</span>
+    </div>
+    <div class="suggestions-list">
+      <div
+        class="suggestion-item"
+        *ngFor="let suggestion of searchSuggestions()"
+        (click)="onSuggestionClick(suggestion)"
+      >
+        <i [class]="getSuggestionIcon(suggestion.type)" class="suggestion-icon"></i>
+        <div class="suggestion-content">
+          <span class="suggestion-text">{{ suggestion.text }}</span>
+          <span class="suggestion-type">{{ suggestion.type | titlecase }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Search Results -->
+  <div class="search-results" *ngIf="!showSuggestions() && hasResults()">
+    <div class="results-header">
+      <span class="results-title">Search Results</span>
+      <span class="results-count">{{ resultCount() }} result{{ resultCount() !== 1 ? 's' : '' }}</span>
+    </div>
+    <div class="results-list">
+      <div
+        class="result-item"
+        *ngFor="let result of searchResults()"
+        (click)="onResultClick(result)"
+      >
+        <div class="result-icon">
+          <i [class]="getResultIcon(result.type)"></i>
+        </div>
+        <div class="result-content">
+          <div class="result-title">{{ result.title }}</div>
+          <div class="result-description" *ngIf="result.description">
+            {{ result.description }}
+          </div>
+          <div class="result-metadata" *ngIf="formatResultMetadata(result)">
+            {{ formatResultMetadata(result) }}
+          </div>
+        </div>
+        <div class="result-type">
+          <span class="type-badge">{{ getResultTypeLabel(result.type) }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- No Results -->
+  <div class="no-results" *ngIf="!showSuggestions() && !hasResults() && searchQuery() && !isSearching()">
+    <div class="no-results-content">
+      <i class="fas fa-search"></i>
+      <h3>No results found</h3>
+      <p>Try adjusting your search terms or check your spelling</p>
+    </div>
+  </div>
+
+  <!-- Search Overlay -->
+  <div class="search-overlay" *ngIf="isOpen()" (click)="clearSearch()"></div>
+</div>

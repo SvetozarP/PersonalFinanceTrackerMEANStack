@@ -26,8 +26,24 @@
     </button>
   </div>
 
-  <!-- Filters Section -->
-  <div class="filters-section">
+  <!-- Advanced Filters Section -->
+  <div class="advanced-filters-section">
+    <app-advanced-filter
+      [fields]="filterFields"
+      category="categories"
+      [showPresets]="true"
+      [showSavedFilters]="true"
+      [showSearchSuggestions]="true"
+      [compact]="false"
+      (filtersChanged)="onAdvancedFiltersChanged($event)"
+      (searchQuery)="onAdvancedSearchQuery($event)"
+      (presetApplied)="onPresetApplied($event)"
+      (savedFilterLoaded)="onSavedFilterLoaded($event)">
+    </app-advanced-filter>
+  </div>
+
+  <!-- Legacy Filters Section (Hidden by default, can be toggled) -->
+  <div class="legacy-filters-section" style="display: none;">
     <div class="filters-row">
       <!-- Search Input -->
       <div class="filter-group">
@@ -199,7 +215,7 @@
       </div>
 
       <div class="categories-table">
-        <div *ngFor="let category of categories" class="category-item">
+        <div *ngFor="let category of filteredCategories" class="category-item">
           <div class="category-icon" [style.background-color]="category.color">
             <span class="icon">{{ getCategoryIcon(category) }}</span>
           </div>
@@ -303,7 +319,7 @@
 
     <!-- Grid View -->
     <div *ngIf="viewMode === 'grid' && hasCategories" class="categories-grid">
-      <div *ngFor="let category of categories" class="category-card">
+      <div *ngFor="let category of filteredCategories" class="category-card">
         <div class="card-header" [style.background-color]="category.color">
           <div class="card-icon">
             <span class="icon">{{ getCategoryIcon(category) }}</span>
