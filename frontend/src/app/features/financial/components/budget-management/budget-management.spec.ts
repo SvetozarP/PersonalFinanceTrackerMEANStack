@@ -377,11 +377,12 @@ describe('BudgetManagementComponent', () => {
     const mockBudget = component['createMockBudgets']()[0];
     component.budgets = [mockBudget];
     
-    spyOn(window, 'confirm').and.returnValue(true);
+    const confirmSpy = spyOn(window, 'confirm').and.returnValue(true);
     
     component.deleteBudget(mockBudget._id);
     
     expect(component.budgets.length).toBe(0);
+    expect(confirmSpy).toHaveBeenCalled();
   });
 
   it('should toggle budget status correctly', () => {

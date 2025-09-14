@@ -162,17 +162,19 @@ describe('CategoryListComponent', () => {
   });
 
   it('should handle category deletion', () => {
-    spyOn(window, 'confirm').and.returnValue(true);
+    const confirmSpy = spyOn(window, 'confirm').and.returnValue(true);
     component.onCategoryDelete('cat1');
 
     expect(categoryService.deleteCategory).toHaveBeenCalledWith('cat1');
+    expect(confirmSpy).toHaveBeenCalled();
   });
 
   it('should not delete category when user cancels', () => {
-    spyOn(window, 'confirm').and.returnValue(false);
+    const confirmSpy = spyOn(window, 'confirm').and.returnValue(false);
     component.onCategoryDelete('cat1');
 
     expect(categoryService.deleteCategory).not.toHaveBeenCalled();
+    expect(confirmSpy).toHaveBeenCalled();
   });
 
   it('should calculate pagination correctly', () => {
@@ -347,7 +349,7 @@ describe('CategoryListComponent', () => {
 
   it('should handle category deletion error', (done) => {
     categoryService.deleteCategory.and.returnValue(throwError(() => new Error('API Error')));
-    spyOn(window, 'confirm').and.returnValue(true);
+    const confirmSpy = spyOn(window, 'confirm').and.returnValue(true);
     
     component.onCategoryDelete('cat1');
     
@@ -377,7 +379,7 @@ describe('CategoryListComponent', () => {
     component.currentPage = 2;
     component.totalItems = 1;
     categoryService.deleteCategory.and.returnValue(of(true));
-    spyOn(window, 'confirm').and.returnValue(true);
+    const confirmSpy = spyOn(window, 'confirm').and.returnValue(true);
     
     component.onCategoryDelete('cat1');
     

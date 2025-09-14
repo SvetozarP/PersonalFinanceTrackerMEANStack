@@ -254,7 +254,7 @@ describe('AdvancedFilterComponent', () => {
       setTimeout(() => {
         expect(component.isSearching()).toBe(false);
         done();
-      }, 100);
+      }, 300); // Increased timeout to account for the 200ms delay in onSearchFocus
     });
 
     it('should handle search blur', (done) => {
@@ -563,7 +563,7 @@ describe('AdvancedFilterComponent', () => {
       setTimeout(() => {
         expect(component.isSearching()).toBeFalse();
         done();
-      }, 100);
+      }, 300); // Increased timeout to account for the 200ms delay in onSearchFocus
     });
 
     it('should handle search blur after delay', (done) => {
@@ -825,7 +825,8 @@ describe('AdvancedFilterComponent', () => {
   describe('Additional Form Management', () => {
     it('should handle form validation', () => {
       const searchControl = component.searchForm.get('searchQuery');
-      // Initially empty, should have minlength error
+      // Initially empty, should have minlength error when touched
+      searchControl?.setValue('');
       searchControl?.markAsTouched();
       searchControl?.updateValueAndValidity();
       expect(searchControl?.hasError('minlength')).toBe(true);
@@ -861,7 +862,7 @@ describe('AdvancedFilterComponent', () => {
       setTimeout(() => {
         expect(component.isSearching()).toBe(false);
         done();
-      }, 100);
+      }, 300); // Increased timeout to account for the 200ms delay in onSearchFocus
     });
 
     it('should handle search blur', (done) => {

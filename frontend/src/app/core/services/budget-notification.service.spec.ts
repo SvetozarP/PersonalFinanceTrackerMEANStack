@@ -233,6 +233,8 @@ describe('BudgetNotificationService', () => {
     it('should handle invalid localStorage data', () => {
       localStorage.setItem('budget-notification-settings', 'invalid-json');
 
+      spyOn(console, 'error'); // Suppress console.error during test
+      
       // Create new service instance to test error handling
       const newService = new BudgetNotificationService();
       

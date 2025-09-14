@@ -264,7 +264,7 @@ describe('FinancialGoalsComponent', () => {
     });
 
     it('should delete goal with confirmation', () => {
-      spyOn(window, 'confirm').and.returnValue(true);
+      const confirmSpy = spyOn(window, 'confirm').and.returnValue(true);
       const initialGoalCount = component.goals.length;
       const goalToDelete = component.goals[0];
 
@@ -275,7 +275,7 @@ describe('FinancialGoalsComponent', () => {
     });
 
     it('should not delete goal without confirmation', () => {
-      spyOn(window, 'confirm').and.returnValue(false);
+      const confirmSpy = spyOn(window, 'confirm').and.returnValue(false);
       const initialGoalCount = component.goals.length;
       const goalToDelete = component.goals[0];
 
@@ -970,7 +970,7 @@ describe('FinancialGoalsComponent', () => {
   });
 
   it('should handle delete goal without confirmation', () => {
-    spyOn(window, 'confirm').and.returnValue(false);
+    const confirmSpy = spyOn(window, 'confirm').and.returnValue(false);
     const initialGoalCount = component.goals.length;
     
     component.deleteGoal('1');
@@ -979,7 +979,7 @@ describe('FinancialGoalsComponent', () => {
   });
 
   it('should handle delete goal with confirmation', () => {
-    spyOn(window, 'confirm').and.returnValue(true);
+    const confirmSpy = spyOn(window, 'confirm').and.returnValue(true);
     const initialGoalCount = component.goals.length;
     
     component.deleteGoal('1');

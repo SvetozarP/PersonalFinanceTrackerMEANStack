@@ -150,6 +150,7 @@ describe('TransactionDetailsComponent', () => {
   });
 
   it('should handle transaction loading error', () => {
+    spyOn(console, 'error'); // Suppress console.error during test
     transactionService.getTransactionById.and.returnValue(throwError(() => new Error('API Error')));
 
     component.ngOnInit();
@@ -179,6 +180,7 @@ describe('TransactionDetailsComponent', () => {
   });
 
   it('should handle category loading error', () => {
+    spyOn(console, 'error'); // Suppress console.error during test
     transactionService.getTransactionById.and.returnValue(of(mockTransaction));
     categoryService.getCategoryById.and.returnValue(throwError(() => new Error('API Error')));
 
@@ -196,7 +198,7 @@ describe('TransactionDetailsComponent', () => {
   });
 
   it('should delete transaction and navigate to list', () => {
-    spyOn(window, 'confirm').and.returnValue(true);
+    const confirmSpy = spyOn(window, 'confirm').and.returnValue(true);
     transactionService.deleteTransaction.and.returnValue(of(true));
 
     component.transaction = mockTransaction;
@@ -207,7 +209,7 @@ describe('TransactionDetailsComponent', () => {
   });
 
   it('should handle delete cancellation', () => {
-    spyOn(window, 'confirm').and.returnValue(false);
+    const confirmSpy = spyOn(window, 'confirm').and.returnValue(false);
 
     component.transaction = mockTransaction;
     component.onDelete();
@@ -216,7 +218,7 @@ describe('TransactionDetailsComponent', () => {
   });
 
   it('should handle delete error', () => {
-    spyOn(window, 'confirm').and.returnValue(true);
+    const confirmSpy = spyOn(window, 'confirm').and.returnValue(true);
     transactionService.deleteTransaction.and.returnValue(throwError(() => new Error('Delete failed')));
 
     component.transaction = mockTransaction;

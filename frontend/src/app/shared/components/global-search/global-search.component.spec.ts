@@ -130,6 +130,7 @@ describe('GlobalSearchComponent', () => {
     });
 
     it('should handle search errors', () => {
+      spyOn(console, 'error'); // Suppress console.error during test
       globalSearchService.search.and.returnValue(throwError(() => new Error('Search error')));
       
       expect(() => {
@@ -265,12 +266,14 @@ describe('GlobalSearchComponent', () => {
 
   describe('Error Handling', () => {
     it('should handle search service errors', () => {
+      spyOn(console, 'error'); // Suppress console.error during test
       globalSearchService.search.and.returnValue(throwError(() => new Error('Service error')));
       
       expect(() => component['performSearch']('test')).not.toThrow();
     });
 
     it('should handle suggestion service errors', () => {
+      spyOn(console, 'error'); // Suppress console.error during test
       globalSearchService.getSuggestions.and.returnValue(throwError(() => new Error('Service error')));
       
       expect(() => component['searchSubject'].next('test')).not.toThrow();
@@ -300,7 +303,7 @@ describe('GlobalSearchComponent', () => {
         expect(component.searchSuggestions()).toEqual(suggestions);
         expect(globalSearchService.getSuggestions).toHaveBeenCalledWith('te');
         done();
-      }, 350);
+      }, 500); // Increased timeout to ensure debounced search completes
     });
 
     it('should clear suggestions and results for short queries', (done) => {
@@ -314,7 +317,7 @@ describe('GlobalSearchComponent', () => {
         expect(component.searchSuggestions()).toEqual([]);
         expect(component.searchResults()).toEqual([]);
         done();
-      }, 350);
+      }, 500); // Increased timeout to ensure debounced search completes
     });
   });
 
@@ -432,7 +435,7 @@ describe('GlobalSearchComponent', () => {
       setTimeout(() => {
         expect(globalSearchService.getSuggestions).toHaveBeenCalledWith('test');
         done();
-      }, 350);
+      }, 500); // Increased timeout to ensure debounced search completes
     });
 
     it('should handle search with special characters and unicode', () => {
@@ -454,6 +457,7 @@ describe('GlobalSearchComponent', () => {
 
   describe('Error Recovery', () => {
     it('should recover from search service errors and continue working', (done) => {
+      spyOn(console, 'error'); // Suppress console.error during test
       globalSearchService.search.and.returnValue(throwError(() => new Error('Network error')));
       
       component['performSearch']('test');
@@ -475,6 +479,7 @@ describe('GlobalSearchComponent', () => {
     it('should handle suggestion service errors gracefully', () => {
       // Test that the component can handle suggestion service errors
       // by testing the error handling in the performSearch method instead
+      spyOn(console, 'error'); // Suppress console.error during test
       globalSearchService.search.and.returnValue(throwError(() => new Error('Search error')));
       
       expect(() => {

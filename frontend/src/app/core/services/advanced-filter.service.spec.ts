@@ -280,6 +280,7 @@ describe('AdvancedFilterService', () => {
     });
 
     it('should handle invalid JSON import', () => {
+      spyOn(console, 'error'); // Suppress console.error during test
       const success = service.importFilters('invalid json');
       expect(success).toBe(false);
     });
@@ -377,6 +378,7 @@ describe('AdvancedFilterService', () => {
     });
 
     it('should handle invalid JSON import', () => {
+      spyOn(console, 'error'); // Suppress console.error during test
       const result = service.importFilters('invalid json');
       expect(result).toBe(false);
     });
@@ -589,6 +591,7 @@ describe('AdvancedFilterService', () => {
     });
 
     it('should handle file import error', (done) => {
+      spyOn(console, 'error'); // Suppress console.error during test
       const mockFile = new File(['invalid json'], 'test.json', { type: 'application/json' });
       
       service.importFiltersFromFile(mockFile).then(success => {
@@ -867,6 +870,7 @@ describe('AdvancedFilterService', () => {
       expect(emptyExport).toBeDefined();
 
       // Test import with malformed JSON
+      spyOn(console, 'error'); // Suppress console.error during test
       const malformedJson = '{"invalid": json}';
       const result = service.importFilters(malformedJson);
       expect(result).toBe(false);
@@ -939,6 +943,7 @@ describe('AdvancedFilterService', () => {
         expect(result).toBe(true);
       });
 
+      spyOn(console, 'error'); // Suppress console.error during test
       service.importFiltersFromFile(textFile).then(result => {
         expect(result).toBe(false);
       });

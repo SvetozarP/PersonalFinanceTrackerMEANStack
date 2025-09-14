@@ -742,7 +742,7 @@ describe('BudgetManagementComponent - Branch Coverage', () => {
 
   describe('deleteBudget', () => {
     it('should delete budget when confirmed', () => {
-      spyOn(window, 'confirm').and.returnValue(true);
+      const confirmSpy = spyOn(window, 'confirm').and.returnValue(true);
       component.budgets = [
         { _id: '1', name: 'Test Budget 1', totalAmount: 1000, categoryAllocations: [], status: 'active', isActive: true, autoAdjust: false, allowRollover: false, rolloverAmount: 0, userId: 'user1', period: 'monthly', startDate: new Date(), endDate: new Date(), currency: 'USD', alertThreshold: 80, createdAt: new Date(), updatedAt: new Date() },
         { _id: '2', name: 'Test Budget 2', totalAmount: 2000, categoryAllocations: [], status: 'active', isActive: true, autoAdjust: false, allowRollover: false, rolloverAmount: 0, userId: 'user1', period: 'monthly', startDate: new Date(), endDate: new Date(), currency: 'USD', alertThreshold: 80, createdAt: new Date(), updatedAt: new Date() }
@@ -755,7 +755,7 @@ describe('BudgetManagementComponent - Branch Coverage', () => {
     });
 
     it('should not delete budget when not confirmed', () => {
-      spyOn(window, 'confirm').and.returnValue(false);
+      const confirmSpy = spyOn(window, 'confirm').and.returnValue(false);
       component.budgets = [
         { _id: '1', name: 'Test Budget 1', totalAmount: 1000, categoryAllocations: [], status: 'active', isActive: true, autoAdjust: false, allowRollover: false, rolloverAmount: 0, userId: 'user1', period: 'monthly', startDate: new Date(), endDate: new Date(), currency: 'USD', alertThreshold: 80, createdAt: new Date(), updatedAt: new Date() },
         { _id: '2', name: 'Test Budget 2', totalAmount: 2000, categoryAllocations: [], status: 'active', isActive: true, autoAdjust: false, allowRollover: false, rolloverAmount: 0, userId: 'user1', period: 'monthly', startDate: new Date(), endDate: new Date(), currency: 'USD', alertThreshold: 80, createdAt: new Date(), updatedAt: new Date() }
@@ -1084,6 +1084,7 @@ describe('BudgetManagementComponent - Branch Coverage', () => {
 
   describe('error handling in loadBudgetSummary', () => {
     it('should handle budget summary loading error', () => {
+      spyOn(console, 'error'); // Suppress console.error during test
       budgetService.getBudgetSummary.and.returnValue(throwError(() => new Error('Summary error')));
 
       component['loadBudgetSummary']();
@@ -1096,6 +1097,7 @@ describe('BudgetManagementComponent - Branch Coverage', () => {
 
   describe('error handling in loadTransactions', () => {
     it('should handle transaction loading error', () => {
+      spyOn(console, 'error'); // Suppress console.error during test
       transactionService.getUserTransactions.and.returnValue(throwError(() => new Error('Transaction error')));
 
       component['loadTransactions']();

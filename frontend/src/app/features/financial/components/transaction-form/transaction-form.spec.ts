@@ -287,6 +287,7 @@ describe('TransactionFormComponent', () => {
   });
 
   it('should handle category loading error', () => {
+    spyOn(console, 'error'); // Suppress console.error during test
     mockCategoryService.getUserCategories.and.returnValue(throwError(() => new Error('API Error')));
     
     // Recreate component to trigger error
@@ -415,6 +416,7 @@ describe('TransactionFormComponent', () => {
   });
 
   it('should handle form submission errors', () => {
+    spyOn(console, 'error'); // Suppress console.error during test
     mockTransactionService.createTransaction.and.returnValue(throwError(() => new Error('API Error')));
     
     component.ngOnInit();
@@ -1520,13 +1522,14 @@ describe('TransactionFormComponent', () => {
   });
 
   it('should handle delete with confirmation', () => {
-    spyOn(window, 'confirm').and.returnValue(true);
+    const confirmSpy = spyOn(window, 'confirm').and.returnValue(true);
     component.transaction = mockTransaction;
     component.transactionId = 'trans1';
     
     component.onDelete();
     
     expect(mockTransactionService.deleteTransaction).toHaveBeenCalledWith('trans1');
+    expect(confirmSpy).toHaveBeenCalled();
   });
 
   it('should handle delete without transaction', () => {

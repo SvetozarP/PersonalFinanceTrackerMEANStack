@@ -89,6 +89,11 @@ describe('CategoryTreeComponent', () => {
     fixture.detectChanges();
   });
 
+  afterEach(() => {
+    // Clean up any spies
+    (jasmine.getEnv() as any).currentSpec = null;
+  });
+
   it('should create', () => {
     expect(component).toBeTruthy();
   });
@@ -138,7 +143,7 @@ describe('CategoryTreeComponent', () => {
 
   it('should handle category deletion', () => {
     spyOn(component.categoryDeleted, 'emit');
-    spyOn(window, 'confirm').and.returnValue(true);
+    const confirmSpy = spyOn(window, 'confirm').and.returnValue(true);
     const category = mockCategories[0];
     const event = new Event('click');
     
@@ -149,7 +154,7 @@ describe('CategoryTreeComponent', () => {
 
   it('should not delete category when user cancels', () => {
     spyOn(component.categoryDeleted, 'emit');
-    spyOn(window, 'confirm').and.returnValue(false);
+    const confirmSpy = spyOn(window, 'confirm').and.returnValue(false);
     const category = mockCategories[0];
     const event = new Event('click');
     
@@ -281,6 +286,7 @@ describe('CategoryTreeComponent', () => {
   });
 
   it('should handle error loading categories', (done) => {
+    spyOn(console, 'error'); // Suppress console.error during test
     categoryService.getUserCategories.and.returnValue(throwError(() => new Error('API Error')));
     
     component['loadCategories']();

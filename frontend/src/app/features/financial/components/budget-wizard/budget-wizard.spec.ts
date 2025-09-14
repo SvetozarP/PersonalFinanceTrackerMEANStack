@@ -368,6 +368,7 @@ describe('BudgetWizardComponent', () => {
   });
 
   it('should handle budget creation error', (done) => {
+    spyOn(console, 'error'); // Suppress console.error during test
     mockBudgetService.createBudget.and.returnValue(throwError(() => new Error('Creation failed')));
     
     component.ngOnInit();
