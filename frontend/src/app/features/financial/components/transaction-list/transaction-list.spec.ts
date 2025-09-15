@@ -13,6 +13,7 @@ describe('TransactionListComponent', () => {
   let fixture: ComponentFixture<TransactionListComponent>;
   let transactionService: jasmine.SpyObj<TransactionService>;
   let categoryService: jasmine.SpyObj<CategoryService>;
+  let confirmSpy: jasmine.Spy;
 
   const mockTransaction: Transaction = {
     _id: '1',
@@ -60,6 +61,9 @@ describe('TransactionListComponent', () => {
     const categoryServiceSpy = jasmine.createSpyObj('CategoryService', [
       'getUserCategories'
     ]);
+
+    // Set up global confirm spy
+    confirmSpy = spyOn(window, 'confirm');
 
     // Setup default return values
     transactionServiceSpy.getUserTransactions.and.returnValue(of({
@@ -158,14 +162,14 @@ describe('TransactionListComponent', () => {
   });
 
   it('should handle transaction deletion', () => {
-    spyOn(window, 'confirm').and.returnValue(true);
+    confirmSpy.and.returnValue(true);
     component.onTransactionDelete('1');
     
     expect(transactionService.deleteTransaction).toHaveBeenCalledWith('1');
   });
 
   it('should not delete transaction when user cancels', () => {
-    spyOn(window, 'confirm').and.returnValue(false);
+    confirmSpy.and.returnValue(false);
     component.onTransactionDelete('1');
     
     expect(transactionService.deleteTransaction).not.toHaveBeenCalled();
@@ -259,7 +263,7 @@ describe('TransactionListComponent', () => {
     });
 
     it('should handle transaction deletion error', () => {
-      spyOn(window, 'confirm').and.returnValue(true);
+      confirmSpy.and.returnValue(true);
       transactionService.deleteTransaction.and.returnValue(throwError(() => new Error('API Error')));
       
       component.onTransactionDelete('1');
@@ -301,7 +305,7 @@ describe('TransactionListComponent', () => {
       component.totalItems = 1;
       component.totalPages = 1;
       
-      spyOn(window, 'confirm').and.returnValue(true);
+      confirmSpy.and.returnValue(true);
       component.onTransactionDelete('1');
       
       expect(component.currentPage).toBe(1);
@@ -504,7 +508,7 @@ describe('TransactionListComponent', () => {
     });
 
     it('should have both deleteTransaction and onTransactionDelete methods', () => {
-      spyOn(window, 'confirm').and.returnValue(true);
+      confirmSpy.and.returnValue(true);
       
       component.deleteTransaction('1');
       expect(transactionService.deleteTransaction).toHaveBeenCalledWith('1');

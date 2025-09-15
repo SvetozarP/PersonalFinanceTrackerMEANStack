@@ -15,6 +15,7 @@ describe('TransactionDetailsComponent', () => {
   let categoryService: jasmine.SpyObj<CategoryService>;
   let router: jasmine.SpyObj<Router>;
   let activatedRoute: any;
+  let confirmSpy: jasmine.Spy;
 
   const mockTransaction: Transaction = {
     _id: '1',
@@ -100,6 +101,9 @@ describe('TransactionDetailsComponent', () => {
     const transactionServiceSpy = jasmine.createSpyObj('TransactionService', ['getTransactionById', 'deleteTransaction']);
     const categoryServiceSpy = jasmine.createSpyObj('CategoryService', ['getCategoryById']);
     const routerSpy = jasmine.createSpyObj('Router', ['navigate']);
+
+    // Set up global confirm spy
+    confirmSpy = spyOn(window, 'confirm');
 
     await TestBed.configureTestingModule({
       imports: [TransactionDetailsComponent],
@@ -198,7 +202,7 @@ describe('TransactionDetailsComponent', () => {
   });
 
   it('should delete transaction and navigate to list', () => {
-    const confirmSpy = spyOn(window, 'confirm').and.returnValue(true);
+    confirmSpy.and.returnValue(true);
     transactionService.deleteTransaction.and.returnValue(of(true));
 
     component.transaction = mockTransaction;
@@ -209,7 +213,7 @@ describe('TransactionDetailsComponent', () => {
   });
 
   it('should handle delete cancellation', () => {
-    const confirmSpy = spyOn(window, 'confirm').and.returnValue(false);
+    confirmSpy.and.returnValue(false);
 
     component.transaction = mockTransaction;
     component.onDelete();
@@ -218,7 +222,7 @@ describe('TransactionDetailsComponent', () => {
   });
 
   it('should handle delete error', () => {
-    const confirmSpy = spyOn(window, 'confirm').and.returnValue(true);
+    confirmSpy.and.returnValue(true);
     transactionService.deleteTransaction.and.returnValue(throwError(() => new Error('Delete failed')));
 
     component.transaction = mockTransaction;

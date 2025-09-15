@@ -15,6 +15,7 @@ describe('TransactionFormComponent', () => {
   let mockCategoryService: jasmine.SpyObj<CategoryService>;
   let mockRouter: jasmine.SpyObj<Router>;
   let mockActivatedRoute: jasmine.SpyObj<ActivatedRoute>;
+  let confirmSpy: jasmine.Spy;
 
   const mockCategory = {
     _id: 'cat1',
@@ -104,6 +105,9 @@ describe('TransactionFormComponent', () => {
     mockActivatedRoute = jasmine.createSpyObj('ActivatedRoute', [], {
       paramMap: of(new Map([['id', 'new']]))
     });
+
+    // Set up global confirm spy
+    confirmSpy = spyOn(window, 'confirm');
 
     mockCategoryService.getUserCategories.and.returnValue(of([mockCategory]));
     mockCategoryService.getCategoriesByParent.and.returnValue(of([mockSubcategory]));
@@ -1512,7 +1516,7 @@ describe('TransactionFormComponent', () => {
   });
 
   it('should handle delete without confirmation', () => {
-    spyOn(window, 'confirm').and.returnValue(false);
+    confirmSpy.and.returnValue(false);
     component.transaction = mockTransaction;
     component.transactionId = 'trans1';
     
@@ -1522,7 +1526,7 @@ describe('TransactionFormComponent', () => {
   });
 
   it('should handle delete with confirmation', () => {
-    const confirmSpy = spyOn(window, 'confirm').and.returnValue(true);
+    confirmSpy.and.returnValue(true);
     component.transaction = mockTransaction;
     component.transactionId = 'trans1';
     

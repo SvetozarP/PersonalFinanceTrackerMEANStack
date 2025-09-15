@@ -12,6 +12,7 @@ describe('CategoryTreeComponent', () => {
   let component: CategoryTreeComponent;
   let fixture: ComponentFixture<CategoryTreeComponent>;
   let categoryService: jasmine.SpyObj<CategoryService>;
+  let confirmSpy: jasmine.Spy;
 
   const mockCategories: Category[] = [
     {
@@ -63,6 +64,9 @@ describe('CategoryTreeComponent', () => {
     const categoryServiceSpy = jasmine.createSpyObj('CategoryService', [
       'getUserCategories', 'deleteCategory'
     ]);
+
+    // Set up global confirm spy
+    confirmSpy = spyOn(window, 'confirm');
 
     // Setup default return values
     categoryServiceSpy.getUserCategories.and.returnValue(of(mockCategories));
@@ -143,7 +147,7 @@ describe('CategoryTreeComponent', () => {
 
   it('should handle category deletion', () => {
     spyOn(component.categoryDeleted, 'emit');
-    const confirmSpy = spyOn(window, 'confirm').and.returnValue(true);
+    confirmSpy.and.returnValue(true);
     const category = mockCategories[0];
     const event = new Event('click');
     
@@ -154,7 +158,7 @@ describe('CategoryTreeComponent', () => {
 
   it('should not delete category when user cancels', () => {
     spyOn(component.categoryDeleted, 'emit');
-    const confirmSpy = spyOn(window, 'confirm').and.returnValue(false);
+    confirmSpy.and.returnValue(false);
     const category = mockCategories[0];
     const event = new Event('click');
     

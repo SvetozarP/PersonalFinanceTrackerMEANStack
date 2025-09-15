@@ -260,7 +260,7 @@ export class AdvancedFilterComponent implements OnInit, OnDestroy {
     if (!field) return [];
 
     const fieldOperators = this.OPERATORS[field.type] || [];
-    return field.operators ? field.operators : fieldOperators;
+    return field.operators && field.operators.length > 0 ? field.operators : fieldOperators;
   }
 
   getFieldOptions(fieldKey: string): { value: any; label: string }[] {
