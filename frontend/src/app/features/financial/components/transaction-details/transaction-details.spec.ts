@@ -15,7 +15,6 @@ describe('TransactionDetailsComponent', () => {
   let categoryService: jasmine.SpyObj<CategoryService>;
   let router: jasmine.SpyObj<Router>;
   let activatedRoute: any;
-  let confirmSpy: jasmine.Spy;
 
   const mockTransaction: Transaction = {
     _id: '1',
@@ -102,8 +101,7 @@ describe('TransactionDetailsComponent', () => {
     const categoryServiceSpy = jasmine.createSpyObj('CategoryService', ['getCategoryById']);
     const routerSpy = jasmine.createSpyObj('Router', ['navigate']);
 
-    // Set up global confirm spy
-    confirmSpy = spyOn(window, 'confirm');
+    // Global confirm spy will be set up per test as needed
 
     await TestBed.configureTestingModule({
       imports: [TransactionDetailsComponent],
@@ -127,6 +125,13 @@ describe('TransactionDetailsComponent', () => {
     categoryService = TestBed.inject(CategoryService) as jasmine.SpyObj<CategoryService>;
     router = TestBed.inject(Router) as jasmine.SpyObj<Router>;
     activatedRoute = TestBed.inject(ActivatedRoute);
+  });
+
+  afterEach(() => {
+    // Clean up any spies to prevent conflicts
+    if (window.confirm && (window.confirm as any).and && (window.confirm as any).and.restore) {
+      (window.confirm as any).and.restore();
+    }
   });
 
   it('should create', () => {
@@ -202,7 +207,7 @@ describe('TransactionDetailsComponent', () => {
   });
 
   it('should delete transaction and navigate to list', () => {
-    confirmSpy.and.returnValue(true);
+    spyOn(window, 'confirm').and.returnValue(true);
     transactionService.deleteTransaction.and.returnValue(of(true));
 
     component.transaction = mockTransaction;
@@ -213,7 +218,7 @@ describe('TransactionDetailsComponent', () => {
   });
 
   it('should handle delete cancellation', () => {
-    confirmSpy.and.returnValue(false);
+    spyOn(window, 'confirm').and.returnValue(false);
 
     component.transaction = mockTransaction;
     component.onDelete();
@@ -222,7 +227,7 @@ describe('TransactionDetailsComponent', () => {
   });
 
   it('should handle delete error', () => {
-    confirmSpy.and.returnValue(true);
+    spyOn(window, 'confirm').and.returnValue(true);
     transactionService.deleteTransaction.and.returnValue(throwError(() => new Error('Delete failed')));
 
     component.transaction = mockTransaction;

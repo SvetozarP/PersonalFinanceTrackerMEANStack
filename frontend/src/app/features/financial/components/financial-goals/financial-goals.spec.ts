@@ -47,6 +47,13 @@ describe('FinancialGoalsComponent', () => {
     component = fixture.componentInstance;
   });
 
+  afterEach(() => {
+    // Clean up any spies to prevent conflicts
+    if (window.confirm && (window.confirm as any).and && (window.confirm as any).and.restore) {
+      (window.confirm as any).and.restore();
+    }
+  });
+
   it('should create', () => {
     expect(component).toBeTruthy();
   });
@@ -703,6 +710,13 @@ describe('FinancialGoalsComponent', () => {
   describe('Form Validation Edge Cases', () => {
     beforeEach(() => {
       component['initializeForms']();
+    });
+
+    afterEach(() => {
+      // Clean up any spies to prevent conflicts
+      if (window.confirm && (window.confirm as any).and && (window.confirm as any).and.restore) {
+        (window.confirm as any).and.restore();
+      }
     });
 
     it('should handle form with extremely long values', () => {

@@ -178,6 +178,13 @@ describe('BudgetManagementComponent', () => {
     fixture.detectChanges();
   });
 
+  afterEach(() => {
+    // Clean up any spies to prevent conflicts
+    if (window.confirm && (window.confirm as any).and && (window.confirm as any).and.restore) {
+      (window.confirm as any).and.restore();
+    }
+  });
+
   it('should create', () => {
     expect(component).toBeTruthy();
   });
