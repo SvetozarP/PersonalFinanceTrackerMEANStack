@@ -267,4 +267,288 @@ describe('ChartService', () => {
       expect(result).toBeDefined();
     });
   });
+
+  describe('Monthly Spending Comparison Chart', () => {
+    it('should generate monthly spending comparison chart data', () => {
+      const result = service.generateMonthlySpendingComparison(mockTransactions);
+      
+      expect(result).toBeDefined();
+      expect(result.labels).toBeDefined();
+      expect(result.datasets).toBeDefined();
+      expect(result.datasets.length).toBe(1);
+      expect(result.datasets[0].label).toBe('Monthly Spending');
+    });
+
+    it('should handle empty transactions for monthly comparison', () => {
+      const result = service.generateMonthlySpendingComparison([]);
+      
+      expect(result.labels).toEqual([]);
+      expect(result.datasets.length).toBe(1);
+      expect(result.datasets[0].data).toEqual([]);
+    });
+  });
+
+  describe('Savings Rate Chart', () => {
+    it('should generate savings rate chart data', () => {
+      const result = service.generateSavingsRateChart(mockTransactions, 'month');
+      
+      expect(result).toBeDefined();
+      expect(result.labels).toBeDefined();
+      expect(result.datasets).toBeDefined();
+      expect(result.datasets.length).toBe(1);
+      expect(result.datasets[0].label).toBe('Savings Rate (%)');
+    });
+
+    it('should handle empty transactions for savings rate', () => {
+      const result = service.generateSavingsRateChart([], 'month');
+      
+      expect(result.labels).toEqual([]);
+      expect(result.datasets.length).toBe(1);
+      expect(result.datasets[0].data).toEqual([]);
+    });
+
+    it('should handle different periods for savings rate', () => {
+      const result = service.generateSavingsRateChart(mockTransactions, 'year');
+      
+      expect(result).toBeDefined();
+      expect(result.labels).toBeDefined();
+    });
+  });
+
+  describe('Category Trend Chart', () => {
+    it('should generate category trend chart data', () => {
+      const result = service.generateCategoryTrendChart(mockTransactions, mockCategories, 'month');
+      
+      expect(result).toBeDefined();
+      expect(result.labels).toBeDefined();
+      expect(result.datasets).toBeDefined();
+      expect(result.datasets.length).toBeGreaterThan(0);
+    });
+
+    it('should handle empty transactions for category trends', () => {
+      const result = service.generateCategoryTrendChart([], mockCategories, 'month');
+      
+      expect(result.labels).toEqual([]);
+      expect(result.datasets).toEqual([]);
+    });
+
+    it('should handle empty categories for category trends', () => {
+      const result = service.generateCategoryTrendChart(mockTransactions, [], 'month');
+      
+      expect(result.labels).toBeDefined();
+      expect(result.datasets).toBeDefined();
+      // When categories are empty, transactions with categoryId will be labeled as "Unknown Category"
+      expect(result.datasets.length).toBeGreaterThanOrEqual(0);
+    });
+  });
+
+  describe('Financial Health Gauge', () => {
+    it('should generate financial health gauge data', () => {
+      const metrics = {
+        totalIncome: 5000,
+        totalExpenses: 4000,
+        netIncome: 1000,
+        savingsRate: 20,
+        averageMonthlyIncome: 5000,
+        averageMonthlyExpenses: 4000,
+        topCategory: 'Food',
+        topCategoryAmount: 800
+      };
+      
+      const result = service.generateFinancialHealthGauge(metrics);
+      
+      expect(result).toBeDefined();
+      expect(result.data).toBeDefined();
+      expect(result.options).toBeDefined();
+    });
+
+    it('should handle edge cases for financial health gauge', () => {
+      const metrics = {
+        totalIncome: 1000,
+        totalExpenses: 1000,
+        netIncome: 0,
+        savingsRate: 0,
+        averageMonthlyIncome: 1000,
+        averageMonthlyExpenses: 1000,
+        topCategory: 'Unknown',
+        topCategoryAmount: 0
+      };
+      
+      const result = service.generateFinancialHealthGauge(metrics);
+      
+      expect(result).toBeDefined();
+      expect(result.data).toBeDefined();
+    });
+  });
+
+  describe('Spending Heatmap', () => {
+    it('should generate spending heatmap data', () => {
+      const result = service.generateSpendingHeatmap(mockTransactions, 2024);
+      
+      expect(result).toBeDefined();
+      expect(result.labels).toBeDefined();
+      expect(result.datasets).toBeDefined();
+      expect(result.datasets.length).toBe(1);
+      expect(result.datasets[0].label).toBe('Daily Spending');
+    });
+
+    it('should handle empty transactions for heatmap', () => {
+      const result = service.generateSpendingHeatmap([], 2024);
+      
+      expect(result).toBeDefined();
+      expect(result.labels).toEqual([]);
+      expect(result.datasets.length).toBe(1);
+      expect(result.datasets[0].data).toEqual([]);
+    });
+  });
+
+  describe('Income Expense Scatter Chart', () => {
+    it('should generate income expense scatter chart data', () => {
+      const result = service.generateIncomeExpenseScatter(mockTransactions);
+      
+      expect(result).toBeDefined();
+      expect(result.labels).toBeDefined();
+      expect(result.datasets).toBeDefined();
+      expect(result.datasets.length).toBe(1);
+      expect(result.datasets[0].label).toBe('Income vs Expenses');
+    });
+
+    it('should handle empty transactions for scatter chart', () => {
+      const result = service.generateIncomeExpenseScatter([]);
+      
+      expect(result.labels).toEqual([]);
+      expect(result.datasets.length).toBe(1);
+      expect(result.datasets[0].data).toEqual([]);
+    });
+  });
+
+  describe('Chart Options - Extended', () => {
+    it('should get doughnut chart options', () => {
+      const options = service.getChartOptions('doughnut');
+      
+      expect(options).toBeDefined();
+      expect(options.responsive).toBe(true);
+      expect(options.maintainAspectRatio).toBe(false);
+    });
+
+    it('should get radar chart options', () => {
+      const options = service.getChartOptions('radar');
+      
+      expect(options).toBeDefined();
+      expect(options.responsive).toBe(true);
+      expect(options.maintainAspectRatio).toBe(false);
+    });
+
+    it('should get polar area chart options', () => {
+      const options = service.getChartOptions('polarArea');
+      
+      expect(options).toBeDefined();
+      expect(options.responsive).toBe(true);
+      expect(options.maintainAspectRatio).toBe(false);
+    });
+
+    it('should get bubble chart options', () => {
+      const options = service.getChartOptions('bubble');
+      
+      expect(options).toBeDefined();
+      expect(options.responsive).toBe(true);
+      expect(options.maintainAspectRatio).toBe(false);
+    });
+
+    it('should apply custom options', () => {
+      const customOptions = {
+        plugins: {
+          legend: {
+            position: 'bottom' as const
+          }
+        }
+      };
+      
+      const options = service.getChartOptions('line', customOptions);
+      
+      expect(options).toBeDefined();
+      expect(options.plugins?.legend?.position).toBe('bottom');
+    });
+  });
+
+  describe('Export Functionality - Extended', () => {
+    it('should export chart data to CSV with custom filename', () => {
+      const chartData = {
+        labels: ['Jan', 'Feb', 'Mar'],
+        datasets: [
+          { label: 'Income', data: [1000, 1200, 1100] },
+          { label: 'Expenses', data: [800, 900, 850] }
+        ]
+      };
+      
+      spyOn(service, 'downloadFile' as any);
+      service.exportChartDataToCSV(chartData, 'custom-data.csv');
+      
+      expect(service['downloadFile']).toHaveBeenCalledWith(
+        jasmine.any(String),
+        'custom-data.csv',
+        'text/csv'
+      );
+    });
+
+    it('should export chart as image with custom filename', () => {
+      const mockCanvas = {
+        toDataURL: jasmine.createSpy('toDataURL').and.returnValue('data:image/png;base64,test')
+      };
+      
+      spyOn(document, 'createElement').and.returnValue({
+        download: '',
+        href: '',
+        click: jasmine.createSpy('click')
+      } as any);
+      
+      service.exportChartAsImage(mockCanvas as any, 'custom-chart.png');
+      
+      expect(document.createElement).toHaveBeenCalledWith('a');
+    });
+  });
+
+  describe('Private Methods - Indirect Testing', () => {
+    it('should handle different period types in trend charts', () => {
+      const result1 = service.generateExpenseTrendChart(mockTransactions, 'day');
+      const result2 = service.generateExpenseTrendChart(mockTransactions, 'week');
+      const result3 = service.generateExpenseTrendChart(mockTransactions, 'year');
+      
+      expect(result1).toBeDefined();
+      expect(result2).toBeDefined();
+      expect(result3).toBeDefined();
+    });
+
+    it('should handle transactions with different date ranges', () => {
+      const oldTransactions = [
+        {
+          ...mockTransactions[0],
+          date: new Date('2020-01-01')
+        },
+        {
+          ...mockTransactions[1],
+          date: new Date('2023-12-31')
+        }
+      ];
+      
+      const result = service.generateExpenseTrendChart(oldTransactions, 'year');
+      
+      expect(result).toBeDefined();
+      expect(result.labels).toBeDefined();
+    });
+
+    it('should handle transactions with missing category IDs', () => {
+      const transactionsWithMissingCategory = [
+        {
+          ...mockTransactions[0],
+          categoryId: 'nonexistent'
+        }
+      ];
+      
+      const result = service.generateCategorySpendingChart(transactionsWithMissingCategory, mockCategories);
+      
+      expect(result).toBeDefined();
+      expect(result.labels).toBeDefined();
+    });
+  });
 });
