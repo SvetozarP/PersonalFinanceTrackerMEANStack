@@ -14,6 +14,7 @@ describe('FinancialGoalsComponent', () => {
   let mockFinancialService: jasmine.SpyObj<FinancialService>;
   let mockTransactionService: jasmine.SpyObj<TransactionService>;
   let mockCategoryService: jasmine.SpyObj<CategoryService>;
+  let confirmSpy: jasmine.Spy;
 
   beforeEach(async () => {
     const financialServiceSpy = jasmine.createSpyObj('FinancialService', ['getFinancialDashboard']);
@@ -45,12 +46,24 @@ describe('FinancialGoalsComponent', () => {
 
     fixture = TestBed.createComponent(FinancialGoalsComponent);
     component = fixture.componentInstance;
+    
+    // Set up global confirm spy only if it doesn't exist
+    if (!(window.confirm as any).and) {
+      confirmSpy = spyOn(window, 'confirm');
+    } else {
+      confirmSpy = window.confirm as jasmine.Spy;
+    }
   });
 
   afterEach(() => {
     // Clean up any spies to prevent conflicts
-    if (window.confirm && (window.confirm as any).and && (window.confirm as any).and.restore) {
-      (window.confirm as any).and.restore();
+    if (window.confirm && (window.confirm as any).and) {
+      if ((window.confirm as any).and.restore) {
+        (window.confirm as any).and.restore();
+      } else {
+        // If restore is not available, reset to callThrough
+        (window.confirm as any).and.callThrough();
+      }
     }
   });
 
@@ -271,7 +284,7 @@ describe('FinancialGoalsComponent', () => {
     });
 
     it('should delete goal with confirmation', () => {
-      const confirmSpy = spyOn(window, 'confirm').and.returnValue(true);
+      confirmSpy.and.returnValue(true);
       const initialGoalCount = component.goals.length;
       const goalToDelete = component.goals[0];
 
@@ -282,7 +295,7 @@ describe('FinancialGoalsComponent', () => {
     });
 
     it('should not delete goal without confirmation', () => {
-      const confirmSpy = spyOn(window, 'confirm').and.returnValue(false);
+      confirmSpy.and.returnValue(false);
       const initialGoalCount = component.goals.length;
       const goalToDelete = component.goals[0];
 
@@ -714,8 +727,13 @@ describe('FinancialGoalsComponent', () => {
 
     afterEach(() => {
       // Clean up any spies to prevent conflicts
-      if (window.confirm && (window.confirm as any).and && (window.confirm as any).and.restore) {
-        (window.confirm as any).and.restore();
+      if (window.confirm && (window.confirm as any).and) {
+        if ((window.confirm as any).and.restore) {
+          (window.confirm as any).and.restore();
+        } else {
+          // If restore is not available, reset to callThrough
+          (window.confirm as any).and.callThrough();
+        }
       }
     });
 
@@ -984,7 +1002,7 @@ describe('FinancialGoalsComponent', () => {
   });
 
   it('should handle delete goal without confirmation', () => {
-    const confirmSpy = spyOn(window, 'confirm').and.returnValue(false);
+    confirmSpy.and.returnValue(false);
     const initialGoalCount = component.goals.length;
     
     component.deleteGoal('1');
@@ -993,7 +1011,7 @@ describe('FinancialGoalsComponent', () => {
   });
 
   it('should handle delete goal with confirmation', () => {
-    const confirmSpy = spyOn(window, 'confirm').and.returnValue(true);
+    confirmSpy.and.returnValue(true);
     const initialGoalCount = component.goals.length;
     
     component.deleteGoal('1');

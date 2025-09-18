@@ -11,6 +11,7 @@ import { TransactionService } from '../../../../core/services/transaction.servic
 import { CategoryService } from '../../../../core/services/category.service';
 import { BudgetService } from '../../../../core/services/budget.service';
 import { RealtimeBudgetProgressService } from '../../../../core/services/realtime-budget-progress.service';
+import { AnalyticsService } from '../../../../core/services/analytics.service';
 import { TransactionType, TransactionStatus, PaymentMethod, RecurrencePattern } from '../../../../core/models/financial.model';
 
 describe('BudgetManagementComponent - Branch Coverage', () => {
@@ -21,6 +22,8 @@ describe('BudgetManagementComponent - Branch Coverage', () => {
   let categoryService: jasmine.SpyObj<CategoryService>;
   let budgetService: jasmine.SpyObj<BudgetService>;
   let realtimeBudgetProgressService: jasmine.SpyObj<RealtimeBudgetProgressService>;
+  let analyticsService: jasmine.SpyObj<AnalyticsService>;
+  let confirmSpy: jasmine.Spy;
 
   const mockCategories = [
     { 
@@ -176,6 +179,7 @@ describe('BudgetManagementComponent - Branch Coverage', () => {
     realtimeBudgetProgressServiceSpy.loadRealtimeData.and.returnValue(of([]));
     realtimeBudgetProgressServiceSpy.getRealtimeProgress.and.returnValue(of([]));
     realtimeBudgetProgressServiceSpy.getBudgetStats.and.returnValue(of(null));
+    const analyticsServiceSpy = jasmine.createSpyObj('AnalyticsService', ['getBudgetAnalytics', 'exportBudgetData']);
 
     await TestBed.configureTestingModule({
       imports: [
@@ -189,6 +193,7 @@ describe('BudgetManagementComponent - Branch Coverage', () => {
         { provide: CategoryService, useValue: categoryServiceSpy },
         { provide: BudgetService, useValue: budgetServiceSpy },
         { provide: RealtimeBudgetProgressService, useValue: realtimeBudgetProgressServiceSpy },
+        { provide: AnalyticsService, useValue: analyticsServiceSpy },
         provideZonelessChangeDetection()
       ]
     }).compileComponents();
@@ -200,6 +205,7 @@ describe('BudgetManagementComponent - Branch Coverage', () => {
     categoryService = TestBed.inject(CategoryService) as jasmine.SpyObj<CategoryService>;
     budgetService = TestBed.inject(BudgetService) as jasmine.SpyObj<BudgetService>;
     realtimeBudgetProgressService = TestBed.inject(RealtimeBudgetProgressService) as jasmine.SpyObj<RealtimeBudgetProgressService>;
+    analyticsService = TestBed.inject(AnalyticsService) as jasmine.SpyObj<AnalyticsService>;
 
     // Setup default mocks
     categoryService.getUserCategories.and.returnValue(of(mockCategories));
@@ -215,6 +221,13 @@ describe('BudgetManagementComponent - Branch Coverage', () => {
     component.isLoading = false;
 
     fixture.detectChanges();
+    
+    // Set up global confirm spy only if it doesn't exist
+    if (!(window.confirm as any).and) {
+      confirmSpy = spyOn(window, 'confirm');
+    } else {
+      confirmSpy = window.confirm as jasmine.Spy;
+    }
   });
 
   afterEach(() => {
@@ -742,7 +755,7 @@ describe('BudgetManagementComponent - Branch Coverage', () => {
 
   describe('deleteBudget', () => {
     it('should delete budget when confirmed', () => {
-      const confirmSpy = spyOn(window, 'confirm').and.returnValue(true);
+      confirmSpy.and.returnValue(true);
       component.budgets = [
         { _id: '1', name: 'Test Budget 1', totalAmount: 1000, categoryAllocations: [], status: 'active', isActive: true, autoAdjust: false, allowRollover: false, rolloverAmount: 0, userId: 'user1', period: 'monthly', startDate: new Date(), endDate: new Date(), currency: 'USD', alertThreshold: 80, createdAt: new Date(), updatedAt: new Date() },
         { _id: '2', name: 'Test Budget 2', totalAmount: 2000, categoryAllocations: [], status: 'active', isActive: true, autoAdjust: false, allowRollover: false, rolloverAmount: 0, userId: 'user1', period: 'monthly', startDate: new Date(), endDate: new Date(), currency: 'USD', alertThreshold: 80, createdAt: new Date(), updatedAt: new Date() }
@@ -755,7 +768,7 @@ describe('BudgetManagementComponent - Branch Coverage', () => {
     });
 
     it('should not delete budget when not confirmed', () => {
-      const confirmSpy = spyOn(window, 'confirm').and.returnValue(false);
+      confirmSpy.and.returnValue(false);
       component.budgets = [
         { _id: '1', name: 'Test Budget 1', totalAmount: 1000, categoryAllocations: [], status: 'active', isActive: true, autoAdjust: false, allowRollover: false, rolloverAmount: 0, userId: 'user1', period: 'monthly', startDate: new Date(), endDate: new Date(), currency: 'USD', alertThreshold: 80, createdAt: new Date(), updatedAt: new Date() },
         { _id: '2', name: 'Test Budget 2', totalAmount: 2000, categoryAllocations: [], status: 'active', isActive: true, autoAdjust: false, allowRollover: false, rolloverAmount: 0, userId: 'user1', period: 'monthly', startDate: new Date(), endDate: new Date(), currency: 'USD', alertThreshold: 80, createdAt: new Date(), updatedAt: new Date() }

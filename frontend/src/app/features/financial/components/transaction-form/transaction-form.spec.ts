@@ -106,8 +106,12 @@ describe('TransactionFormComponent', () => {
       paramMap: of(new Map([['id', 'new']]))
     });
 
-    // Set up global confirm spy
-    confirmSpy = spyOn(window, 'confirm');
+    // Set up global confirm spy only if it doesn't exist
+    if (!(window.confirm as any).and) {
+      confirmSpy = spyOn(window, 'confirm');
+    } else {
+      confirmSpy = window.confirm as jasmine.Spy;
+    }
 
     mockCategoryService.getUserCategories.and.returnValue(of([mockCategory]));
     mockCategoryService.getCategoriesByParent.and.returnValue(of([mockSubcategory]));
@@ -135,6 +139,13 @@ describe('TransactionFormComponent', () => {
 
     fixture = TestBed.createComponent(TransactionFormComponent);
     component = fixture.componentInstance;
+  });
+
+  afterEach(() => {
+    // Clean up the confirm spy to prevent conflicts with other tests
+    if (confirmSpy) {
+      confirmSpy.and.callThrough();
+    }
   });
 
   it('should create', () => {

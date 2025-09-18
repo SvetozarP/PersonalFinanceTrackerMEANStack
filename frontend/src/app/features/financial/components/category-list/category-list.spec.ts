@@ -12,6 +12,7 @@ describe('CategoryListComponent', () => {
   let component: CategoryListComponent;
   let fixture: ComponentFixture<CategoryListComponent>;
   let categoryService: jasmine.SpyObj<CategoryService>;
+  let confirmSpy: jasmine.Spy;
 
   const mockCategories: Category[] = [
     {
@@ -90,6 +91,25 @@ describe('CategoryListComponent', () => {
     fixture = TestBed.createComponent(CategoryListComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
+    
+    // Set up global confirm spy only if it doesn't exist
+    if (!(window.confirm as any).and) {
+      confirmSpy = spyOn(window, 'confirm');
+    } else {
+      confirmSpy = window.confirm as jasmine.Spy;
+    }
+  });
+
+  afterEach(() => {
+    // Clean up any spies to prevent conflicts
+    if (window.confirm && (window.confirm as any).and) {
+      if ((window.confirm as any).and.restore) {
+        (window.confirm as any).and.restore();
+      } else {
+        // If restore is not available, reset to callThrough
+        (window.confirm as any).and.callThrough();
+      }
+    }
   });
 
   it('should create', () => {
@@ -162,7 +182,7 @@ describe('CategoryListComponent', () => {
   });
 
   it('should handle category deletion', () => {
-    const confirmSpy = spyOn(window, 'confirm').and.returnValue(true);
+    confirmSpy.and.returnValue(true);
     component.onCategoryDelete('cat1');
 
     expect(categoryService.deleteCategory).toHaveBeenCalledWith('cat1');
@@ -170,7 +190,7 @@ describe('CategoryListComponent', () => {
   });
 
   it('should not delete category when user cancels', () => {
-    const confirmSpy = spyOn(window, 'confirm').and.returnValue(false);
+    confirmSpy.and.returnValue(false);
     component.onCategoryDelete('cat1');
 
     expect(categoryService.deleteCategory).not.toHaveBeenCalled();
@@ -349,7 +369,7 @@ describe('CategoryListComponent', () => {
 
   it('should handle category deletion error', (done) => {
     categoryService.deleteCategory.and.returnValue(throwError(() => new Error('API Error')));
-    const confirmSpy = spyOn(window, 'confirm').and.returnValue(true);
+    confirmSpy.and.returnValue(true);
     
     component.onCategoryDelete('cat1');
     
@@ -379,7 +399,7 @@ describe('CategoryListComponent', () => {
     component.currentPage = 2;
     component.totalItems = 1;
     categoryService.deleteCategory.and.returnValue(of(true));
-    const confirmSpy = spyOn(window, 'confirm').and.returnValue(true);
+    confirmSpy.and.returnValue(true);
     
     component.onCategoryDelete('cat1');
     

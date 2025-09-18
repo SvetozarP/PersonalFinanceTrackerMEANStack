@@ -10,6 +10,7 @@ import { TransactionService } from '../../../../core/services/transaction.servic
 import { CategoryService } from '../../../../core/services/category.service';
 import { BudgetService } from '../../../../core/services/budget.service';
 import { RealtimeBudgetProgressService } from '../../../../core/services/realtime-budget-progress.service';
+import { AnalyticsService } from '../../../../core/services/analytics.service';
 import { Category, Transaction, TransactionType, PaginatedResponse } from '../../../../core/models/financial.model';
 
 describe('BudgetManagementComponent', () => {
@@ -20,6 +21,8 @@ describe('BudgetManagementComponent', () => {
   let mockCategoryService: jasmine.SpyObj<CategoryService>;
   let mockBudgetService: jasmine.SpyObj<BudgetService>;
   let mockRealtimeBudgetProgressService: jasmine.SpyObj<RealtimeBudgetProgressService>;
+  let mockAnalyticsService: jasmine.SpyObj<AnalyticsService>;
+  let confirmSpy: jasmine.Spy;
 
   const mockCategories: Category[] = [
     {
@@ -78,6 +81,7 @@ describe('BudgetManagementComponent', () => {
     mockCategoryService = jasmine.createSpyObj('CategoryService', ['getUserCategories']);
     mockBudgetService = jasmine.createSpyObj('BudgetService', ['getBudgets', 'getBudgetSummary', 'createBudget', 'updateBudget', 'deleteBudget']);
     mockRealtimeBudgetProgressService = jasmine.createSpyObj('RealtimeBudgetProgressService', ['getRealtimeProgress', 'getBudgetStats', 'getAlerts', 'getConnectionStatus']);
+    mockAnalyticsService = jasmine.createSpyObj('AnalyticsService', ['getBudgetAnalytics', 'exportBudgetData']);
 
     // Setup default return values
     mockCategoryService.getUserCategories.and.returnValue(of(mockCategories));
@@ -168,7 +172,8 @@ describe('BudgetManagementComponent', () => {
         { provide: TransactionService, useValue: mockTransactionService },
         { provide: CategoryService, useValue: mockCategoryService },
         { provide: BudgetService, useValue: mockBudgetService },
-        { provide: RealtimeBudgetProgressService, useValue: mockRealtimeBudgetProgressService }
+        { provide: RealtimeBudgetProgressService, useValue: mockRealtimeBudgetProgressService },
+        { provide: AnalyticsService, useValue: mockAnalyticsService }
       ]
     })
     .compileComponents();
@@ -176,12 +181,24 @@ describe('BudgetManagementComponent', () => {
     fixture = TestBed.createComponent(BudgetManagementComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
+    
+    // Set up global confirm spy only if it doesn't exist
+    if (!(window.confirm as any).and) {
+      confirmSpy = spyOn(window, 'confirm');
+    } else {
+      confirmSpy = window.confirm as jasmine.Spy;
+    }
   });
 
   afterEach(() => {
     // Clean up any spies to prevent conflicts
-    if (window.confirm && (window.confirm as any).and && (window.confirm as any).and.restore) {
-      (window.confirm as any).and.restore();
+    if (window.confirm && (window.confirm as any).and) {
+      if ((window.confirm as any).and.restore) {
+        (window.confirm as any).and.restore();
+      } else {
+        // If restore is not available, reset to callThrough
+        (window.confirm as any).and.callThrough();
+      }
     }
   });
 
@@ -384,7 +401,7 @@ describe('BudgetManagementComponent', () => {
     const mockBudget = component['createMockBudgets']()[0];
     component.budgets = [mockBudget];
     
-    const confirmSpy = spyOn(window, 'confirm').and.returnValue(true);
+    confirmSpy.and.returnValue(true);
     
     component.deleteBudget(mockBudget._id);
     
@@ -402,11 +419,9 @@ describe('BudgetManagementComponent', () => {
   });
 
   it('should export budget report', () => {
-    spyOn(console, 'log');
-    
     component.exportBudgetReport();
     
-    expect(console.log).toHaveBeenCalledWith('Exporting budget report...');
+    expect(component.showExportModal).toBe(true);
   });
 
   it('should print budget report', () => {

@@ -65,8 +65,12 @@ describe('CategoryTreeComponent', () => {
       'getUserCategories', 'deleteCategory'
     ]);
 
-    // Set up global confirm spy
-    confirmSpy = spyOn(window, 'confirm');
+    // Set up global confirm spy only if it doesn't exist
+    if (!(window.confirm as any).and) {
+      confirmSpy = spyOn(window, 'confirm');
+    } else {
+      confirmSpy = window.confirm as jasmine.Spy;
+    }
 
     // Setup default return values
     categoryServiceSpy.getUserCategories.and.returnValue(of(mockCategories));
@@ -94,6 +98,10 @@ describe('CategoryTreeComponent', () => {
   });
 
   afterEach(() => {
+    // Clean up the confirm spy to prevent conflicts with other tests
+    if (confirmSpy) {
+      confirmSpy.and.callThrough();
+    }
     // Clean up any spies
     (jasmine.getEnv() as any).currentSpec = null;
   });
