@@ -757,4 +757,365 @@ describe('CategoryListComponent', () => {
     expect(component.categories[0].isActive).toBe(false);
     expect(component.isDeleting).toBe(false);
   });
+
+  // Advanced filter tests for better branch coverage
+  describe('Advanced Filter Methods', () => {
+    it('should apply advanced filters with empty filter groups', () => {
+      component.categories = mockCategories;
+      component['applyAdvancedFilters']([]);
+      
+      expect(component.filteredCategories).toEqual(mockCategories);
+    });
+
+    it('should apply advanced filters with null filter groups', () => {
+      component.categories = mockCategories;
+      component['applyAdvancedFilters'](null as any);
+      
+      expect(component.filteredCategories).toEqual(mockCategories);
+    });
+
+    it('should build query from filter groups with OR logic', () => {
+      const filterGroups = [{
+        id: '1',
+        name: 'Test Group',
+        logic: 'OR' as const,
+        conditions: [
+          { field: 'name', operator: 'contains' as const, value: 'Food' },
+          { field: 'level', operator: 'equals' as const, value: 1 }
+        ],
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }];
+      
+      const query = component['buildQueryFromFilterGroups'](filterGroups);
+      
+      expect(query).toEqual({
+        $and: [{
+          $or: [
+            { field: 'name', operator: 'contains' as const, value: 'Food' },
+            { field: 'level', operator: 'equals' as const, value: 1 }
+          ]
+        }]
+      });
+    });
+
+    it('should build query from filter groups with AND logic', () => {
+      const filterGroups = [{
+        id: '1',
+        name: 'Test Group',
+        logic: 'AND' as const,
+        conditions: [
+          { field: 'name', operator: 'contains' as const, value: 'Food' },
+          { field: 'level', operator: 'equals' as const, value: 1 }
+        ],
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }];
+      
+      const query = component['buildQueryFromFilterGroups'](filterGroups);
+      
+      expect(query).toEqual({
+        $and: [
+          { field: 'name', operator: 'contains' as const, value: 'Food' },
+          { field: 'level', operator: 'equals' as const, value: 1 }
+        ]
+      });
+    });
+
+    it('should build query from empty filter groups', () => {
+      const filterGroups = [{
+        id: '1',
+        name: 'Test Group',
+        logic: 'AND' as const,
+        conditions: [],
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }];
+      
+      const query = component['buildQueryFromFilterGroups'](filterGroups);
+      
+      expect(query).toEqual({});
+    });
+
+    it('should evaluate category against query with $and', () => {
+      const category = mockCategories[0];
+      const query = {
+        $and: [
+          { field: 'name', operator: 'contains' as const, value: 'Food' },
+          { field: 'level', operator: 'equals' as const, value: 1 }
+        ]
+      };
+      
+      const result = component['evaluateCategoryAgainstQuery'](category, query);
+      
+      expect(result).toBe(true);
+    });
+
+    it('should evaluate category against query with $or', () => {
+      const category = mockCategories[0];
+      const query = {
+        $or: [
+          { field: 'name', operator: 'contains' as const, value: 'Transport' },
+          { field: 'level', operator: 'equals' as const, value: 1 }
+        ]
+      };
+      
+      const result = component['evaluateCategoryAgainstQuery'](category, query);
+      
+      expect(result).toBe(true);
+    });
+
+    it('should evaluate category against simple query', () => {
+      const category = mockCategories[0];
+      const query = { field: 'name', operator: 'contains' as const, value: 'Food' };
+      
+      const result = component['evaluateCategoryAgainstQuery'](category, query);
+      
+      expect(result).toBe(true);
+    });
+
+    it('should evaluate category against empty query', () => {
+      const category = mockCategories[0];
+      const query = {};
+      
+      const result = component['evaluateCategoryAgainstQuery'](category, query);
+      
+      expect(result).toBe(true);
+    });
+
+    it('should evaluate field condition', () => {
+      const category = mockCategories[0];
+      const condition = { field: 'name', operator: 'contains' as const, value: 'Food' };
+      
+      const result = component['evaluateFieldCondition'](category, condition);
+      
+      expect(result).toBe(true);
+    });
+
+    it('should evaluate operator equals', () => {
+      const result = component['evaluateOperator']('Food', 'equals', 'Food');
+      expect(result).toBe(true);
+    });
+
+    it('should evaluate operator contains', () => {
+      const result = component['evaluateOperator']('Food & Dining', 'contains', 'Food');
+      expect(result).toBe(true);
+    });
+
+    it('should evaluate operator startsWith', () => {
+      const result = component['evaluateOperator']('Food & Dining', 'startsWith', 'Food');
+      expect(result).toBe(true);
+    });
+
+    it('should evaluate operator endsWith', () => {
+      const result = component['evaluateOperator']('Food & Dining', 'endsWith', 'Dining');
+      expect(result).toBe(true);
+    });
+
+    it('should evaluate operator in', () => {
+      const result = component['evaluateOperator']('Food', 'in', ['Food', 'Transport']);
+      expect(result).toBe(true);
+    });
+
+    it('should evaluate operator after', () => {
+      const result = component['evaluateOperator']('2024-01-15', 'after', '2024-01-01');
+      expect(result).toBe(true);
+    });
+
+    it('should evaluate operator before', () => {
+      const result = component['evaluateOperator']('2024-01-01', 'before', '2024-01-15');
+      expect(result).toBe(true);
+    });
+
+    it('should evaluate operator between', () => {
+      const result = component['evaluateOperator']('2024-01-10', 'between', ['2024-01-01', '2024-01-15']);
+      expect(result).toBe(true);
+    });
+
+    it('should evaluate operator between with invalid array', () => {
+      const result = component['evaluateOperator']('2024-01-10', 'between', ['2024-01-01']);
+      expect(result).toBe(false);
+    });
+
+    it('should evaluate operator between with non-array', () => {
+      const result = component['evaluateOperator']('2024-01-10', 'between', '2024-01-01');
+      expect(result).toBe(false);
+    });
+
+    it('should evaluate operator default case', () => {
+      const result = component['evaluateOperator']('value', 'unknown', 'test');
+      expect(result).toBe(true);
+    });
+
+    it('should get category field value for different fields', () => {
+      // Create a fresh copy to avoid test interference
+      const category = { ...mockCategories[0] };
+      
+      expect(component['getCategoryFieldValue'](category, 'name')).toBe('Food & Dining');
+      expect(component['getCategoryFieldValue'](category, 'level')).toBe(1);
+      expect(component['getCategoryFieldValue'](category, 'isActive')).toBe(true);
+      expect(component['getCategoryFieldValue'](category, 'isSystem')).toBe(false);
+      expect(component['getCategoryFieldValue'](category, 'color')).toBe('#FF0000');
+      expect(component['getCategoryFieldValue'](category, 'createdAt')).toBe(category.createdAt);
+      expect(component['getCategoryFieldValue'](category, 'updatedAt')).toBe(category.updatedAt);
+      expect(component['getCategoryFieldValue'](category, 'unknown')).toBe('');
+    });
+  });
+
+  // Error handling tests for better branch coverage
+  describe('Error Handling', () => {
+    it('should handle category tree loading error', () => {
+      const consoleSpy = spyOn(console, 'error');
+      categoryService.getCategoryTree.and.returnValue(throwError(() => new Error('Tree error')));
+      
+      component['loadCategoryTree']();
+      
+      expect(component.error).toBe('Failed to load category tree');
+      expect(component.isTreeLoading).toBe(false);
+      expect(consoleSpy).toHaveBeenCalledWith('Error loading category tree:', jasmine.any(Error));
+    });
+
+    it('should handle category stats loading error', () => {
+      const consoleSpy = spyOn(console, 'error');
+      categoryService.getCategoryStats.and.returnValue(throwError(() => new Error('Stats error')));
+      
+      component['loadCategoryStats']();
+      
+      expect(component.error).toBe('Failed to load category statistics');
+      expect(component.isStatsLoading).toBe(false);
+      expect(consoleSpy).toHaveBeenCalledWith('Error loading category stats:', jasmine.any(Error));
+    });
+
+    it('should handle category deletion error', () => {
+      const consoleSpy = spyOn(console, 'error');
+      categoryService.deleteCategory.and.returnValue(throwError(() => new Error('Delete error')));
+      confirmSpy.and.returnValue(true);
+      
+      component.deleteCategory('cat1');
+      
+      expect(component.error).toBe('Failed to delete category');
+      expect(component.isDeleting).toBe(false);
+      expect(consoleSpy).toHaveBeenCalledWith('Error deleting category:', jasmine.any(Error));
+    });
+  });
+
+  // Pagination tests for better branch coverage
+  describe('Pagination', () => {
+    it('should calculate page numbers when total pages is less than max visible', () => {
+      component.totalPages = 3;
+      component.currentPage = 1;
+      
+      const pages = component.pageNumbers;
+      
+      expect(pages).toEqual([1, 2, 3]);
+    });
+
+    it('should calculate page numbers when total pages is greater than max visible', () => {
+      component.totalPages = 10;
+      component.currentPage = 5;
+      
+      const pages = component.pageNumbers;
+      
+      expect(pages).toEqual([3, 4, 5, 6, 7]);
+    });
+
+    it('should calculate page numbers at the beginning', () => {
+      component.totalPages = 10;
+      component.currentPage = 1;
+      
+      const pages = component.pageNumbers;
+      
+      expect(pages).toEqual([1, 2, 3, 4, 5]);
+    });
+
+    it('should calculate page numbers at the end', () => {
+      component.totalPages = 10;
+      component.currentPage = 10;
+      
+      const pages = component.pageNumbers;
+      
+      expect(pages).toEqual([8, 9, 10]);
+    });
+  });
+
+  // Formatting tests for better branch coverage
+  describe('Formatting', () => {
+    it('should format percentage with zero total', () => {
+      const result = component.formatPercentage(10, 0);
+      expect(result).toBe('0%');
+    });
+
+    it('should format percentage with normal values', () => {
+      const result = component.formatPercentage(25, 100);
+      expect(result).toBe('25.0%');
+    });
+
+    it('should format currency with default currency', () => {
+      const result = component.formatCurrency(100);
+      expect(result).toBe('$100.00');
+    });
+
+    it('should format currency with custom currency', () => {
+      const result = component.formatCurrency(100, 'EUR');
+      expect(result).toBe('€100.00');
+    });
+  });
+
+  // Event handler tests for better branch coverage
+  describe('Event Handlers', () => {
+    it('should handle advanced filters changed', () => {
+      const filterGroups = [{
+        id: '1',
+        name: 'Test Group',
+        logic: 'AND' as const,
+        conditions: [],
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }];
+      const updateFiltersSpy = spyOn(component['advancedFilterService'], 'updateFilters');
+      
+      component.onAdvancedFiltersChanged(filterGroups);
+      
+      expect(updateFiltersSpy).toHaveBeenCalledWith(filterGroups);
+    });
+
+    it('should handle advanced search query', () => {
+      const searchSpy = spyOn(component, 'onSearch');
+      
+      component.onAdvancedSearchQuery('test query');
+      
+      expect(component.searchTerm).toBe('test query');
+      expect(searchSpy).toHaveBeenCalled();
+    });
+
+    it('should handle preset applied', () => {
+      const consoleSpy = spyOn(console, 'log');
+      const preset = { name: 'test preset' };
+      
+      component.onPresetApplied(preset);
+      
+      expect(consoleSpy).toHaveBeenCalledWith('Preset applied:', preset);
+    });
+
+    it('should handle saved filter loaded', () => {
+      const consoleSpy = spyOn(console, 'log');
+      const filter = { name: 'saved filter' };
+      
+      component.onSavedFilterLoaded(filter);
+      
+      expect(consoleSpy).toHaveBeenCalledWith('Saved filter loaded:', filter);
+    });
+
+    it('should add to search history', () => {
+      const consoleSpy = spyOn(console, 'log');
+      
+      component.addToSearchHistory('test query');
+      
+      expect(consoleSpy).toHaveBeenCalledWith('Adding to search history:', 'test query');
+    });
+  });
 });

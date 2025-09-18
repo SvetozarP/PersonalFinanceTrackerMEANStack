@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 import { Subject, takeUntil, fromEvent } from 'rxjs';
 import { debounceTime } from 'rxjs/operators';
+import { trigger, state, style, transition, animate } from '@angular/animations';
 import { GlobalSearchComponent } from '../global-search/global-search.component';
 
 export interface NavigationItem {
@@ -18,7 +19,29 @@ export interface NavigationItem {
   standalone: true,
   imports: [CommonModule, RouterOutlet, RouterLink, RouterLinkActive, GlobalSearchComponent],
   templateUrl: './responsive-layout.html',
-  styleUrls: ['./responsive-layout.scss']
+  styleUrls: ['./responsive-layout.scss'],
+  animations: [
+    trigger('slideInOut', [
+      state('in', style({
+        transform: 'translateX(0)'
+      })),
+      state('out', style({
+        transform: 'translateX(-100%)'
+      })),
+      transition('in => out', animate('300ms ease-in-out')),
+      transition('out => in', animate('300ms ease-in-out'))
+    ]),
+    trigger('fadeInOut', [
+      state('in', style({
+        opacity: 1
+      })),
+      state('out', style({
+        opacity: 0
+      })),
+      transition('in => out', animate('300ms ease-in-out')),
+      transition('out => in', animate('300ms ease-in-out'))
+    ])
+  ]
 })
 export class ResponsiveLayoutComponent implements OnInit, OnDestroy {
   @Input() navigationItems: NavigationItem[] = [];

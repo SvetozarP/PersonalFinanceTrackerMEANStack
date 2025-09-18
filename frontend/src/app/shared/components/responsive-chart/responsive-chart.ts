@@ -214,7 +214,8 @@ export class ResponsiveChartComponent implements OnInit, OnDestroy, AfterViewIni
   }
 
   getMinValue(): number {
-    return Math.min(...this.data.map(item => item.value), 0);
+    if (!this.data || this.data.length === 0) return 0;
+    return Math.min(...this.data.map(item => item.value));
   }
 
   // Chart type specific methods
