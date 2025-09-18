@@ -1,4 +1,4 @@
-@import '../../../../styles/responsive.scss';
+@use '../../../../styles/responsive.scss' as responsive;
 
 // Dashboard Variables
 $primary-color: #3182ce;
@@ -32,7 +32,7 @@ $shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.15);
     font-weight: 600;
     color: $text-color;
 
-    @include respond-below(sm) {
+    @include responsive.respond-below(sm) {
       font-size: 20px;
     }
   }
@@ -93,7 +93,7 @@ $shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.15);
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: 24px;
 
-    @include respond-below(sm) {
+    @include responsive.respond-below(sm) {
       grid-template-columns: 1fr;
       gap: 16px;
     }
@@ -175,7 +175,7 @@ $shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.15);
         margin-bottom: 8px;
         line-height: 1.2;
 
-        @include respond-below(sm) {
+        @include responsive.respond-below(sm) {
           font-size: 24px;
         }
       }
@@ -214,12 +214,12 @@ $shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.15);
     grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
     gap: 24px;
 
-    @include respond-below(md) {
+    @include responsive.respond-below(md) {
       grid-template-columns: 1fr;
       gap: 16px;
     }
 
-    @include respond-below(sm) {
+    @include responsive.respond-below(sm) {
       grid-template-columns: 1fr;
       gap: 12px;
     }
@@ -266,7 +266,7 @@ $shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.15);
       padding: 24px;
       min-height: 200px;
 
-      @include respond-below(sm) {
+      @include responsive.respond-below(sm) {
         padding: 16px;
         min-height: 150px;
       }
@@ -280,7 +280,7 @@ $shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.15);
       background-color: #f7fafc;
       border-radius: 8px;
 
-      @include respond-below(sm) {
+      @include responsive.respond-below(sm) {
         min-height: 150px;
       }
     }
@@ -288,7 +288,7 @@ $shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.15);
     .chart-container {
       min-height: 200px;
 
-      @include respond-below(sm) {
+      @include responsive.respond-below(sm) {
         min-height: 150px;
       }
     }
@@ -304,7 +304,7 @@ $shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.15);
       background-color: #f7fafc;
       border-radius: 8px;
 
-      @include respond-below(sm) {
+      @include responsive.respond-below(sm) {
         min-height: 150px;
       }
 
@@ -313,7 +313,7 @@ $shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.15);
         margin-bottom: 16px;
         opacity: 0.5;
 
-        @include respond-below(sm) {
+        @include responsive.respond-below(sm) {
           font-size: 36px;
           margin-bottom: 12px;
         }
@@ -324,7 +324,7 @@ $shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.15);
         font-size: 16px;
         font-weight: 500;
 
-        @include respond-below(sm) {
+        @include responsive.respond-below(sm) {
           font-size: 14px;
         }
       }
@@ -342,7 +342,7 @@ $shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.15);
       border-radius: 8px;
       border: 2px dashed $border-color;
 
-      @include respond-below(sm) {
+      @include responsive.respond-below(sm) {
         min-height: 150px;
       }
 
@@ -351,7 +351,7 @@ $shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.15);
         margin-bottom: 16px;
         opacity: 0.5;
 
-        @include respond-below(sm) {
+        @include responsive.respond-below(sm) {
           font-size: 36px;
           margin-bottom: 12px;
         }
@@ -362,7 +362,7 @@ $shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.15);
         font-size: 16px;
         font-weight: 500;
 
-        @include respond-below(sm) {
+        @include responsive.respond-below(sm) {
           font-size: 14px;
         }
       }
@@ -381,7 +381,7 @@ $shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.15);
   .transactions-content {
     padding: 24px;
 
-    @include respond-below(sm) {
+    @include responsive.respond-below(sm) {
       padding: 16px;
     }
   }
@@ -414,7 +414,7 @@ $shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.15);
       background-color: #edf2f7;
     }
 
-    @include respond-below(sm) {
+    @include responsive.respond-below(sm) {
       flex-direction: column;
       align-items: flex-start;
       gap: 12px;
@@ -462,7 +462,7 @@ $shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.15);
       font-size: 16px;
       flex-shrink: 0;
 
-      @include respond-below(sm) {
+      @include responsive.respond-below(sm) {
         align-self: flex-end;
       }
 
@@ -515,13 +515,13 @@ $shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.15);
     gap: 16px;
     padding: 24px;
 
-    @include respond-below(sm) {
+    @include responsive.respond-below(sm) {
       grid-template-columns: repeat(2, 1fr);
       gap: 12px;
       padding: 16px;
     }
 
-    @include respond-below(xs) {
+    @include responsive.respond-below(xs) {
       grid-template-columns: 1fr;
     }
   }
@@ -547,7 +547,7 @@ $shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.15);
       box-shadow: $shadow;
     }
 
-    @include respond-below(sm) {
+    @include responsive.respond-below(sm) {
       padding: 20px 12px;
     }
 
@@ -563,7 +563,7 @@ $shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.15);
       font-size: 20px;
       transition: all 0.2s ease;
 
-      @include respond-below(sm) {
+      @include responsive.respond-below(sm) {
         width: 40px;
         height: 40px;
         font-size: 18px;
@@ -576,7 +576,7 @@ $shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.15);
       text-align: center;
       font-size: 14px;
 
-      @include respond-below(sm) {
+      @include responsive.respond-below(sm) {
         font-size: 13px;
       }
     }

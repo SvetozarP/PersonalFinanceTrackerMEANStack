@@ -1,4 +1,4 @@
-@import '../../../../styles/responsive.scss';
+@use '../../../../styles/responsive.scss' as responsive;
 
 // Demo Variables
 $primary-color: #3182ce;
@@ -28,7 +28,7 @@ $shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.15);
     border-radius: 12px;
     box-shadow: $shadow-lg;
 
-    @include respond-below(sm) {
+    @include responsive.respond-below(sm) {
       padding: 24px;
     }
 
@@ -41,7 +41,7 @@ $shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.15);
         font-size: 32px;
         font-weight: 700;
 
-        @include respond-below(sm) {
+        @include responsive.respond-below(sm) {
           font-size: 24px;
         }
       }
@@ -51,7 +51,7 @@ $shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.15);
         font-size: 18px;
         opacity: 0.9;
 
-        @include respond-below(sm) {
+        @include responsive.respond-below(sm) {
           font-size: 16px;
         }
       }
@@ -63,7 +63,7 @@ $shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.15);
       gap: 32px;
       flex-wrap: wrap;
 
-      @include respond-below(sm) {
+      @include responsive.respond-below(sm) {
         flex-direction: column;
         gap: 16px;
         text-align: center;
@@ -106,7 +106,7 @@ $shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.15);
     grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
     gap: 24px;
 
-    @include respond-below(md) {
+    @include responsive.respond-below(md) {
       grid-template-columns: 1fr;
       gap: 16px;
     }
@@ -152,7 +152,7 @@ $shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.15);
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
     gap: 24px;
 
-    @include respond-below(sm) {
+    @include responsive.respond-below(sm) {
       grid-template-columns: 1fr;
       gap: 16px;
     }
@@ -228,7 +228,7 @@ $shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.15);
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
     gap: 16px;
 
-    @include respond-below(sm) {
+    @include responsive.respond-below(sm) {
       grid-template-columns: 1fr;
     }
 
@@ -310,11 +310,11 @@ $shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.15);
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 16px;
 
-    @include respond-below(sm) {
+    @include responsive.respond-below(sm) {
       grid-template-columns: repeat(2, 1fr);
     }
 
-    @include respond-below(xs) {
+    @include responsive.respond-below(xs) {
       grid-template-columns: 1fr;
     }
 
@@ -380,7 +380,7 @@ $shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.15);
       grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
       gap: 24px;
 
-      @include respond-below(sm) {
+      @include responsive.respond-below(sm) {
         grid-template-columns: 1fr;
         gap: 16px;
       }
@@ -427,7 +427,7 @@ $shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.15);
 }
 
 // Responsive utilities
-@include respond-below(sm) {
+@include responsive.respond-below(sm) {
   .charts-grid {
     grid-template-columns: 1fr !important;
   }

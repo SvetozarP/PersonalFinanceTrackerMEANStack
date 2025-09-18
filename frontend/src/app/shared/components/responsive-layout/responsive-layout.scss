@@ -1,4 +1,4 @@
-@import '../../../../styles/responsive.scss';
+@use '../../../../styles/responsive.scss' as responsive;
 
 // Layout Variables
 $sidebar-width: 280px;
@@ -307,7 +307,7 @@ $shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.15);
   &.main-content-with-sidebar {
     margin-left: $sidebar-width;
 
-    @include respond-below(md) {
+    @include responsive.respond-below(md) {
       margin-left: 0;
     }
   }
@@ -355,7 +355,7 @@ $shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.15);
         background-color: $secondary-color;
       }
 
-      @include respond-below(md) {
+      @include responsive.respond-below(md) {
         display: block;
       }
     }
@@ -366,7 +366,7 @@ $shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.15);
       font-weight: 600;
       color: $text-color;
 
-      @include respond-below(sm) {
+      @include responsive.respond-below(sm) {
         font-size: 20px;
       }
     }
@@ -378,7 +378,7 @@ $shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.15);
     gap: 16px;
 
     .search-container {
-      @include respond-below(md) {
+      @include responsive.respond-below(md) {
         display: none;
       }
 
@@ -424,7 +424,7 @@ $shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.15);
     }
 
     .user-menu {
-      @include respond-below(md) {
+      @include responsive.respond-below(md) {
         display: none;
       }
 
@@ -461,10 +461,6 @@ $shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.15);
     }
 
     .mobile-menu-btn {
-      @include respond-to(md) {
-        display: none;
-      }
-
       background: none;
       border: none;
       font-size: 18px;
@@ -473,6 +469,10 @@ $shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.15);
       padding: 8px;
       border-radius: 4px;
       transition: background-color 0.2s ease;
+
+      @include responsive.respond-to(md) {
+        display: none;
+      }
 
       &:hover {
         background-color: $secondary-color;
@@ -488,7 +488,7 @@ $shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.15);
   max-width: 100%;
   overflow-x: auto;
 
-  @include respond-below(sm) {
+  @include responsive.respond-below(sm) {
     padding: 16px;
   }
 }
@@ -507,7 +507,7 @@ $shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.15);
     max-width: 1200px;
     margin: 0 auto;
 
-    @include respond-below(sm) {
+    @include responsive.respond-below(sm) {
       flex-direction: column;
       gap: 12px;
       text-align: center;
@@ -523,7 +523,7 @@ $shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.15);
       display: flex;
       gap: 24px;
 
-      @include respond-below(sm) {
+      @include responsive.respond-below(sm) {
         gap: 16px;
       }
 

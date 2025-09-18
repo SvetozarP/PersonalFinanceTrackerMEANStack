@@ -388,4 +388,101 @@
 
     <!-- Budget Wizard Component -->
     <app-budget-wizard (budgetCreated)="onBudgetCreated($event)"></app-budget-wizard>
+
+    <!-- Export Modal -->
+    <div class="modal fade" [class.show]="showExportModal" [style.display]="showExportModal ? 'block' : 'none'" tabindex="-1" role="dialog">
+      <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">
+              <i class="fas fa-download"></i>
+              Export Budget Report
+            </h5>
+            <button type="button" class="close" (click)="cancelExport()" aria-label="Close">
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          <div class="modal-body">
+            <form>
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label for="exportFormat">Export Format</label>
+                    <select class="form-control" id="exportFormat" [(ngModel)]="exportFormat" name="exportFormat">
+                      <option value="pdf">PDF Document</option>
+                      <option value="excel">Excel Spreadsheet</option>
+                      <option value="csv">CSV File</option>
+                      <option value="json">JSON Data</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label for="exportReportType">Report Type</label>
+                    <select class="form-control" id="exportReportType" [(ngModel)]="exportReportType" name="exportReportType">
+                      <option value="all">Complete Report</option>
+                      <option value="performance">Performance Analysis</option>
+                      <option value="variance">Variance Analysis</option>
+                      <option value="trend">Trend Analysis</option>
+                      <option value="forecast">Forecast Report</option>
+                      <option value="breakdown">Category Breakdown</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label for="exportPeriod">Time Period</label>
+                    <select class="form-control" id="exportPeriod" [(ngModel)]="selectedPeriod" name="exportPeriod">
+                      <option value="monthly">Current Month</option>
+                      <option value="quarterly">Current Quarter</option>
+                      <option value="yearly">Current Year</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label>Quick Export</label>
+                    <div class="btn-group w-100" role="group">
+                      <button type="button" class="btn btn-outline-primary" (click)="quickExport('pdf')" [disabled]="isExporting">
+                        <i class="fas fa-file-pdf"></i> PDF
+                      </button>
+                      <button type="button" class="btn btn-outline-success" (click)="quickExport('excel')" [disabled]="isExporting">
+                        <i class="fas fa-file-excel"></i> Excel
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i>
+                <strong>Export includes:</strong>
+                <ul class="mb-0 mt-2">
+                  <li>Budget performance metrics</li>
+                  <li>Category-wise spending analysis</li>
+                  <li>Variance reports and trends</li>
+                  <li>Visual charts and graphs (PDF/Excel only)</li>
+                </ul>
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" (click)="cancelExport()" [disabled]="isExporting">
+              Cancel
+            </button>
+            <button type="button" class="btn btn-primary" (click)="executeExport()" [disabled]="isExporting">
+              <span *ngIf="isExporting" class="spinner-border spinner-border-sm mr-2" role="status" aria-hidden="true"></span>
+              <i *ngIf="!isExporting" class="fas fa-download"></i>
+              {{ isExporting ? 'Exporting...' : 'Export Report' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Export Modal Backdrop -->
+    <div class="modal-backdrop fade" [class.show]="showExportModal" [style.display]="showExportModal ? 'block' : 'none'" (click)="cancelExport()"></div>
   </div>

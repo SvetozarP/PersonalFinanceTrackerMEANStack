@@ -1,4 +1,4 @@
-@import '../../../../styles/responsive.scss';
+@use '../../../../styles/responsive.scss' as responsive;
 
 // Chart Variables
 $primary-color: #3182ce;
@@ -35,7 +35,7 @@ $shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.15);
       font-weight: 600;
       color: $text-color;
 
-      @include respond-below(sm) {
+      @include responsive.respond-below(sm) {
         font-size: 16px;
       }
     }
@@ -194,7 +194,7 @@ $shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.15);
             color: $primary-color;
             opacity: 0.7;
 
-            @include respond-below(sm) {
+            @include responsive.respond-below(sm) {
               font-size: 36px;
             }
           }
@@ -221,7 +221,7 @@ $shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.15);
             flex-direction: column;
             gap: 4px;
 
-            @include respond-to(sm) {
+            @include responsive.respond-to(sm) {
               flex-direction: row;
               gap: 16px;
             }
@@ -260,7 +260,7 @@ $shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.15);
       flex-direction: column;
       gap: 8px;
 
-      @include respond-to(sm) {
+      @include responsive.respond-to(sm) {
         flex-direction: row;
         flex-wrap: wrap;
         gap: 12px;

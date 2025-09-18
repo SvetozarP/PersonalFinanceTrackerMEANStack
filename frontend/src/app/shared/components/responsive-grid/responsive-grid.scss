@@ -1,4 +1,4 @@
-@import '../../../../styles/responsive.scss';
+@use '../../../../styles/responsive.scss' as responsive;
 
 .responsive-grid {
   display: grid;
@@ -49,7 +49,7 @@
   // Item span classes for different breakpoints
   @each $breakpoint, $value in (xs: 0, sm: 576px, md: 768px, lg: 992px, xl: 1200px, xxl: 1400px) {
     @if $value > 0 {
-      @include respond-to($breakpoint) {
+      @include responsive.respond-to($breakpoint) {
         @for $i from 1 through 12 {
           .item-#{$breakpoint}-#{$i} {
             grid-column: span #{$i};
@@ -99,11 +99,11 @@
 
 // Responsive grid utilities
 .grid-container {
-  @include container;
+  @include responsive.container;
 }
 
 .grid-container-fluid {
-  @include container-fluid;
+  @include responsive.container-fluid;
 }
 
 // Grid item utilities

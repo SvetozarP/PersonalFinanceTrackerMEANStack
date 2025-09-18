@@ -1,6 +1,8 @@
 // Responsive Design System
 // Mobile-first approach with consistent breakpoints
 
+@use "sass:map";
+
 // Breakpoint definitions
 $breakpoints: (
   xs: 0,
@@ -13,8 +15,8 @@ $breakpoints: (
 
 // Media query mixins
 @mixin respond-to($breakpoint) {
-  @if map-has-key($breakpoints, $breakpoint) {
-    $value: map-get($breakpoints, $breakpoint);
+  @if map.has-key($breakpoints, $breakpoint) {
+    $value: map.get($breakpoints, $breakpoint);
     @if $value == 0 {
       @content;
     } @else {
@@ -28,8 +30,8 @@ $breakpoints: (
 }
 
 @mixin respond-below($breakpoint) {
-  @if map-has-key($breakpoints, $breakpoint) {
-    $value: map-get($breakpoints, $breakpoint);
+  @if map.has-key($breakpoints, $breakpoint) {
+    $value: map.get($breakpoints, $breakpoint);
     @media (max-width: $value - 1px) {
       @content;
     }
@@ -39,9 +41,9 @@ $breakpoints: (
 }
 
 @mixin respond-between($min-breakpoint, $max-breakpoint) {
-  @if map-has-key($breakpoints, $min-breakpoint) and map-has-key($breakpoints, $max-breakpoint) {
-    $min-value: map-get($breakpoints, $min-breakpoint);
-    $max-value: map-get($breakpoints, $max-breakpoint);
+  @if map.has-key($breakpoints, $min-breakpoint) and map.has-key($breakpoints, $max-breakpoint) {
+    $min-value: map.get($breakpoints, $min-breakpoint);
+    $max-value: map.get($breakpoints, $max-breakpoint);
     @media (min-width: $min-value) and (max-width: $max-value - 1px) {
       @content;
     }
@@ -327,6 +329,7 @@ $breakpoints: (
 @include sizing-utilities;
 @include border-utilities;
 @include shadow-utilities;
+
 
 
 

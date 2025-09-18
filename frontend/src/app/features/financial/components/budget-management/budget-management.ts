@@ -17,6 +17,7 @@ import { FinancialService } from '../../../../core/services/financial.service';
 import { TransactionService } from '../../../../core/services/transaction.service';
 import { CategoryService } from '../../../../core/services/category.service';
 import { BudgetService } from '../../../../core/services/budget.service';
+import { AnalyticsService, BudgetExportOptions } from '../../../../core/services/analytics.service';
 import { AdvancedFilterService, FilterGroup } from '../../../../core/services/advanced-filter.service';
 import { BudgetWizardComponent } from '../budget-wizard/budget-wizard';
 import { OptimizedRealtimeBudgetProgressComponent } from '../realtime-budget-progress/optimized-realtime-budget-progress.component';
@@ -48,6 +49,7 @@ export class BudgetManagementComponent implements OnInit, OnDestroy {
   private transactionService = inject(TransactionService);
   private categoryService = inject(CategoryService);
   private budgetService = inject(BudgetService);
+  private analyticsService = inject(AnalyticsService);
   private advancedFilterService = inject(AdvancedFilterService);
   private fb = inject(FormBuilder);
 
@@ -76,6 +78,12 @@ export class BudgetManagementComponent implements OnInit, OnDestroy {
   editingBudgetId: string | null = null;
   selectedPeriod: 'monthly' | 'quarterly' | 'yearly' = 'monthly';
   selectedCategory: string = '';
+  
+  // Export State
+  isExporting: boolean = false;
+  exportFormat: 'json' | 'csv' | 'pdf' | 'excel' = 'pdf';
+  exportReportType: 'performance' | 'variance' | 'trend' | 'forecast' | 'breakdown' | 'all' = 'all';
+  showExportModal: boolean = false;
   
   // Budget Statistics
   totalBudget: number = 0;
@@ -645,8 +653,85 @@ export class BudgetManagementComponent implements OnInit, OnDestroy {
   }
 
   exportBudgetReport(): void {
-    console.log('Exporting budget report...');
-    // Implementation for export functionality
+    this.showExportModal = true;
+  }
+
+  /**
+   * Execute budget report export
+   */
+  executeExport(): void {
+    if (this.isExporting) return;
+
+    this.isExporting = true;
+    
+    // Get current date range based on selected period
+    const now = new Date();
+    let startDate: Date;
+    let endDate: Date;
+
+    switch (this.selectedPeriod) {
+      case 'monthly':
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+        endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        break;
+      case 'quarterly':
+        const quarter = Math.floor(now.getMonth() / 3);
+        startDate = new Date(now.getFullYear(), quarter * 3, 1);
+        endDate = new Date(now.getFullYear(), quarter * 3 + 3, 0);
+        break;
+      case 'yearly':
+        startDate = new Date(now.getFullYear(), 0, 1);
+        endDate = new Date(now.getFullYear(), 11, 31);
+        break;
+      default:
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+        endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    }
+
+    const exportOptions: BudgetExportOptions = {
+      format: this.exportFormat,
+      reportType: this.exportReportType,
+      includeCharts: true,
+      includeDetails: true,
+      dateRange: {
+        startDate,
+        endDate
+      },
+      budgetIds: this.budgets.map(b => b._id),
+      categories: this.categories.map(c => c._id)
+    };
+
+    this.analyticsService.downloadBudgetReport(exportOptions)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          console.log('Budget report exported successfully');
+          this.showExportModal = false;
+          this.isExporting = false;
+        },
+        error: (error) => {
+          console.error('Error exporting budget report:', error);
+          this.isExporting = false;
+          // You might want to show a toast notification here
+        }
+      });
+  }
+
+  /**
+   * Cancel export operation
+   */
+  cancelExport(): void {
+    this.showExportModal = false;
+    this.isExporting = false;
+  }
+
+  /**
+   * Quick export with default settings
+   */
+  quickExport(format: 'pdf' | 'excel' = 'pdf'): void {
+    this.exportFormat = format;
+    this.exportReportType = 'all';
+    this.executeExport();
   }
 
   printBudgetReport(): void {
