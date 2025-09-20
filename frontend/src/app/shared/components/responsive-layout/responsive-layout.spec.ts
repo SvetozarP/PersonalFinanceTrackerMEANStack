@@ -219,8 +219,15 @@ describe('ResponsiveLayoutComponent', () => {
   });
 
   it('should not show sidebar on mobile when closed', () => {
+    // Mock window width to be mobile
+    Object.defineProperty(window, 'innerWidth', {
+      writable: true,
+      configurable: true,
+      value: 600
+    });
+    
     component.showSidebar = true;
-    component.isMobile.set(true);
+    component['updateScreenSize'](); // This will set isMobile to true
     component.sidebarOpen.set(false);
     
     expect(component.shouldShowSidebar).toBe(false);

@@ -9,6 +9,36 @@ import { CategoryService } from '../../../../core/services/category.service';
 import { Transaction, TransactionType, TransactionStatus, PaymentMethod } from '../../../../core/models/financial.model';
 import { createWindowSpyWithCleanup } from '../../../../test-utils/test-cleanup';
 
+// Helper function to create mock transactions
+function createMockTransaction(overrides: Partial<Transaction> = {}): Transaction {
+  return {
+    _id: '1',
+    title: 'Test Transaction',
+    amount: 100,
+    type: 'expense' as TransactionType,
+    status: 'completed' as TransactionStatus,
+    categoryId: 'cat1',
+    date: new Date(),
+    paymentMethod: 'card' as PaymentMethod,
+    tags: [],
+    isRecurring: false,
+    userId: 'user1',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    currency: 'USD',
+    timezone: 'UTC',
+    recurrencePattern: 'none' as any,
+    attachments: [],
+    notes: '',
+    location: undefined,
+    merchantName: '',
+    source: 'manual',
+    accountId: 'account1',
+    isDeleted: false,
+    ...overrides
+  };
+}
+
 describe('TransactionListComponent', () => {
   let component: TransactionListComponent;
   let fixture: ComponentFixture<TransactionListComponent>;
@@ -100,6 +130,361 @@ describe('TransactionListComponent', () => {
 
   it('should create', () => {
     expect(component).toBeTruthy();
+  });
+
+  // Error handling tests
+  it('should handle category loading error', () => {
+    categoryService.getUserCategories.and.returnValue(throwError(() => new Error('API Error')));
+
+    component['loadCategories']();
+
+    expect(component.isCategoriesLoading).toBe(false);
+  });
+
+  it('should handle transaction loading error', () => {
+    transactionService.getUserTransactions.and.returnValue(throwError(() => new Error('API Error')));
+
+    component['loadTransactions']();
+
+    expect(component.error).toBe('Failed to load transactions');
+    expect(component.isTransactionsLoading).toBe(false);
+  });
+
+  it('should handle transaction deletion error', () => {
+    createWindowSpyWithCleanup('confirm').and.returnValue(true);
+    transactionService.deleteTransaction.and.returnValue(throwError(() => new Error('API Error')));
+
+    component.deleteTransaction('1');
+
+    expect(component.error).toBe('Failed to delete transaction');
+    expect(component.isDeleting).toBe(false);
+  });
+
+  // Advanced filter tests
+  it('should apply advanced filters with empty filter groups', () => {
+    const mockTransaction = createMockTransaction();
+    component.transactions = [mockTransaction];
+
+    component['applyAdvancedFilters']([]);
+
+    expect(component.filteredTransactions).toEqual(component.transactions);
+  });
+
+  it('should evaluate transaction against query with $and conditions', () => {
+    const transaction = createMockTransaction();
+
+    const query = {
+      $and: [
+        { amount: { $gte: 50 } },
+        { type: { $eq: 'expense' } }
+      ]
+    };
+
+    const result = component['evaluateTransactionAgainstQuery'](transaction, query);
+    expect(result).toBe(true);
+  });
+
+  it('should evaluate transaction against query with $or conditions', () => {
+    const transaction = createMockTransaction();
+
+    const query = {
+      $or: [
+        { amount: { $lt: 50 } },
+        { type: { $eq: 'expense' } }
+      ]
+    };
+
+    const result = component['evaluateTransactionAgainstQuery'](transaction, query);
+    expect(result).toBe(true);
+  });
+
+  it('should evaluate transaction against query with empty query', () => {
+    const transaction = createMockTransaction();
+
+    const result = component['evaluateTransactionAgainstQuery'](transaction, {});
+    expect(result).toBe(true);
+  });
+
+  it('should evaluate field condition with direct equality', () => {
+    const transaction = createMockTransaction();
+
+    const result = component['evaluateFieldCondition'](transaction, 'type', 'expense');
+    expect(result).toBe(true);
+  });
+
+  it('should evaluate field condition with object condition', () => {
+    const transaction = createMockTransaction();
+
+    const result = component['evaluateFieldCondition'](transaction, 'amount', { $gte: 50 });
+    expect(result).toBe(true);
+  });
+
+  // Operator evaluation tests
+  it('should evaluate $eq operator', () => {
+    const result = component['evaluateOperator'](100, '$eq', 100);
+    expect(result).toBe(true);
+  });
+
+  it('should evaluate $ne operator', () => {
+    const result = component['evaluateOperator'](100, '$ne', 50);
+    expect(result).toBe(true);
+  });
+
+  it('should evaluate $gt operator', () => {
+    const result = component['evaluateOperator'](100, '$gt', 50);
+    expect(result).toBe(true);
+  });
+
+  it('should evaluate $gte operator', () => {
+    const result = component['evaluateOperator'](100, '$gte', 100);
+    expect(result).toBe(true);
+  });
+
+  it('should evaluate $lt operator', () => {
+    const result = component['evaluateOperator'](50, '$lt', 100);
+    expect(result).toBe(true);
+  });
+
+  it('should evaluate $lte operator', () => {
+    const result = component['evaluateOperator'](100, '$lte', 100);
+    expect(result).toBe(true);
+  });
+
+  it('should evaluate $in operator', () => {
+    const result = component['evaluateOperator']('expense', '$in', ['expense', 'income']);
+    expect(result).toBe(true);
+  });
+
+  it('should evaluate $nin operator', () => {
+    const result = component['evaluateOperator']('expense', '$nin', ['income', 'transfer']);
+    expect(result).toBe(true);
+  });
+
+  it('should evaluate $regex operator', () => {
+    const result = component['evaluateOperator']('Test Transaction', '$regex', 'Test');
+    expect(result).toBe(true);
+  });
+
+  it('should evaluate $not operator', () => {
+    const result = component['evaluateOperator']('Test Transaction', '$not', 'Other');
+    expect(result).toBe(true);
+  });
+
+  it('should return true for unknown operator', () => {
+    const result = component['evaluateOperator'](100, '$unknown', 50);
+    expect(result).toBe(true);
+  });
+
+  // Field value getter tests
+  it('should get transaction field value for different fields', () => {
+    const transaction = createMockTransaction({
+      tags: ['test'],
+      isRecurring: true
+    });
+
+    expect(component['getTransactionFieldValue'](transaction, 'title')).toBe('Test Transaction');
+    expect(component['getTransactionFieldValue'](transaction, 'amount')).toBe(100);
+    expect(component['getTransactionFieldValue'](transaction, 'type')).toBe('expense');
+    expect(component['getTransactionFieldValue'](transaction, 'status')).toBe('completed');
+    expect(component['getTransactionFieldValue'](transaction, 'categoryId')).toBe('cat1');
+    expect(component['getTransactionFieldValue'](transaction, 'date')).toBe(transaction.date);
+    expect(component['getTransactionFieldValue'](transaction, 'paymentMethod')).toBe('card');
+    expect(component['getTransactionFieldValue'](transaction, 'tags')).toEqual(['test']);
+    expect(component['getTransactionFieldValue'](transaction, 'isRecurring')).toBe(true);
+    expect(component['getTransactionFieldValue'](transaction, 'unknown')).toBe(undefined);
+  });
+
+  // Pagination tests
+  it('should handle pagination when current page becomes empty', () => {
+    createWindowSpyWithCleanup('confirm').and.returnValue(true);
+    component.transactions = [createMockTransaction({ title: 'Test' })];
+    component.currentPage = 2;
+
+    component.deleteTransaction('1');
+
+    expect(component.currentPage).toBe(1);
+  });
+
+  it('should not change page when current page is first page', () => {
+    createWindowSpyWithCleanup('confirm').and.returnValue(true);
+    component.transactions = [createMockTransaction({ title: 'Test' })];
+    component.currentPage = 1;
+
+    component.deleteTransaction('1');
+
+    expect(component.currentPage).toBe(1);
+  });
+
+  // UI interaction tests
+  it('should handle search', () => {
+    spyOn(component as any, 'loadTransactions');
+    component.onSearch();
+    expect(component.isFiltering).toBe(true);
+    expect(component.currentPage).toBe(1);
+  });
+
+  it('should handle filter change', () => {
+    spyOn(component, 'onSearch');
+    component.onFilterChange();
+    expect(component.onSearch).toHaveBeenCalled();
+  });
+
+  it('should handle sort change', () => {
+    spyOn(component as any, 'loadTransactions');
+    component.onSortChange();
+    expect((component as any).loadTransactions).toHaveBeenCalled();
+  });
+
+  it('should handle page change', () => {
+    spyOn(component as any, 'loadTransactions');
+    component.onPageChange(2);
+    expect(component.currentPage).toBe(2);
+    expect((component as any).loadTransactions).toHaveBeenCalled();
+  });
+
+  it('should handle page size change', () => {
+    spyOn(component as any, 'loadTransactions');
+    component.onPageSizeChange(50);
+    expect(component.pageSize).toBe(50);
+    expect(component.currentPage).toBe(1);
+    expect((component as any).loadTransactions).toHaveBeenCalled();
+  });
+
+  it('should handle export transactions', () => {
+    spyOn(console, 'log');
+    component.exportTransactions();
+    expect(component.isExporting).toBe(true);
+  });
+
+  it('should clear filters', () => {
+    spyOn(component, 'onSearch');
+    component.searchTerm = 'test';
+    component.selectedType = 'expense' as TransactionType;
+    component.selectedStatus = 'completed' as TransactionStatus;
+    component.selectedCategory = 'cat1';
+    component.dateRange = { start: '2024-01-01', end: '2024-12-31' };
+    component.currentPage = 2;
+
+    component.clearFilters();
+
+    expect(component.searchTerm).toBe('');
+    expect(component.selectedType).toBe('');
+    expect(component.selectedStatus).toBe('');
+    expect(component.selectedCategory).toBe('');
+    expect(component.dateRange).toEqual({ start: '', end: '' });
+    expect(component.currentPage).toBe(1);
+    expect(component.onSearch).toHaveBeenCalled();
+  });
+
+  // Helper method tests
+  it('should get category name', () => {
+    component.categories = [
+      { _id: 'cat1', name: 'Food', color: '#ff0000' },
+      { _id: 'cat2', name: 'Transport', color: '#00ff00' }
+    ];
+
+    expect(component.getCategoryName('cat1')).toBe('Food');
+    expect(component.getCategoryName('unknown')).toBe('Unknown');
+  });
+
+  it('should get category color', () => {
+    component.categories = [
+      { _id: 'cat1', name: 'Food', color: '#ff0000' },
+      { _id: 'cat2', name: 'Transport', color: '#00ff00' }
+    ];
+
+    expect(component.getCategoryColor('cat1')).toBe('#ff0000');
+    expect(component.getCategoryColor('unknown')).toBe('#667eea');
+  });
+
+  it('should format currency', () => {
+    expect(component.formatCurrency(100)).toBe('$100.00');
+    expect(component.formatCurrency(100, 'EUR')).toBe('€100.00');
+  });
+
+  it('should format date', () => {
+    const date = new Date('2024-01-15');
+    const formatted = component.formatDate(date);
+    expect(formatted).toContain('Jan');
+    expect(formatted).toContain('15');
+    expect(formatted).toContain('2024');
+  });
+
+  it('should get transaction type icon', () => {
+    expect(component.getTransactionTypeIcon('income' as any)).toBe('💰');
+    expect(component.getTransactionTypeIcon('expense' as any)).toBe('💸');
+    expect(component.getTransactionTypeIcon('transfer' as any)).toBe('🔄');
+    expect(component.getTransactionTypeIcon('adjustment' as any)).toBe('⚖️');
+    expect(component.getTransactionTypeIcon('unknown' as any)).toBe('');
+  });
+
+  it('should get transaction status class', () => {
+    expect(component.getTransactionStatusClass('completed' as any)).toBe('status-completed');
+    expect(component.getTransactionStatusClass('pending' as any)).toBe('status-pending');
+    expect(component.getTransactionStatusClass('failed' as any)).toBe('status-failed');
+    expect(component.getTransactionStatusClass('cancelled' as any)).toBe('status-cancelled');
+    expect(component.getTransactionStatusClass('unknown' as any)).toBe('status-unknown');
+  });
+
+  // Computed property tests
+  it('should return loading state', () => {
+    component.isTransactionsLoading = true;
+    component.isCategoriesLoading = false;
+    expect(component.isLoading).toBe(true);
+
+    component.isTransactionsLoading = false;
+    component.isCategoriesLoading = true;
+    expect(component.isLoading).toBe(true);
+
+    component.isTransactionsLoading = false;
+    component.isCategoriesLoading = false;
+    expect(component.isLoading).toBe(false);
+  });
+
+  it('should return any action loading state', () => {
+    component.isFiltering = true;
+    component.isDeleting = false;
+    component.isExporting = false;
+    expect(component.isAnyActionLoading).toBe(true);
+
+    component.isFiltering = false;
+    component.isDeleting = true;
+    component.isExporting = false;
+    expect(component.isAnyActionLoading).toBe(true);
+
+    component.isFiltering = false;
+    component.isDeleting = false;
+    component.isExporting = true;
+    expect(component.isAnyActionLoading).toBe(true);
+
+    component.isFiltering = false;
+    component.isDeleting = false;
+    component.isExporting = false;
+    expect(component.isAnyActionLoading).toBe(false);
+  });
+
+  it('should return has transactions', () => {
+    component.transactions = [];
+    expect(component.hasTransactions).toBe(false);
+
+    component.transactions = [createMockTransaction({ title: 'Test' })];
+    expect(component.hasTransactions).toBe(true);
+  });
+
+  // Category filter options update test
+  it('should update category filter options', () => {
+    const categories = [
+      { _id: 'cat1', name: 'Food', color: '#ff0000' },
+      { _id: 'cat2', name: 'Transport', color: '#00ff00' }
+    ];
+
+    component['updateCategoryFilterOptions'](categories);
+
+    const categoryField = component.filterFields.find(field => field.key === 'categoryId');
+    expect(categoryField?.options).toEqual([
+      { value: 'cat1', label: 'Food' },
+      { value: 'cat2', label: 'Transport' }
+    ]);
   });
 
   it('should initialize with default values', () => {
@@ -262,7 +647,7 @@ describe('TransactionListComponent', () => {
     });
 
     it('should handle transaction deletion error', () => {
-      spyOn(window, 'confirm').and.returnValue(true);
+      createWindowSpyWithCleanup('confirm').and.returnValue(true);
       transactionService.deleteTransaction.and.returnValue(throwError(() => new Error('API Error')));
       
       component.onTransactionDelete('1');
@@ -304,7 +689,7 @@ describe('TransactionListComponent', () => {
       component.totalItems = 1;
       component.totalPages = 1;
       
-      spyOn(window, 'confirm').and.returnValue(true);
+      createWindowSpyWithCleanup('confirm').and.returnValue(true);
       component.onTransactionDelete('1');
       
       expect(component.currentPage).toBe(1);

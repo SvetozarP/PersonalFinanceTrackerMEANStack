@@ -71,6 +71,704 @@ describe('FinancialGoalsComponent', () => {
     expect(component).toBeTruthy();
   });
 
+  // Error handling tests
+  it('should handle category loading error', () => {
+    mockCategoryService.getUserCategories.and.returnValue(throwError(() => new Error('API Error')));
+
+    component['loadData']();
+
+    expect(component.isLoading).toBe(false);
+  });
+
+  it('should handle transaction loading error', () => {
+    mockTransactionService.getUserTransactions.and.returnValue(throwError(() => new Error('API Error')));
+
+    component['loadTransactions']();
+
+    expect(component.isLoading).toBe(false);
+  });
+
+  // Goal progress calculation tests
+  it('should calculate goal progress correctly', () => {
+    component.goals = [
+      {
+        _id: '1',
+        title: 'Test Goal',
+        targetAmount: 1000,
+        currentAmount: 500,
+        startDate: new Date(2024, 0, 1),
+        targetDate: new Date(2024, 11, 31),
+        category: 'Test',
+        priority: 'medium',
+        status: 'active',
+        type: 'savings',
+        icon: 'fas fa-star',
+        color: '#007bff',
+        userId: 'user1',
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }
+    ];
+
+    component['calculateGoalProgress']();
+
+    expect(component.goalProgress.length).toBe(1);
+    expect(component.goalProgress[0].percentageComplete).toBe(50);
+  });
+
+  it('should calculate goal stats correctly', () => {
+    component.goals = [
+      { _id: '1', title: 'Goal 1', targetAmount: 1000, currentAmount: 500, startDate: new Date(), targetDate: new Date(), category: 'Test', priority: 'medium', status: 'active', type: 'savings', icon: 'fas fa-star', color: '#007bff', userId: 'user1', createdAt: new Date(), updatedAt: new Date() },
+      { _id: '2', title: 'Goal 2', targetAmount: 2000, currentAmount: 2000, startDate: new Date(), targetDate: new Date(), category: 'Test', priority: 'high', status: 'completed', type: 'savings', icon: 'fas fa-star', color: '#007bff', userId: 'user1', createdAt: new Date(), updatedAt: new Date() }
+    ];
+
+    component['calculateGoalStats']();
+
+    expect(component.totalGoals).toBe(2);
+    expect(component.activeGoals).toBe(1);
+    expect(component.completedGoals).toBe(1);
+    expect(component.totalTargetAmount).toBe(3000);
+    expect(component.totalCurrentAmount).toBe(2500);
+    expect(component.overallProgress).toBe(83.33333333333334);
+  });
+
+  // Days remaining calculation tests
+  it('should calculate days remaining correctly', () => {
+    const futureDate = new Date();
+    futureDate.setDate(futureDate.getDate() + 10);
+    
+    const daysRemaining = component['calculateDaysRemaining'](futureDate);
+    
+    expect(daysRemaining).toBe(10);
+  });
+
+  it('should return 0 for past dates', () => {
+    const pastDate = new Date();
+    pastDate.setDate(pastDate.getDate() - 10);
+    
+    const daysRemaining = component['calculateDaysRemaining'](pastDate);
+    
+    expect(daysRemaining).toBe(0);
+  });
+
+  // Goal on track calculation tests
+  it('should determine if goal is on track', () => {
+    const goal = {
+      _id: '1',
+      title: 'Test Goal',
+      targetAmount: 1000,
+      currentAmount: 500,
+      startDate: new Date(2024, 0, 1),
+      targetDate: new Date(2024, 11, 31),
+      category: 'Test',
+      priority: 'medium' as 'low' | 'medium' | 'high',
+      status: 'active' as 'active' | 'paused' | 'completed' | 'cancelled',
+      type: 'savings' as 'savings' | 'debt-payoff' | 'investment' | 'purchase' | 'emergency-fund' | 'other',
+      icon: 'fas fa-star',
+      color: '#007bff',
+      userId: 'user1',
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    const isOnTrack = component['isGoalOnTrack'](goal);
+    
+    expect(typeof isOnTrack).toBe('boolean');
+  });
+
+  // Monthly contribution calculation tests
+  it('should calculate monthly contribution correctly', () => {
+    const goal = {
+      _id: '1',
+      title: 'Test Goal',
+      targetAmount: 1000,
+      currentAmount: 500,
+      startDate: new Date(2024, 0, 1),
+      targetDate: new Date(2024, 11, 31),
+      category: 'Test',
+      priority: 'medium' as 'low' | 'medium' | 'high',
+      status: 'active' as 'active' | 'paused' | 'completed' | 'cancelled',
+      type: 'savings' as 'savings' | 'debt-payoff' | 'investment' | 'purchase' | 'emergency-fund' | 'other',
+      icon: 'fas fa-star',
+      color: '#007bff',
+      userId: 'user1',
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    const monthlyContribution = component['calculateMonthlyContribution'](goal);
+    
+    expect(monthlyContribution).toBeGreaterThan(0);
+  });
+
+  it('should return current amount for new goals', () => {
+    const goal = {
+      _id: '1',
+      title: 'Test Goal',
+      targetAmount: 1000,
+      currentAmount: 500,
+      startDate: new Date(),
+      targetDate: new Date(),
+      category: 'Test',
+      priority: 'medium' as 'low' | 'medium' | 'high',
+      status: 'active' as 'active' | 'paused' | 'completed' | 'cancelled',
+      type: 'savings' as 'savings' | 'debt-payoff' | 'investment' | 'purchase' | 'emergency-fund' | 'other',
+      icon: 'fas fa-star',
+      color: '#007bff',
+      userId: 'user1',
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    const monthlyContribution = component['calculateMonthlyContribution'](goal);
+    
+    expect(monthlyContribution).toBe(500);
+  });
+
+  // Estimated completion calculation tests
+  it('should calculate estimated completion date', () => {
+    const goal = {
+      _id: '1',
+      title: 'Test Goal',
+      targetAmount: 1000,
+      currentAmount: 500,
+      startDate: new Date(2024, 0, 1),
+      targetDate: new Date(2024, 11, 31),
+      category: 'Test',
+      priority: 'medium' as 'low' | 'medium' | 'high',
+      status: 'active' as 'active' | 'paused' | 'completed' | 'cancelled',
+      type: 'savings' as 'savings' | 'debt-payoff' | 'investment' | 'purchase' | 'emergency-fund' | 'other',
+      icon: 'fas fa-star',
+      color: '#007bff',
+      userId: 'user1',
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    const estimatedDate = component['calculateEstimatedCompletion'](goal, 100);
+    
+    expect(estimatedDate).toBeInstanceOf(Date);
+  });
+
+  it('should return target date for zero monthly contribution', () => {
+    const goal = {
+      _id: '1',
+      title: 'Test Goal',
+      targetAmount: 1000,
+      currentAmount: 500,
+      startDate: new Date(2024, 0, 1),
+      targetDate: new Date(2024, 11, 31),
+      category: 'Test',
+      priority: 'medium' as 'low' | 'medium' | 'high',
+      status: 'active' as 'active' | 'paused' | 'completed' | 'cancelled',
+      type: 'savings' as 'savings' | 'debt-payoff' | 'investment' | 'purchase' | 'emergency-fund' | 'other',
+      icon: 'fas fa-star',
+      color: '#007bff',
+      userId: 'user1',
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    const estimatedDate = component['calculateEstimatedCompletion'](goal, 0);
+    
+    expect(estimatedDate).toEqual(goal.targetDate);
+  });
+
+  // Filter tests
+  it('should filter goals by type', () => {
+    component.goals = [
+      { _id: '1', title: 'Goal 1', targetAmount: 1000, currentAmount: 500, startDate: new Date(), targetDate: new Date(), category: 'Test', priority: 'medium', status: 'active', type: 'savings', icon: 'fas fa-star', color: '#007bff', userId: 'user1', createdAt: new Date(), updatedAt: new Date() },
+      { _id: '2', title: 'Goal 2', targetAmount: 2000, currentAmount: 1000, startDate: new Date(), targetDate: new Date(), category: 'Test', priority: 'high', status: 'active', type: 'debt-payoff', icon: 'fas fa-star', color: '#007bff', userId: 'user1', createdAt: new Date(), updatedAt: new Date() }
+    ];
+    component.selectedGoalType = 'savings';
+
+    const filtered = component.getFilteredGoals();
+
+    expect(filtered.length).toBe(1);
+    expect(filtered[0].type).toBe('savings');
+  });
+
+  it('should filter goals by status', () => {
+    component.goals = [
+      { _id: '1', title: 'Goal 1', targetAmount: 1000, currentAmount: 500, startDate: new Date(), targetDate: new Date(), category: 'Test', priority: 'medium', status: 'active', type: 'savings', icon: 'fas fa-star', color: '#007bff', userId: 'user1', createdAt: new Date(), updatedAt: new Date() },
+      { _id: '2', title: 'Goal 2', targetAmount: 2000, currentAmount: 2000, startDate: new Date(), targetDate: new Date(), category: 'Test', priority: 'high', status: 'completed', type: 'savings', icon: 'fas fa-star', color: '#007bff', userId: 'user1', createdAt: new Date(), updatedAt: new Date() }
+    ];
+    component.selectedStatus = 'completed';
+
+    const filtered = component.getFilteredGoals();
+
+    expect(filtered.length).toBe(1);
+    expect(filtered[0].status).toBe('completed');
+  });
+
+  it('should filter goals by priority', () => {
+    component.goals = [
+      { _id: '1', title: 'Goal 1', targetAmount: 1000, currentAmount: 500, startDate: new Date(), targetDate: new Date(), category: 'Test', priority: 'medium', status: 'active', type: 'savings', icon: 'fas fa-star', color: '#007bff', userId: 'user1', createdAt: new Date(), updatedAt: new Date() },
+      { _id: '2', title: 'Goal 2', targetAmount: 2000, currentAmount: 1000, startDate: new Date(), targetDate: new Date(), category: 'Test', priority: 'high', status: 'active', type: 'savings', icon: 'fas fa-star', color: '#007bff', userId: 'user1', createdAt: new Date(), updatedAt: new Date() }
+    ];
+    component.selectedPriority = 'high';
+
+    const filtered = component.getFilteredGoals();
+
+    expect(filtered.length).toBe(1);
+    expect(filtered[0].priority).toBe('high');
+  });
+
+  it('should return all goals when filters are set to all', () => {
+    component.goals = [
+      { _id: '1', title: 'Goal 1', targetAmount: 1000, currentAmount: 500, startDate: new Date(), targetDate: new Date(), category: 'Test', priority: 'medium', status: 'active', type: 'savings', icon: 'fas fa-star', color: '#007bff', userId: 'user1', createdAt: new Date(), updatedAt: new Date() },
+      { _id: '2', title: 'Goal 2', targetAmount: 2000, currentAmount: 1000, startDate: new Date(), targetDate: new Date(), category: 'Test', priority: 'high', status: 'completed', type: 'debt-payoff', icon: 'fas fa-star', color: '#007bff', userId: 'user1', createdAt: new Date(), updatedAt: new Date() }
+    ];
+    component.selectedGoalType = 'all';
+    component.selectedStatus = 'all';
+    component.selectedPriority = 'all';
+
+    const filtered = component.getFilteredGoals();
+
+    expect(filtered.length).toBe(2);
+  });
+
+  // Form handling tests
+  it('should show add goal form', () => {
+    component.showAddGoalForm();
+
+    expect(component.showAddGoal).toBe(true);
+    expect(component.goalForm.get('priority')?.value).toBe('medium');
+    expect(component.goalForm.get('type')?.value).toBe('savings');
+  });
+
+  it('should hide add goal form', () => {
+    component.showAddGoal = true;
+    component.hideAddGoalForm();
+
+    expect(component.showAddGoal).toBe(false);
+  });
+
+  it('should submit valid goal form', () => {
+    component.goalForm.patchValue({
+      title: 'Test Goal',
+      targetAmount: 1000,
+      startDate: '2024-01-01',
+      targetDate: '2024-12-31',
+      category: 'Test',
+      priority: 'medium',
+      type: 'savings'
+    });
+
+    const initialLength = component.goals.length;
+    component.onSubmitGoal();
+
+    expect(component.goals.length).toBe(initialLength + 1);
+    expect(component.showAddGoal).toBe(false);
+  });
+
+  it('should not submit invalid goal form', () => {
+    component.goalForm.patchValue({
+      title: '', // Invalid: empty title
+      targetAmount: 1000,
+      startDate: '2024-01-01',
+      targetDate: '2024-12-31',
+      category: 'Test',
+      priority: 'medium',
+      type: 'savings'
+    });
+
+    const initialLength = component.goals.length;
+    component.onSubmitGoal();
+
+    expect(component.goals.length).toBe(initialLength);
+  });
+
+  // Goal editing tests
+  it('should edit goal', () => {
+    const goal = {
+      _id: '1',
+      title: 'Test Goal',
+      targetAmount: 1000,
+      currentAmount: 500,
+      startDate: new Date(2024, 0, 1),
+      targetDate: new Date(2024, 11, 31),
+      category: 'Test',
+      priority: 'medium' as 'low' | 'medium' | 'high',
+      status: 'active' as 'active' | 'paused' | 'completed' | 'cancelled',
+      type: 'savings' as 'savings' | 'debt-payoff' | 'investment' | 'purchase' | 'emergency-fund' | 'other',
+      icon: 'fas fa-star',
+      color: '#007bff',
+      userId: 'user1',
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    component.editGoal(goal);
+
+    expect(component.editingGoalId).toBe('1');
+    expect(component.editGoalForm.get('title')?.value).toBe('Test Goal');
+  });
+
+  it('should cancel edit', () => {
+    component.editingGoalId = '1';
+    component.cancelEdit();
+
+    expect(component.editingGoalId).toBeNull();
+  });
+
+  it('should update goal with valid form', () => {
+    component.goals = [{
+      _id: '1',
+      title: 'Test Goal',
+      targetAmount: 1000,
+      currentAmount: 500,
+      startDate: new Date(2024, 0, 1),
+      targetDate: new Date(2024, 11, 31),
+      category: 'Test',
+      priority: 'medium',
+      status: 'active',
+      type: 'savings',
+      icon: 'fas fa-star',
+      color: '#007bff',
+      userId: 'user1',
+      createdAt: new Date(),
+      updatedAt: new Date()
+    }];
+
+    component.editingGoalId = '1';
+    component.editGoalForm.patchValue({
+      title: 'Updated Goal',
+      targetAmount: 2000,
+      startDate: '2024-01-01',
+      targetDate: '2024-12-31',
+      category: 'Test',
+      priority: 'high',
+      type: 'savings'
+    });
+
+    component.updateGoal();
+
+    expect(component.goals[0].title).toBe('Updated Goal');
+    expect(component.goals[0].targetAmount).toBe(2000);
+    expect(component.editingGoalId).toBeNull();
+  });
+
+  it('should not update goal with invalid form', () => {
+    component.goals = [{
+      _id: '1',
+      title: 'Test Goal',
+      targetAmount: 1000,
+      currentAmount: 500,
+      startDate: new Date(2024, 0, 1),
+      targetDate: new Date(2024, 11, 31),
+      category: 'Test',
+      priority: 'medium',
+      status: 'active',
+      type: 'savings',
+      icon: 'fas fa-star',
+      color: '#007bff',
+      userId: 'user1',
+      createdAt: new Date(),
+      updatedAt: new Date()
+    }];
+
+    component.editingGoalId = '1';
+    component.editGoalForm.patchValue({
+      title: '', // Invalid: empty title
+      targetAmount: 2000,
+      startDate: '2024-01-01',
+      targetDate: '2024-12-31',
+      category: 'Test',
+      priority: 'high',
+      type: 'savings'
+    });
+
+    const originalTitle = component.goals[0].title;
+    component.updateGoal();
+
+    expect(component.goals[0].title).toBe(originalTitle);
+  });
+
+  // Goal deletion tests
+  it('should delete goal when confirmed', () => {
+    component.goals = [{
+      _id: '1',
+      title: 'Test Goal',
+      targetAmount: 1000,
+      currentAmount: 500,
+      startDate: new Date(2024, 0, 1),
+      targetDate: new Date(2024, 11, 31),
+      category: 'Test',
+      priority: 'medium',
+      status: 'active',
+      type: 'savings',
+      icon: 'fas fa-star',
+      color: '#007bff',
+      userId: 'user1',
+      createdAt: new Date(),
+      updatedAt: new Date()
+    }];
+
+    confirmSpy.and.returnValue(true);
+    component.deleteGoal('1');
+
+    expect(component.goals.length).toBe(0);
+  });
+
+  it('should not delete goal when not confirmed', () => {
+    component.goals = [{
+      _id: '1',
+      title: 'Test Goal',
+      targetAmount: 1000,
+      currentAmount: 500,
+      startDate: new Date(2024, 0, 1),
+      targetDate: new Date(2024, 11, 31),
+      category: 'Test',
+      priority: 'medium',
+      status: 'active',
+      type: 'savings',
+      icon: 'fas fa-star',
+      color: '#007bff',
+      userId: 'user1',
+      createdAt: new Date(),
+      updatedAt: new Date()
+    }];
+
+    confirmSpy.and.returnValue(false);
+    component.deleteGoal('1');
+
+    expect(component.goals.length).toBe(1);
+  });
+
+  // Goal progress update tests
+  it('should update goal progress', () => {
+    const goal = {
+      _id: '1',
+      title: 'Test Goal',
+      targetAmount: 1000,
+      currentAmount: 500,
+      startDate: new Date(2024, 0, 1),
+      targetDate: new Date(2024, 11, 31),
+      category: 'Test',
+      priority: 'medium' as 'low' | 'medium' | 'high',
+      status: 'active' as 'active' | 'paused' | 'completed' | 'cancelled',
+      type: 'savings' as 'savings' | 'debt-payoff' | 'investment' | 'purchase' | 'emergency-fund' | 'other',
+      icon: 'fas fa-star',
+      color: '#007bff',
+      userId: 'user1',
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    component.updateGoalProgress(goal, 200);
+
+    expect(goal.currentAmount).toBe(700);
+  });
+
+  it('should not exceed target amount when updating progress', () => {
+    const goal = {
+      _id: '1',
+      title: 'Test Goal',
+      targetAmount: 1000,
+      currentAmount: 900,
+      startDate: new Date(2024, 0, 1),
+      targetDate: new Date(2024, 11, 31),
+      category: 'Test',
+      priority: 'medium' as 'low' | 'medium' | 'high',
+      status: 'active' as 'active' | 'paused' | 'completed' | 'cancelled',
+      type: 'savings' as 'savings' | 'debt-payoff' | 'investment' | 'purchase' | 'emergency-fund' | 'other',
+      icon: 'fas fa-star',
+      color: '#007bff',
+      userId: 'user1',
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    component.updateGoalProgress(goal, 200);
+
+    expect(goal.currentAmount).toBe(1000);
+  });
+
+  it('should not go below 0 when updating progress', () => {
+    const goal = {
+      _id: '1',
+      title: 'Test Goal',
+      targetAmount: 1000,
+      currentAmount: 100,
+      startDate: new Date(2024, 0, 1),
+      targetDate: new Date(2024, 11, 31),
+      category: 'Test',
+      priority: 'medium' as 'low' | 'medium' | 'high',
+      status: 'active' as 'active' | 'paused' | 'completed' | 'cancelled',
+      type: 'savings' as 'savings' | 'debt-payoff' | 'investment' | 'purchase' | 'emergency-fund' | 'other',
+      icon: 'fas fa-star',
+      color: '#007bff',
+      userId: 'user1',
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    component.updateGoalProgress(goal, -200);
+
+    expect(goal.currentAmount).toBe(0);
+  });
+
+  // Goal status toggle tests
+  it('should toggle goal status from active to paused', () => {
+    const goal = {
+      _id: '1',
+      title: 'Test Goal',
+      targetAmount: 1000,
+      currentAmount: 500,
+      startDate: new Date(2024, 0, 1),
+      targetDate: new Date(2024, 11, 31),
+      category: 'Test',
+      priority: 'medium' as 'low' | 'medium' | 'high',
+      status: 'active' as 'active' | 'paused' | 'completed' | 'cancelled',
+      type: 'savings' as 'savings' | 'debt-payoff' | 'investment' | 'purchase' | 'emergency-fund' | 'other',
+      icon: 'fas fa-star',
+      color: '#007bff',
+      userId: 'user1',
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    component.toggleGoalStatus(goal);
+
+    expect(goal.status).toBe('paused');
+  });
+
+  it('should toggle goal status from paused to active', () => {
+    const goal = {
+      _id: '1',
+      title: 'Test Goal',
+      targetAmount: 1000,
+      currentAmount: 500,
+      startDate: new Date(2024, 0, 1),
+      targetDate: new Date(2024, 11, 31),
+      category: 'Test',
+      priority: 'medium' as 'low' | 'medium' | 'high',
+      status: 'paused' as 'active' | 'paused' | 'completed' | 'cancelled',
+      type: 'savings' as 'savings' | 'debt-payoff' | 'investment' | 'purchase' | 'emergency-fund' | 'other',
+      icon: 'fas fa-star',
+      color: '#007bff',
+      userId: 'user1',
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    component.toggleGoalStatus(goal);
+
+    expect(goal.status).toBe('active');
+  });
+
+  // Goal completion tests
+  it('should complete goal', () => {
+    const goal = {
+      _id: '1',
+      title: 'Test Goal',
+      targetAmount: 1000,
+      currentAmount: 500,
+      startDate: new Date(2024, 0, 1),
+      targetDate: new Date(2024, 11, 31),
+      category: 'Test',
+      priority: 'medium' as 'low' | 'medium' | 'high',
+      status: 'active' as 'active' | 'paused' | 'completed' | 'cancelled',
+      type: 'savings' as 'savings' | 'debt-payoff' | 'investment' | 'purchase' | 'emergency-fund' | 'other',
+      icon: 'fas fa-star',
+      color: '#007bff',
+      userId: 'user1',
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    component.completeGoal(goal);
+
+    expect(goal.status).toBe('completed');
+    expect(goal.currentAmount).toBe(1000);
+  });
+
+  // Utility method tests
+  it('should get goal progress by id', () => {
+    component.goalProgress = [{
+      goalId: '1',
+      percentageComplete: 50,
+      daysRemaining: 100,
+      projectedCompletion: new Date(),
+      isOnTrack: true,
+      monthlyContribution: 100,
+      estimatedCompletionDate: new Date()
+    }];
+
+    const progress = component.getGoalProgress('1');
+
+    expect(progress).toBeDefined();
+    expect(progress?.percentageComplete).toBe(50);
+  });
+
+  it('should return undefined for non-existent goal progress', () => {
+    const progress = component.getGoalProgress('999');
+
+    expect(progress).toBeUndefined();
+  });
+
+  it('should get priority color', () => {
+    const color = component.getPriorityColor('high');
+
+    expect(color).toBe('#dc3545');
+  });
+
+  it('should return default color for unknown priority', () => {
+    const color = component.getPriorityColor('unknown');
+
+    expect(color).toBe('#6c757d');
+  });
+
+  it('should get status color', () => {
+    const color = component.getStatusColor('active');
+
+    expect(color).toBe('#28a745');
+  });
+
+  it('should return default color for unknown status', () => {
+    const color = component.getStatusColor('unknown');
+
+    expect(color).toBe('#6c757d');
+  });
+
+  it('should get goal type icon', () => {
+    const icon = component.getGoalTypeIcon('savings');
+
+    expect(icon).toBe('fas fa-piggy-bank');
+  });
+
+  it('should return default icon for unknown type', () => {
+    const icon = component.getGoalTypeIcon('unknown');
+
+    expect(icon).toBe('fas fa-star');
+  });
+
+  it('should get goal type color', () => {
+    const color = component.getGoalTypeColor('savings');
+
+    expect(color).toBe('#28a745');
+  });
+
+  it('should return default color for unknown type', () => {
+    const color = component.getGoalTypeColor('unknown');
+
+    expect(color).toBe('#007bff');
+  });
+
+  // Export and print tests
+  it('should export goals', () => {
+    spyOn(console, 'log');
+    component.exportGoals();
+    expect(console.log).toHaveBeenCalledWith('Exporting goals...');
+  });
+
+  it('should print goals', () => {
+    spyOn(window, 'print');
+    component.printGoals();
+    expect(window.print).toHaveBeenCalled();
+  });
+
   it('should initialize with default values', () => {
     expect(component.isLoading).toBe(false);
     expect(component.showAddGoal).toBe(false);

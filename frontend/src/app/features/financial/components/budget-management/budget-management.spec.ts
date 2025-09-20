@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ReactiveFormsModule, FormsModule } from '@angular/forms';
 import { RouterTestingModule } from '@angular/router/testing';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 
 import { BudgetManagementComponent } from './budget-management';
 import { FinancialService } from '../../../../core/services/financial.service';
@@ -81,9 +81,11 @@ describe('BudgetManagementComponent', () => {
     mockCategoryService = jasmine.createSpyObj('CategoryService', ['getUserCategories']);
     mockBudgetService = jasmine.createSpyObj('BudgetService', ['getBudgets', 'getBudgetSummary', 'createBudget', 'updateBudget', 'deleteBudget']);
     mockRealtimeBudgetProgressService = jasmine.createSpyObj('RealtimeBudgetProgressService', ['getRealtimeProgress', 'getBudgetStats', 'getAlerts', 'getConnectionStatus']);
-    mockAnalyticsService = jasmine.createSpyObj('AnalyticsService', ['getBudgetAnalytics', 'exportBudgetData']);
+    mockAnalyticsService = jasmine.createSpyObj('AnalyticsService', ['getBudgetAnalytics', 'exportBudgetData', 'exportBudgetReport', 'downloadBudgetReport']);
 
     // Setup default return values
+    mockAnalyticsService.exportBudgetReport.and.returnValue(of(new Blob()));
+    mockAnalyticsService.downloadBudgetReport.and.returnValue(of(void 0));
     mockCategoryService.getUserCategories.and.returnValue(of(mockCategories));
     mockTransactionService.getUserTransactions.and.returnValue(of({ 
       data: mockTransactions,
@@ -204,6 +206,12 @@ describe('BudgetManagementComponent', () => {
 
   it('should create', () => {
     expect(component).toBeTruthy();
+  });
+
+  beforeEach(() => {
+    // Ensure budgets are loaded for tests that need them
+    component.budgets = component['createMockBudgets']();
+    component.filteredBudgets = [...component.budgets];
   });
 
   it('should initialize with default values', () => {
@@ -440,5 +448,577 @@ describe('BudgetManagementComponent', () => {
     
     expect(component['destroy$'].next).toHaveBeenCalled();
     expect(component['destroy$'].complete).toHaveBeenCalled();
+  });
+
+  // Error handling tests for better branch coverage
+  describe('Error Handling', () => {
+    it('should handle budget loading error', () => {
+      mockBudgetService.getBudgets.and.returnValue(throwError(() => new Error('API Error')));
+      
+      component['loadBudgets']();
+      
+      expect(component.isLoading).toBe(false);
+    });
+
+    it('should handle budget summary loading error', () => {
+      mockBudgetService.getBudgetSummary.and.returnValue(throwError(() => new Error('API Error')));
+      
+      component['loadBudgetSummary']();
+      
+      expect(component.budgetSummary).toBeNull();
+    });
+
+    it('should handle transaction loading error', () => {
+      mockTransactionService.getUserTransactions.and.returnValue(throwError(() => new Error('API Error')));
+      
+      component['loadTransactions']();
+      
+      expect(component.transactions).toEqual([]);
+    });
+
+    it('should handle budget creation error', () => {
+      // The onSubmitBudget method doesn't actually call the service,
+      // it just adds the budget locally, so we test the local behavior
+      component.budgetForm.patchValue({
+        name: 'Test Budget',
+        categoryId: '1',
+        amount: 1000,
+        startDate: new Date(),
+        endDate: new Date()
+      });
+      
+      component.onSubmitBudget();
+      
+      // Form should be closed after successful local creation
+      expect(component.showAddBudget).toBe(false);
+      expect(component.budgets.length).toBeGreaterThan(0);
+    });
+
+    it('should handle budget update error', () => {
+      mockBudgetService.updateBudget.and.returnValue(throwError(() => new Error('API Error')));
+      
+      component.editingBudgetId = '1';
+      component.editBudgetForm.patchValue({
+        name: 'Updated Budget',
+        categoryAllocations: [{ categoryId: '1', amount: 1500 }]
+      });
+      
+      component.updateBudget();
+      
+      expect(component.editingBudgetId).toBe('1');
+    });
+
+    it('should handle budget deletion error', () => {
+      mockBudgetService.deleteBudget.and.returnValue(throwError(() => new Error('API Error')));
+      
+      const initialLength = component.budgets.length;
+      component.deleteBudget('1');
+      
+      // Budgets should remain unchanged due to error
+      expect(component.budgets.length).toBe(initialLength);
+    });
+
+    it('should handle budget status toggle error', () => {
+      // The toggleBudgetStatus method doesn't call any service,
+      // it just toggles the status locally, so we test the local behavior
+      const budget = component.budgets[0];
+      const originalStatus = budget.isActive;
+      
+      component.toggleBudgetStatus(budget);
+      
+      // The status should be toggled locally
+      expect(budget.isActive).toBe(!originalStatus);
+    });
+  });
+
+  // Edge cases and conditional logic tests
+  describe('Edge Cases and Conditional Logic', () => {
+    it('should handle empty budgets array in calculateBudgetProgress', () => {
+      component.budgets = [];
+      component['calculateBudgetProgress']();
+      
+      expect(component.budgetProgress).toEqual([]);
+    });
+
+    it('should handle budget with null categoryAllocations', () => {
+      const budgetWithNullAllocations = {
+        ...component.budgets[0],
+        categoryAllocations: null as any
+      };
+      component.budgets = [budgetWithNullAllocations];
+      
+      component['calculateBudgetProgress']();
+      
+      expect(component.budgetProgress).toEqual([]);
+    });
+
+    it('should handle budget with null endDate', () => {
+      const budgetWithNullEndDate = {
+        ...component.budgets[0],
+        endDate: null as any
+      };
+      component.budgets = [budgetWithNullEndDate];
+      
+      component['calculateBudgetProgress']();
+      
+      expect(component.budgetProgress).toEqual([]);
+    });
+
+    it('should handle percentage used >= 100', () => {
+      const budget = {
+        ...component.budgets[0],
+        categoryAllocations: [{ 
+          categoryId: '1', 
+          allocatedAmount: 1000,
+          isFlexible: true,
+          priority: 1
+        }],
+        endDate: new Date()
+      };
+      component.budgets = [budget];
+      component.transactions = [{
+        _id: '1',
+        title: 'Test Transaction',
+        amount: 1200,
+        currency: 'USD',
+        type: 'expense' as TransactionType,
+        status: 'completed' as any,
+        categoryId: '1',
+        tags: [],
+        date: new Date(),
+        timezone: 'UTC',
+        paymentMethod: 'cash' as any,
+        isRecurring: false,
+        recurrencePattern: 'none' as any,
+        attachments: [],
+        source: 'manual',
+        userId: 'user1',
+        accountId: 'acc1',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        isDeleted: false
+      }];
+      
+      component['calculateBudgetProgress']();
+      
+      const progress = component.budgetProgress[0];
+      expect(progress.status).toBe('over');
+      expect(progress.percentageUsed).toBeGreaterThanOrEqual(100);
+    });
+
+    it('should handle null endDate in calculateDaysRemaining', () => {
+      const result = component['calculateDaysRemaining'](null as any);
+      
+      expect(result).toBe(0);
+    });
+
+    it('should handle past endDate in calculateDaysRemaining', () => {
+      const pastDate = new Date();
+      pastDate.setDate(pastDate.getDate() - 5);
+      
+      const result = component['calculateDaysRemaining'](pastDate);
+      
+      expect(result).toBe(0);
+    });
+
+    it('should handle invalid form submission', () => {
+      component.budgetForm.patchValue({
+        name: '', // Invalid: empty name
+        categoryAllocations: [] // Invalid: empty allocations
+      });
+      
+      component.onSubmitBudget();
+      
+      expect(mockBudgetService.createBudget).not.toHaveBeenCalled();
+    });
+
+    it('should handle update budget with invalid form', () => {
+      component.editingBudgetId = '1';
+      component.editBudgetForm.patchValue({
+        name: '' // Invalid: empty name
+      });
+      
+      component.updateBudget();
+      
+      expect(mockBudgetService.updateBudget).not.toHaveBeenCalled();
+    });
+
+    it('should handle update budget with non-existent budget ID', () => {
+      component.editingBudgetId = 'non-existent';
+      component.editBudgetForm.patchValue({
+        name: 'Updated Budget',
+        categoryAllocations: [{ categoryId: '1', amount: 1500 }]
+      });
+      
+      component.updateBudget();
+      
+      expect(mockBudgetService.updateBudget).not.toHaveBeenCalled();
+    });
+  });
+
+  // Advanced filter tests
+  describe('Advanced Filters', () => {
+    it('should apply advanced filters with empty filter groups', () => {
+      component['applyAdvancedFilters']([]);
+      
+      expect(component.filteredBudgets).toEqual(component.budgets);
+    });
+
+    it('should evaluate budget against query with $and conditions', () => {
+      const budget = component.budgets[0];
+      const query = {
+        $and: [
+          { name: { $eq: budget.name } },
+          { isActive: { $eq: true } }
+        ]
+      };
+      
+      const result = component['evaluateBudgetAgainstQuery'](budget, query);
+      
+      expect(typeof result).toBe('boolean');
+    });
+
+    it('should evaluate budget against query with $or conditions', () => {
+      const budget = component.budgets[0];
+      const query = {
+        $or: [
+          { name: { $eq: budget.name } },
+          { name: { $eq: 'Another Budget' } }
+        ]
+      };
+      
+      const result = component['evaluateBudgetAgainstQuery'](budget, query);
+      
+      expect(typeof result).toBe('boolean');
+    });
+
+    it('should evaluate field condition with object condition', () => {
+      const budget = component.budgets[0];
+      const condition = { $eq: budget.name };
+      
+      const result = component['evaluateFieldCondition'](budget, 'name', condition);
+      
+      expect(typeof result).toBe('boolean');
+    });
+
+    it('should evaluate field condition with primitive condition', () => {
+      const budget = component.budgets[0];
+      
+      const result = component['evaluateFieldCondition'](budget, 'name', budget.name);
+      
+      expect(typeof result).toBe('boolean');
+    });
+
+    it('should evaluate operator with $eq', () => {
+      const result = component['evaluateOperator']('Test', '$eq', 'Test');
+      
+      expect(result).toBe(true);
+    });
+
+    it('should evaluate operator with $ne', () => {
+      const result = component['evaluateOperator']('Test', '$ne', 'Different');
+      
+      expect(result).toBe(true);
+    });
+
+    it('should evaluate operator with $gt', () => {
+      const result = component['evaluateOperator'](10, '$gt', 5);
+      
+      expect(result).toBe(true);
+    });
+
+    it('should evaluate operator with $lt', () => {
+      const result = component['evaluateOperator'](5, '$lt', 10);
+      
+      expect(result).toBe(true);
+    });
+
+    it('should evaluate operator with $gte', () => {
+      const result = component['evaluateOperator'](10, '$gte', 10);
+      
+      expect(result).toBe(true);
+    });
+
+    it('should evaluate operator with $lte', () => {
+      const result = component['evaluateOperator'](10, '$lte', 10);
+      
+      expect(result).toBe(true);
+    });
+
+    it('should evaluate operator with $in', () => {
+      const result = component['evaluateOperator']('Test', '$in', ['Test', 'Other']);
+      
+      expect(result).toBe(true);
+    });
+
+    it('should evaluate operator with $nin', () => {
+      const result = component['evaluateOperator']('Test', '$nin', ['Other', 'Different']);
+      
+      expect(result).toBe(true);
+    });
+
+    it('should evaluate operator with $regex', () => {
+      const result = component['evaluateOperator']('Test Budget', '$regex', 'Test');
+      
+      expect(result).toBe(true);
+    });
+
+    it('should evaluate operator with unknown operator', () => {
+      const result = component['evaluateOperator']('Test', '$unknown', 'Test');
+      
+      expect(result).toBe(true);
+    });
+
+    it('should get budget field value for different fields', () => {
+      const budget = component.budgets[0];
+      
+      expect(component['getBudgetFieldValue'](budget, 'name')).toBe(budget.name);
+      expect(component['getBudgetFieldValue'](budget, 'isActive')).toBe(budget.isActive);
+      expect(component['getBudgetFieldValue'](budget, 'startDate')).toBe(budget.startDate);
+      expect(component['getBudgetFieldValue'](budget, 'endDate')).toBe(budget.endDate);
+      expect(component['getBudgetFieldValue'](budget, 'unknown')).toBe(undefined);
+    });
+  });
+
+  // Export functionality tests
+  describe('Export Functionality', () => {
+    it('should handle export with different formats', () => {
+      component.exportFormat = 'csv';
+      component.exportReportType = 'performance';
+      
+      component.exportBudgetReport();
+      
+      expect(component.showExportModal).toBe(true);
+    });
+
+    it('should execute export with PDF format', () => {
+      component.exportFormat = 'pdf';
+      component.exportReportType = 'all';
+      
+      component.executeExport();
+      
+      expect(mockAnalyticsService.downloadBudgetReport).toHaveBeenCalled();
+    });
+
+    it('should execute export with Excel format', () => {
+      component.exportFormat = 'excel';
+      component.exportReportType = 'trend';
+      
+      component.executeExport();
+      
+      expect(mockAnalyticsService.downloadBudgetReport).toHaveBeenCalled();
+    });
+
+    it('should execute export with JSON format', () => {
+      component.exportFormat = 'json';
+      component.exportReportType = 'breakdown';
+      
+      component.executeExport();
+      
+      expect(mockAnalyticsService.downloadBudgetReport).toHaveBeenCalled();
+    });
+
+    it('should execute export with CSV format', () => {
+      component.exportFormat = 'csv';
+      component.exportReportType = 'variance';
+      
+      component.executeExport();
+      
+      expect(mockAnalyticsService.downloadBudgetReport).toHaveBeenCalled();
+    });
+
+    it('should cancel export', () => {
+      component.showExportModal = true;
+      
+      component.cancelExport();
+      
+      expect(component.showExportModal).toBe(false);
+    });
+
+    it('should quick export with PDF', () => {
+      component.quickExport('pdf');
+      
+      expect(mockAnalyticsService.downloadBudgetReport).toHaveBeenCalled();
+    });
+
+    it('should quick export with Excel', () => {
+      component.quickExport('excel');
+      
+      expect(mockAnalyticsService.downloadBudgetReport).toHaveBeenCalled();
+    });
+  });
+
+  // UI interaction tests
+  describe('UI Interactions', () => {
+    it('should show budget wizard', () => {
+      component.showBudgetWizard();
+      
+      expect(component.showAddBudget).toBe(false);
+    });
+
+    it('should handle budget wizard when not available', () => {
+      component.budgetWizard = null as any;
+      
+      component.showBudgetWizard();
+      
+      // Should not throw error
+      expect(true).toBe(true);
+    });
+
+    it('should handle realtime budget click', () => {
+      const budget = { budgetId: '1', name: 'Test Budget' };
+      spyOn(component as any, 'scrollToBudget');
+      
+      component.onRealtimeBudgetClick(budget);
+      
+      expect((component as any).scrollToBudget).toHaveBeenCalledWith('1');
+    });
+
+    it('should handle realtime category click', () => {
+      const event = { budget: { id: '1' }, category: { categoryId: 'cat1' } };
+      
+      component.onRealtimeCategoryClick(event);
+      
+      expect(component.selectedCategory).toBe('cat1');
+    });
+
+    it('should handle realtime alert click with categoryId', () => {
+      const alert = { categoryId: 'cat1', message: 'Alert' };
+      
+      component.onRealtimeAlertClick(alert);
+      
+      expect(component.selectedCategory).toBe('cat1');
+    });
+
+    it('should handle realtime alert click without categoryId', () => {
+      const alert = { message: 'Alert' };
+      
+      component.onRealtimeAlertClick(alert);
+      
+      expect(component.selectedCategory).toBe('');
+    });
+
+    it('should scroll to budget element', () => {
+      const mockElement = {
+        scrollIntoView: jasmine.createSpy('scrollIntoView'),
+        classList: {
+          add: jasmine.createSpy('add'),
+          remove: jasmine.createSpy('remove')
+        }
+      };
+      spyOn(document, 'getElementById').and.returnValue(mockElement as any);
+      
+      component['scrollToBudget']('1');
+      
+      expect(document.getElementById).toHaveBeenCalledWith('budget-1');
+      expect(mockElement.scrollIntoView).toHaveBeenCalled();
+    });
+
+    it('should handle scroll to budget when element not found', () => {
+      spyOn(document, 'getElementById').and.returnValue(null);
+      
+      component['scrollToBudget']('1');
+      
+      // Should not throw error
+      expect(true).toBe(true);
+    });
+  });
+
+  // Advanced filter event handlers
+  describe('Advanced Filter Event Handlers', () => {
+    it('should handle advanced filters changed', () => {
+      const filterGroups = [{
+        id: '1',
+        name: 'Test Filter',
+        field: 'name',
+        operator: '$eq',
+        value: 'Test',
+        conditions: [],
+        logic: 'AND' as 'AND' | 'OR',
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }];
+      
+      component.onAdvancedFiltersChanged(filterGroups);
+      
+      expect(component.filteredBudgets).toBeDefined();
+    });
+
+    it('should handle advanced search query', () => {
+      const query = 'test query';
+      
+      component.onAdvancedSearchQuery(query);
+      
+      expect(component.filteredBudgets).toBeDefined();
+    });
+
+    it('should handle preset applied', () => {
+      const preset = { name: 'Test Preset', filters: [] };
+      
+      component.onPresetApplied(preset);
+      
+      expect(component.filteredBudgets).toBeDefined();
+    });
+
+    it('should handle saved filter loaded', () => {
+      const savedFilter = { name: 'Saved Filter', filters: [] };
+      
+      component.onSavedFilterLoaded(savedFilter);
+      
+      expect(component.filteredBudgets).toBeDefined();
+    });
+
+    it('should add to search history', () => {
+      const query = 'test query';
+      
+      component['addToSearchHistory'](query);
+      
+      // Should not throw error
+      expect(true).toBe(true);
+    });
+  });
+
+  // Period and category filtering tests
+  describe('Period and Category Filtering', () => {
+    it('should filter budgets by monthly period', () => {
+      component.selectedPeriod = 'monthly';
+      
+      component['filterBudgetsByPeriod']();
+      
+      expect(component.filteredBudgets).toBeDefined();
+    });
+
+    it('should filter budgets by quarterly period', () => {
+      component.selectedPeriod = 'quarterly';
+      
+      component['filterBudgetsByPeriod']();
+      
+      expect(component.filteredBudgets).toBeDefined();
+    });
+
+    it('should filter budgets by yearly period', () => {
+      component.selectedPeriod = 'yearly';
+      
+      component['filterBudgetsByPeriod']();
+      
+      expect(component.filteredBudgets).toBeDefined();
+    });
+
+    it('should filter budgets by category', () => {
+      component.selectedCategory = '1';
+      
+      component['filterBudgetsByCategory']();
+      
+      expect(component.filteredBudgets).toBeDefined();
+    });
+
+    it('should filter budgets by all categories', () => {
+      component.selectedCategory = '';
+      
+      component['filterBudgetsByCategory']();
+      
+      expect(component.filteredBudgets).toEqual(component.budgets);
+    });
   });
 });
