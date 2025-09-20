@@ -239,14 +239,18 @@ describe('TransactionDetailsComponent', () => {
     expect(transactionService.deleteTransaction).not.toHaveBeenCalled();
   });
 
-  it('should handle delete error', () => {
+  it('should handle delete error', (done) => {
     confirmSpy.and.returnValue(true);
     transactionService.deleteTransaction.and.returnValue(throwError(() => new Error('Delete failed')));
 
     component.transaction = mockTransaction;
     component.onDelete();
 
-    expect(component.error).toBe('Failed to delete transaction');
+    // Wait for async operation to complete
+    setTimeout(() => {
+      expect(component.error).toBe('Failed to delete transaction');
+      done();
+    }, 100);
   });
 
   it('should navigate back to transactions list', () => {

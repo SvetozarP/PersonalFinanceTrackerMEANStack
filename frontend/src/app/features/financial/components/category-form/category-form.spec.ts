@@ -167,7 +167,7 @@ describe('CategoryFormComponent', () => {
     });
   });
 
-  it('should handle form submission errors', () => {
+  it('should handle form submission errors', (done) => {
     categoryService.createCategory.and.returnValue(throwError(() => new Error('API Error')));
     
     // Set up a valid form first
@@ -182,7 +182,11 @@ describe('CategoryFormComponent', () => {
     
     component.onSubmit();
     
-    expect(component.error).toBe('Failed to create category');
+    // Wait for async operation to complete
+    setTimeout(() => {
+      expect(component.error).toBe('Failed to create category');
+      done();
+    }, 100);
   });
 
   it('should reset form after successful submission', () => {
@@ -265,24 +269,32 @@ describe('CategoryFormComponent', () => {
     expect(component.categoryForm.get('description')?.value).toBe('Test Description');
   });
 
-  it('should handle category loading error', () => {
+  it('should handle category loading error', (done) => {
     categoryService.getCategoryById.and.returnValue(throwError(() => new Error('API Error')));
     
     component.categoryId = 'cat1';
     component.isEditMode = true;
     component['loadCategory']('cat1');
     
-    expect(component.error).toBe('Failed to load category');
-    expect(component.isFormLoading).toBe(false);
+    // Wait for async operation to complete
+    setTimeout(() => {
+      expect(component.error).toBe('Failed to load category');
+      expect(component.isFormLoading).toBe(false);
+      done();
+    }, 100);
   });
 
-  it('should handle parent categories loading error', () => {
+  it('should handle parent categories loading error', (done) => {
     categoryService.getUserCategories.and.returnValue(throwError(() => new Error('API Error')));
     
     component['loadParentCategories']();
     
-    expect(component.isParentCategoriesLoading).toBe(false);
-    expect(component.categoryForm.get('parentId')?.enabled).toBe(true);
+    // Wait for async operation to complete
+    setTimeout(() => {
+      expect(component.isParentCategoriesLoading).toBe(false);
+      expect(component.categoryForm.get('parentId')?.enabled).toBe(true);
+      done();
+    }, 100);
   });
 
   it('should filter out current category from parent categories in edit mode', () => {
@@ -312,7 +324,7 @@ describe('CategoryFormComponent', () => {
     expect(categoryService.updateCategory).not.toHaveBeenCalled();
   });
 
-  it('should handle update category error', () => {
+  it('should handle update category error', (done) => {
     categoryService.updateCategory.and.returnValue(throwError(() => new Error('API Error')));
     
     component.isEditMode = true;
@@ -328,11 +340,15 @@ describe('CategoryFormComponent', () => {
     
     component.onSubmit();
     
-    expect(component.error).toBe('Failed to update category');
-    expect(component.isSubmitting).toBe(false);
+    // Wait for async operation to complete
+    setTimeout(() => {
+      expect(component.error).toBe('Failed to update category');
+      expect(component.isSubmitting).toBe(false);
+      done();
+    }, 100);
   });
 
-  it('should handle create category error', () => {
+  it('should handle create category error', (done) => {
     categoryService.createCategory.and.returnValue(throwError(() => new Error('API Error')));
     
     component.isEditMode = false;
@@ -347,8 +363,12 @@ describe('CategoryFormComponent', () => {
     
     component.onSubmit();
     
-    expect(component.error).toBe('Failed to create category');
-    expect(component.isSubmitting).toBe(false);
+    // Wait for async operation to complete
+    setTimeout(() => {
+      expect(component.error).toBe('Failed to create category');
+      expect(component.isSubmitting).toBe(false);
+      done();
+    }, 100);
   });
 
   it('should handle parent category change', () => {
