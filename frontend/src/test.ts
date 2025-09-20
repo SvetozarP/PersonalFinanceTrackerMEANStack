@@ -19,6 +19,7 @@ import {
   BrowserDynamicTestingModule,
   platformBrowserDynamicTesting,
 } from '@angular/platform-browser-dynamic/testing';
+import { TestCleanup } from './app/test-utils/test-cleanup';
 
 declare const require: {
   context(path: string, deep?: boolean, filter?: RegExp): {
@@ -32,6 +33,17 @@ getTestBed().initTestEnvironment(
   BrowserDynamicTestingModule,
   platformBrowserDynamicTesting(),
 );
+
+// Global test cleanup to prevent interference between tests
+beforeEach(() => {
+  // Use comprehensive cleanup utility
+  TestCleanup.cleanup();
+});
+
+afterEach(() => {
+  // Use comprehensive cleanup utility
+  TestCleanup.cleanup();
+});
 
 // Then we find all the tests.
 const context = require.context('./', true, /\.spec\.ts$/);

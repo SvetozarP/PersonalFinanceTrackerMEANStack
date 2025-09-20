@@ -7,6 +7,7 @@ import { TransactionListComponent } from './transaction-list';
 import { TransactionService } from '../../../../core/services/transaction.service';
 import { CategoryService } from '../../../../core/services/category.service';
 import { Transaction, TransactionType, TransactionStatus, PaymentMethod } from '../../../../core/models/financial.model';
+import { createWindowSpyWithCleanup } from '../../../../test-utils/test-cleanup';
 
 describe('TransactionListComponent', () => {
   let component: TransactionListComponent;
@@ -95,24 +96,7 @@ describe('TransactionListComponent', () => {
     fixture.detectChanges();
   });
 
-  afterEach(() => {
-    // Clean up spies to prevent interference between tests
-    try {
-      if (window.confirm && (window.confirm as any).and && (window.confirm as any).and.restore) {
-        (window.confirm as any).and.restore();
-      }
-    } catch (e) {
-      // Ignore restore errors
-    }
-    // Reset spy calls for known methods
-    if (transactionService) {
-      transactionService.getUserTransactions.calls.reset();
-      transactionService.deleteTransaction.calls.reset();
-    }
-    if (categoryService) {
-      categoryService.getUserCategories.calls.reset();
-    }
-  });
+  // Global cleanup is handled in test.ts
 
   it('should create', () => {
     expect(component).toBeTruthy();
@@ -177,14 +161,14 @@ describe('TransactionListComponent', () => {
   });
 
   it('should handle transaction deletion', () => {
-    spyOn(window, 'confirm').and.returnValue(true);
+    createWindowSpyWithCleanup('confirm').and.returnValue(true);
     component.onTransactionDelete('1');
     
     expect(transactionService.deleteTransaction).toHaveBeenCalledWith('1');
   });
 
   it('should not delete transaction when user cancels', () => {
-    spyOn(window, 'confirm').and.returnValue(false);
+    createWindowSpyWithCleanup('confirm').and.returnValue(false);
     component.onTransactionDelete('1');
     
     expect(transactionService.deleteTransaction).not.toHaveBeenCalled();
@@ -523,7 +507,7 @@ describe('TransactionListComponent', () => {
     });
 
     it('should have both deleteTransaction and onTransactionDelete methods', () => {
-      spyOn(window, 'confirm').and.returnValue(true);
+      createWindowSpyWithCleanup('confirm').and.returnValue(true);
       
       component.deleteTransaction('1');
       expect(transactionService.deleteTransaction).toHaveBeenCalledWith('1');
