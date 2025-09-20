@@ -38,11 +38,45 @@ getTestBed().initTestEnvironment(
 beforeEach(() => {
   // Use comprehensive cleanup utility
   TestCleanup.cleanup();
+  
+  // Additional aggressive cleanup for window.confirm
+  if (window.confirm && (window.confirm as any).and) {
+    try {
+      (window.confirm as any).and.restore();
+    } catch (e) {
+      // If restore fails, reset to original function
+      (window as any).confirm = function(message?: string): boolean {
+        return true; // Default to true for tests
+      };
+    }
+  } else {
+    // Reset to original function if not spied
+    (window as any).confirm = function(message?: string): boolean {
+      return true; // Default to true for tests
+    };
+  }
 });
 
 afterEach(() => {
   // Use comprehensive cleanup utility
   TestCleanup.cleanup();
+  
+  // Additional aggressive cleanup for window.confirm
+  if (window.confirm && (window.confirm as any).and) {
+    try {
+      (window.confirm as any).and.restore();
+    } catch (e) {
+      // If restore fails, reset to original function
+      (window as any).confirm = function(message?: string): boolean {
+        return true; // Default to true for tests
+      };
+    }
+  } else {
+    // Reset to original function if not spied
+    (window as any).confirm = function(message?: string): boolean {
+      return true; // Default to true for tests
+    };
+  }
 });
 
 // Then we find all the tests.

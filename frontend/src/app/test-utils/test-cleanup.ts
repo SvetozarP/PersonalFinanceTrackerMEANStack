@@ -107,6 +107,18 @@ export function createSpyWithCleanup<T>(object: any, method: string): jasmine.Sp
  * Jasmine helper to create spies on window object with automatic cleanup
  */
 export function createWindowSpyWithCleanup(method: keyof Window): jasmine.Spy {
+  // Check if already spied upon and restore first
+  if ((window[method] as any).and) {
+    try {
+      (window[method] as any).and.restore();
+    } catch (e) {
+      // If restore fails, reset to original function
+      (window as any)[method] = function(message?: string): boolean {
+        return true; // Default to true for tests
+      };
+    }
+  }
+  
   const spy = spyOn(window, method);
   TestCleanup.registerSpy(spy);
   return spy;
