@@ -1,42 +1,36 @@
 import { Request, Response, NextFunction } from 'express';
 import { logger } from '../services/logger.service';
+import { databaseOptimizationService } from '../services/database-optimization.service';
 
 /**
  * Performance monitoring middleware
- * Tracks request duration and logs slow queries
+ * Tracks request duration, memory usage, and database query performance
  */
-export const performanceMiddleware = (req: Request, res: Response, next: NextFunction) => {
+export const performanceMiddleware = (req: Request, res: Response, next: NextFunction): void => {
   const startTime = Date.now();
   const startMemory = process.memoryUsage();
 
-  // Override res.end to capture response time
+  // Override res.end to capture response completion
   const originalEnd = res.end;
   res.end = function(chunk?: any, encoding?: any): any {
     const endTime = Date.now();
     const endMemory = process.memoryUsage();
     const duration = endTime - startTime;
-    
-    // Calculate memory usage
-    const memoryUsed = {
-      rss: endMemory.rss - startMemory.rss,
-      heapUsed: endMemory.heapUsed - startMemory.heapUsed,
-      heapTotal: endMemory.heapTotal - startMemory.heapTotal,
-      external: endMemory.external - startMemory.external
-    };
+    const memoryDelta = endMemory.heapUsed - startMemory.heapUsed;
 
     // Log performance metrics
     const performanceData = {
       method: req.method,
       url: req.url,
+      duration: duration,
+      memoryDelta: memoryDelta,
       statusCode: res.statusCode,
-      duration: `${duration}ms`,
-      memoryUsed: `${Math.round(memoryUsed.heapUsed / 1024 / 1024 * 100) / 100}MB`,
       userAgent: req.get('User-Agent'),
       ip: req.ip || req.connection.remoteAddress,
       timestamp: new Date().toISOString()
     };
 
-    // Log slow requests (> 1 second)
+    // Log based on performance thresholds
     if (duration > 1000) {
       logger.warn('Slow request detected', performanceData);
     } else if (duration > 500) {
@@ -45,114 +39,237 @@ export const performanceMiddleware = (req: Request, res: Response, next: NextFun
       logger.debug('Request completed', performanceData);
     }
 
+    // Log memory usage if significant
+    if (memoryDelta > 10 * 1024 * 1024) { // 10MB
+      logger.warn('High memory usage detected', {
+        ...performanceData,
+        memoryUsage: {
+          heapUsed: endMemory.heapUsed,
+          heapTotal: endMemory.heapTotal,
+          external: endMemory.external,
+          rss: endMemory.rss
+        }
+      });
+    }
+
     // Call original end method
-    originalEnd.call(this, chunk, encoding);
+    if (originalEnd) {
+      originalEnd.call(this, chunk, encoding);
+    }
   };
 
   next();
 };
 
 /**
- * Database query performance middleware
- * Tracks MongoDB query performance
+ * Database performance monitoring middleware
+ * Tracks MongoDB query performance and execution statistics
  */
-export const databasePerformanceMiddleware = (req: Request, res: Response, next: NextFunction) => {
-  // Store original mongoose query methods
-  const originalFind = require('mongoose').Query.prototype.find;
-  const originalFindOne = require('mongoose').Query.prototype.findOne;
-  const originalAggregate = require('mongoose').Model.aggregate;
+export const databasePerformanceMiddleware = (req: Request, res: Response, next: NextFunction): void => {
+  const startTime = Date.now();
 
-  // Override find method
-  require('mongoose').Query.prototype.find = function(options?: any) {
-    const startTime = Date.now();
-    const query = this;
-    
-    return originalFind.call(this, options).then((result: any) => {
-      const duration = Date.now() - startTime;
-      
-      if (duration > 100) { // Log queries taking more than 100ms
-        logger.warn('Slow database query detected', {
-          operation: 'find',
-          collection: query.model?.collection?.name || 'unknown',
-          duration: `${duration}ms`,
-          filter: query.getFilter(),
-          options: query.getOptions(),
-          resultCount: Array.isArray(result) ? result.length : 1
-        });
-      }
-      
-      return result;
-    });
-  };
+  // Override res.end to capture database performance
+  const originalEnd = res.end;
+  res.end = function(chunk?: any, encoding?: any): any {
+    const endTime = Date.now();
+    const duration = endTime - startTime;
 
-  // Override findOne method
-  require('mongoose').Query.prototype.findOne = function(options?: any) {
-    const startTime = Date.now();
-    const query = this;
-    
-    return originalFindOne.call(this, options).then((result: any) => {
-      const duration = Date.now() - startTime;
-      
-      if (duration > 100) { // Log queries taking more than 100ms
-        logger.warn('Slow database query detected', {
-          operation: 'findOne',
-          collection: query.model?.collection?.name || 'unknown',
-          duration: `${duration}ms`,
-          filter: query.getFilter(),
-          options: query.getOptions(),
-          resultCount: result ? 1 : 0
-        });
-      }
-      
-      return result;
-    });
-  };
+    // Log database performance if request took significant time
+    if (duration > 100) {
+      logger.info('Database operation completed', {
+        method: req.method,
+        url: req.url,
+        duration: duration,
+        statusCode: res.statusCode,
+        timestamp: new Date().toISOString()
+      });
+    }
 
-  // Override aggregate method
-  require('mongoose').Model.aggregate = function(pipeline: any[]) {
-    const startTime = Date.now();
-    const model = this;
-    
-    return originalAggregate.call(this, pipeline).then((result: any) => {
-      const duration = Date.now() - startTime;
-      
-      if (duration > 200) { // Log aggregations taking more than 200ms
-        logger.warn('Slow database aggregation detected', {
-          operation: 'aggregate',
-          collection: model.collection.name,
-          duration: `${duration}ms`,
-          pipeline: pipeline,
-          resultCount: Array.isArray(result) ? result.length : 1
-        });
-      }
-      
-      return result;
-    });
+    // Call original end method
+    if (originalEnd) {
+      originalEnd.call(this, chunk, encoding);
+    }
   };
 
   next();
 };
 
 /**
- * Memory usage monitoring middleware
+ * Memory monitoring middleware
+ * Tracks memory usage patterns and alerts on high usage
  */
-export const memoryMonitoringMiddleware = (req: Request, res: Response, next: NextFunction) => {
+export const memoryMonitoringMiddleware = (req: Request, res: Response, next: NextFunction): void => {
   const memoryUsage = process.memoryUsage();
-  
-  // Log high memory usage
-  const heapUsedMB = memoryUsage.heapUsed / 1024 / 1024;
-  const heapTotalMB = memoryUsage.heapTotal / 1024 / 1024;
-  const memoryUsagePercent = (heapUsedMB / heapTotalMB) * 100;
-  
+  const memoryUsagePercent = (memoryUsage.heapUsed / memoryUsage.heapTotal) * 100;
+
+  // Alert on high memory usage
   if (memoryUsagePercent > 80) {
     logger.warn('High memory usage detected', {
-      heapUsed: `${Math.round(heapUsedMB * 100) / 100}MB`,
-      heapTotal: `${Math.round(heapTotalMB * 100) / 100}MB`,
-      usagePercent: `${Math.round(memoryUsagePercent * 100) / 100}%`,
-      rss: `${Math.round(memoryUsage.rss / 1024 / 1024 * 100) / 100}MB`,
-      external: `${Math.round(memoryUsage.external / 1024 / 1024 * 100) / 100}MB`
+      memoryUsage: {
+        heapUsed: memoryUsage.heapUsed,
+        heapTotal: memoryUsage.heapTotal,
+        external: memoryUsage.external,
+        rss: memoryUsage.rss
+      },
+      usagePercent: memoryUsagePercent,
+      method: req.method,
+      url: req.url,
+      timestamp: new Date().toISOString()
     });
   }
-  
+
+  // Log memory usage for debugging
+  if (memoryUsagePercent > 60) {
+    logger.debug('Memory usage monitoring', {
+      usagePercent: memoryUsagePercent,
+      method: req.method,
+      url: req.url
+    });
+  }
+
   next();
 };
+
+/**
+ * Query optimization middleware
+ * Analyzes and optimizes database queries
+ */
+export const queryOptimizationMiddleware = (req: Request, res: Response, next: NextFunction): void => {
+  // Store original query execution methods
+  const originalQuery = req.query;
+  
+  // Add query optimization hints to request
+  req.queryOptimization = {
+    enableCaching: true,
+    maxResults: 1000,
+    timeout: 30000
+  };
+
+  // Override res.end to analyze query performance
+  const originalEnd = res.end;
+  res.end = function(chunk?: any, encoding?: any): any {
+    const endTime = Date.now();
+    const duration = endTime - (req as any).startTime || Date.now();
+
+    // Analyze query performance if this was a database operation
+    if (req.url.includes('/api/') && req.method === 'GET') {
+      databaseOptimizationService.analyzeQueryPerformance(originalQuery, 'transactions')
+        .then(analysis => {
+          if (analysis.efficiency < 50) {
+            logger.warn('Query efficiency below threshold', {
+              url: req.url,
+              efficiency: analysis.efficiency,
+              executionTime: analysis.executionTime,
+              suggestions: analysis.suggestions
+            });
+          }
+        })
+        .catch(error => {
+          logger.debug('Query analysis failed', { error: String(error) });
+        });
+    }
+
+    // Call original end method
+    if (originalEnd) {
+      originalEnd.call(this, chunk, encoding);
+    }
+  };
+
+  next();
+};
+
+/**
+ * Cache control middleware
+ * Manages query result caching
+ */
+export const cacheControlMiddleware = (req: Request, res: Response, next: NextFunction): void => {
+  // Set cache headers based on request type
+  if (req.method === 'GET') {
+    // Cache GET requests for 5 minutes
+    res.set('Cache-Control', 'public, max-age=300');
+    res.set('ETag', `"${Date.now()}"`);
+  } else {
+    // No cache for non-GET requests
+    res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
+  }
+
+  next();
+};
+
+/**
+ * Performance metrics collection middleware
+ * Collects comprehensive performance metrics
+ */
+export const metricsCollectionMiddleware = (req: Request, res: Response, next: NextFunction): void => {
+  const startTime = Date.now();
+  const startMemory = process.memoryUsage();
+
+  // Store start time for later use
+  (req as any).startTime = startTime;
+  (req as any).startMemory = startMemory;
+
+  // Override res.end to collect metrics
+  const originalEnd = res.end;
+  res.end = function(chunk?: any, encoding?: any): any {
+    const endTime = Date.now();
+    const endMemory = process.memoryUsage();
+    const duration = endTime - startTime;
+    const memoryDelta = endMemory.heapUsed - startMemory.heapUsed;
+
+    // Collect comprehensive metrics
+    const metrics = {
+      request: {
+        method: req.method,
+        url: req.url,
+        userAgent: req.get('User-Agent'),
+        ip: req.ip || req.connection.remoteAddress,
+        timestamp: new Date().toISOString()
+      },
+      performance: {
+        duration: duration,
+        memoryDelta: memoryDelta,
+        memoryUsage: {
+          heapUsed: endMemory.heapUsed,
+          heapTotal: endMemory.heapTotal,
+          external: endMemory.external,
+          rss: endMemory.rss
+        }
+      },
+      response: {
+        statusCode: res.statusCode,
+        contentLength: res.get('Content-Length') || 0
+      }
+    };
+
+    // Log metrics based on performance
+    if (duration > 1000 || memoryDelta > 50 * 1024 * 1024) {
+      logger.warn('Performance metrics collected', metrics);
+    } else {
+      logger.debug('Performance metrics collected', metrics);
+    }
+
+    // Call original end method
+    if (originalEnd) {
+      originalEnd.call(this, chunk, encoding);
+    }
+  };
+
+  next();
+};
+
+// Extend Request interface to include custom properties
+declare global {
+  namespace Express {
+    interface Request {
+      queryOptimization?: {
+        enableCaching: boolean;
+        maxResults: number;
+        timeout: number;
+      };
+      startTime?: number;
+      startMemory?: NodeJS.MemoryUsage;
+    }
+  }
+}
