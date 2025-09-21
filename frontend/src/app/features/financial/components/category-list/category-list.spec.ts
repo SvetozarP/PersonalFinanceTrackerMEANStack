@@ -952,7 +952,20 @@ describe('CategoryListComponent', () => {
 
     it('should get category field value for different fields', () => {
       // Create a fresh copy to avoid test interference
-      const category = { ...mockCategories[0] };
+      const category = {
+        _id: 'cat1',
+        name: 'Food & Dining',
+        description: 'Food and dining expenses',
+        color: '#FF0000',
+        icon: '🍔',
+        path: ['Food & Dining'],
+        level: 1,
+        isActive: true,
+        isSystem: false,
+        userId: 'user1',
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
       
       expect(component['getCategoryFieldValue'](category, 'name')).toBe('Food & Dining');
       expect(component['getCategoryFieldValue'](category, 'level')).toBe(1);

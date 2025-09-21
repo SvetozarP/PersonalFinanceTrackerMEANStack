@@ -239,10 +239,15 @@ describe('createSpyWithCleanup', () => {
     // Clean up any existing spies first
     TestCleanup.cleanup();
     
-    const spy = createSpyWithCleanup(mockObject, 'testMethod');
-    const directSpy = spyOn(mockObject, 'testMethod');
+    // Create a fresh mock object to avoid spy conflicts
+    const freshMockObject = { testMethod: jasmine.createSpy('testMethod') };
     
-    expect(spy).toEqual(directSpy);
+    const spy = createSpyWithCleanup(freshMockObject, 'testMethod');
+    
+    // Verify the spy is properly created and registered
+    expect(spy).toBeDefined();
+    expect((TestCleanup as any).spies).toContain(spy);
+    expect(spy).toBe(freshMockObject.testMethod);
   });
 });
 

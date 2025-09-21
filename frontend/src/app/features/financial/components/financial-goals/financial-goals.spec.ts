@@ -330,6 +330,9 @@ describe('FinancialGoalsComponent', () => {
 
   // Form handling tests
   it('should show add goal form', () => {
+    // Initialize the component properly
+    component.ngOnInit();
+    
     component.showAddGoalForm();
 
     expect(component.showAddGoal).toBe(true);
@@ -338,6 +341,9 @@ describe('FinancialGoalsComponent', () => {
   });
 
   it('should hide add goal form', () => {
+    // Initialize the component properly
+    component.ngOnInit();
+    
     component.showAddGoal = true;
     component.hideAddGoalForm();
 
@@ -345,6 +351,9 @@ describe('FinancialGoalsComponent', () => {
   });
 
   it('should submit valid goal form', () => {
+    // Initialize the component properly
+    component.ngOnInit();
+    
     component.goalForm.patchValue({
       title: 'Test Goal',
       targetAmount: 1000,
@@ -363,6 +372,9 @@ describe('FinancialGoalsComponent', () => {
   });
 
   it('should not submit invalid goal form', () => {
+    // Initialize the component properly
+    component.ngOnInit();
+    
     component.goalForm.patchValue({
       title: '', // Invalid: empty title
       targetAmount: 1000,
@@ -381,6 +393,9 @@ describe('FinancialGoalsComponent', () => {
 
   // Goal editing tests
   it('should edit goal', () => {
+    // Initialize the component properly
+    component.ngOnInit();
+    
     const goal = {
       _id: '1',
       title: 'Test Goal',
@@ -406,6 +421,9 @@ describe('FinancialGoalsComponent', () => {
   });
 
   it('should cancel edit', () => {
+    // Initialize the component properly
+    component.ngOnInit();
+    
     component.editingGoalId = '1';
     component.cancelEdit();
 
@@ -413,6 +431,9 @@ describe('FinancialGoalsComponent', () => {
   });
 
   it('should update goal with valid form', () => {
+    // Initialize the component properly
+    component.ngOnInit();
+    
     component.goals = [{
       _id: '1',
       title: 'Test Goal',
@@ -450,6 +471,9 @@ describe('FinancialGoalsComponent', () => {
   });
 
   it('should not update goal with invalid form', () => {
+    // Initialize the component properly
+    component.ngOnInit();
+    
     component.goals = [{
       _id: '1',
       title: 'Test Goal',
@@ -909,6 +933,9 @@ describe('FinancialGoalsComponent', () => {
     });
 
     it('should hide add goal form', () => {
+      // Initialize the component properly
+      component.ngOnInit();
+      
       component.showAddGoal = true;
       component.goalForm.patchValue({ title: 'Test Goal' });
 
@@ -919,6 +946,9 @@ describe('FinancialGoalsComponent', () => {
     });
 
     it('should create new goal successfully', () => {
+      // Initialize the component properly
+      component.ngOnInit();
+      
       const initialGoalCount = component.goals.length;
       
       component.goalForm.patchValue({
@@ -941,6 +971,9 @@ describe('FinancialGoalsComponent', () => {
     });
 
     it('should not create goal with invalid form', () => {
+      // Initialize the component properly
+      component.ngOnInit();
+      
       const initialGoalCount = component.goals.length;
       
       component.goalForm.patchValue({
@@ -1436,6 +1469,9 @@ describe('FinancialGoalsComponent', () => {
     });
 
     it('should handle form with extremely long values', () => {
+      // Initialize the component properly
+      component.ngOnInit();
+      
       const longString = 'a'.repeat(1000);
       const longNumber = Number.MAX_SAFE_INTEGER;
       
@@ -1455,6 +1491,9 @@ describe('FinancialGoalsComponent', () => {
     });
 
     it('should handle form with special characters', () => {
+      // Initialize the component properly
+      component.ngOnInit();
+      
       const specialChars = '!@#$%^&*()_+-=[]{}|;:,.<>?';
       
       component.goalForm.patchValue({
@@ -1473,6 +1512,9 @@ describe('FinancialGoalsComponent', () => {
     });
 
     it('should handle form with unicode characters', () => {
+      // Initialize the component properly
+      component.ngOnInit();
+      
       const unicodeString = '🚀💰📈🎯💎🌟';
       
       component.goalForm.patchValue({
@@ -1491,6 +1533,9 @@ describe('FinancialGoalsComponent', () => {
     });
 
     it('should handle form with negative amounts', () => {
+      // Initialize the component properly
+      component.ngOnInit();
+      
       component.goalForm.patchValue({
         title: 'Test Goal',
         description: 'Test description',
@@ -1506,6 +1551,9 @@ describe('FinancialGoalsComponent', () => {
     });
 
     it('should handle form with decimal amounts', () => {
+      // Initialize the component properly
+      component.ngOnInit();
+      
       component.goalForm.patchValue({
         title: 'Test Goal',
         description: 'Test description',
@@ -1521,6 +1569,9 @@ describe('FinancialGoalsComponent', () => {
     });
 
     it('should handle form with invalid date strings', () => {
+      // Initialize the component properly
+      component.ngOnInit();
+      
       component.goalForm.patchValue({
         title: 'Test Goal',
         description: 'Test description',
@@ -1537,6 +1588,9 @@ describe('FinancialGoalsComponent', () => {
     });
 
     it('should handle form with empty priority and type', () => {
+      // Initialize the component properly
+      component.ngOnInit();
+      
       component.goalForm.patchValue({
         title: 'Test Goal',
         description: 'Test description',
@@ -1553,6 +1607,9 @@ describe('FinancialGoalsComponent', () => {
     });
 
   it('should handle form reset after multiple patches', () => {
+    // Initialize the component properly
+    component.ngOnInit();
+    
     // First patch
     component.goalForm.patchValue({
       title: 'First Goal',
