@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { AnalyticsService } from '../services/analytics.service';
+import { PredictiveAnalyticsService } from '../services/predictive-analytics.service';
 import { logger } from '../../../../shared/services/logger.service';
 import { validateAnalyticsQuery } from '../validation/analytics.validation';
 
@@ -12,9 +13,11 @@ interface AuthenticatedRequest extends Request {
 
 export class AnalyticsController {
   private analyticsService: AnalyticsService;
+  private predictiveAnalyticsService: PredictiveAnalyticsService;
 
   constructor() {
     this.analyticsService = new AnalyticsService();
+    this.predictiveAnalyticsService = new PredictiveAnalyticsService();
   }
 
   /**
@@ -883,6 +886,394 @@ export class AnalyticsController {
       });
     } catch (error) {
       logger.error('Error in exportBudgetReport controller', {
+        error: String(error),
+        userId: req.user?.userId,
+      });
+
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+      });
+    }
+  };
+
+  // ==================== PREDICTIVE ANALYTICS ENDPOINTS ====================
+
+  /**
+   * Get comprehensive predictive insights
+   * GET /api/analytics/predictive/insights
+   */
+  getPredictiveInsights = async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<void> => {
+    try {
+      const userId = req.user?.userId;
+      if (!userId) {
+        res.status(401).json({
+          success: false,
+          message: 'Authentication required',
+        });
+        return;
+      }
+
+      // Parse and validate query parameters
+      const { error, value } = validateAnalyticsQuery(req.query);
+      if (error) {
+        res.status(400).json({
+          success: false,
+          message: 'Invalid query parameters',
+          errors: error.details.map((detail: any) => detail.message),
+        });
+        return;
+      }
+
+      const query = {
+        ...value,
+        userId,
+        startDate: value.startDate || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+        endDate: value.endDate || new Date(),
+      };
+
+      const insights = await this.predictiveAnalyticsService.getPredictiveInsights(query);
+
+      res.status(200).json({
+        success: true,
+        data: insights,
+      });
+
+      logger.info('Predictive insights accessed via API', { userId, insightCount: insights.summary.totalInsights });
+    } catch (error) {
+      logger.error('Error in getPredictiveInsights controller', {
+        error: String(error),
+        userId: req.user?.userId,
+      });
+
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+      });
+    }
+  };
+
+  /**
+   * Get spending prediction
+   * GET /api/analytics/predictive/spending
+   */
+  getSpendingPrediction = async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<void> => {
+    try {
+      const userId = req.user?.userId;
+      if (!userId) {
+        res.status(401).json({
+          success: false,
+          message: 'Authentication required',
+        });
+        return;
+      }
+
+      const { error, value } = validateAnalyticsQuery(req.query);
+      if (error) {
+        res.status(400).json({
+          success: false,
+          message: 'Invalid query parameters',
+          errors: error.details.map((detail: any) => detail.message),
+        });
+        return;
+      }
+
+      const query = {
+        ...value,
+        userId,
+        startDate: value.startDate || new Date(),
+        endDate: value.endDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      };
+
+      const prediction = await this.predictiveAnalyticsService.getSpendingPrediction(query);
+
+      res.status(200).json({
+        success: true,
+        data: prediction,
+      });
+
+      logger.info('Spending prediction accessed via API', { userId, confidence: prediction.confidence });
+    } catch (error) {
+      logger.error('Error in getSpendingPrediction controller', {
+        error: String(error),
+        userId: req.user?.userId,
+      });
+
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+      });
+    }
+  };
+
+  /**
+   * Get anomaly detection results
+   * GET /api/analytics/predictive/anomalies
+   */
+  getAnomalyDetection = async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<void> => {
+    try {
+      const userId = req.user?.userId;
+      if (!userId) {
+        res.status(401).json({
+          success: false,
+          message: 'Authentication required',
+        });
+        return;
+      }
+
+      const { error, value } = validateAnalyticsQuery(req.query);
+      if (error) {
+        res.status(400).json({
+          success: false,
+          message: 'Invalid query parameters',
+          errors: error.details.map((detail: any) => detail.message),
+        });
+        return;
+      }
+
+      const query = {
+        ...value,
+        userId,
+        startDate: value.startDate || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+        endDate: value.endDate || new Date(),
+      };
+
+      const anomalies = await this.predictiveAnalyticsService.getAnomalyDetection(query);
+
+      res.status(200).json({
+        success: true,
+        data: anomalies,
+      });
+
+      logger.info('Anomaly detection accessed via API', { userId, anomalyCount: anomalies.summary.totalAnomalies });
+    } catch (error) {
+      logger.error('Error in getAnomalyDetection controller', {
+        error: String(error),
+        userId: req.user?.userId,
+      });
+
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+      });
+    }
+  };
+
+  /**
+   * Get financial forecast
+   * GET /api/analytics/predictive/forecast
+   */
+  getFinancialForecast = async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<void> => {
+    try {
+      const userId = req.user?.userId;
+      if (!userId) {
+        res.status(401).json({
+          success: false,
+          message: 'Authentication required',
+        });
+        return;
+      }
+
+      const { error, value } = validateAnalyticsQuery(req.query);
+      if (error) {
+        res.status(400).json({
+          success: false,
+          message: 'Invalid query parameters',
+          errors: error.details.map((detail: any) => detail.message),
+        });
+        return;
+      }
+
+      const query = {
+        ...value,
+        userId,
+        startDate: value.startDate || new Date(),
+        endDate: value.endDate || new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
+      };
+
+      const forecast = await this.predictiveAnalyticsService.getFinancialForecast(query);
+
+      res.status(200).json({
+        success: true,
+        data: forecast,
+      });
+
+      logger.info('Financial forecast accessed via API', { userId, confidence: forecast.baseScenario.confidence });
+    } catch (error) {
+      logger.error('Error in getFinancialForecast controller', {
+        error: String(error),
+        userId: req.user?.userId,
+      });
+
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+      });
+    }
+  };
+
+  /**
+   * Get cash flow prediction
+   * GET /api/analytics/predictive/cashflow
+   */
+  getCashFlowPrediction = async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<void> => {
+    try {
+      const userId = req.user?.userId;
+      if (!userId) {
+        res.status(401).json({
+          success: false,
+          message: 'Authentication required',
+        });
+        return;
+      }
+
+      const { error, value } = validateAnalyticsQuery(req.query);
+      if (error) {
+        res.status(400).json({
+          success: false,
+          message: 'Invalid query parameters',
+          errors: error.details.map((detail: any) => detail.message),
+        });
+        return;
+      }
+
+      const query = {
+        ...value,
+        userId,
+        startDate: value.startDate || new Date(),
+        endDate: value.endDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      };
+
+      const prediction = await this.predictiveAnalyticsService.getCashFlowPrediction(query);
+
+      res.status(200).json({
+        success: true,
+        data: prediction,
+      });
+
+      logger.info('Cash flow prediction accessed via API', { userId, confidence: prediction.predictions.confidence });
+    } catch (error) {
+      logger.error('Error in getCashFlowPrediction controller', {
+        error: String(error),
+        userId: req.user?.userId,
+      });
+
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+      });
+    }
+  };
+
+  /**
+   * Get trend analysis
+   * GET /api/analytics/predictive/trends
+   */
+  getTrendAnalysis = async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<void> => {
+    try {
+      const userId = req.user?.userId;
+      if (!userId) {
+        res.status(401).json({
+          success: false,
+          message: 'Authentication required',
+        });
+        return;
+      }
+
+      const { error, value } = validateAnalyticsQuery(req.query);
+      if (error) {
+        res.status(400).json({
+          success: false,
+          message: 'Invalid query parameters',
+          errors: error.details.map((detail: any) => detail.message),
+        });
+        return;
+      }
+
+      const query = {
+        ...value,
+        userId,
+        startDate: value.startDate || new Date(Date.now() - 90 * 24 * 60 * 60 * 1000),
+        endDate: value.endDate || new Date(),
+      };
+
+      const trends = await this.predictiveAnalyticsService.getTrendAnalysis(query);
+
+      res.status(200).json({
+        success: true,
+        data: trends,
+      });
+
+      logger.info('Trend analysis accessed via API', { userId, categoryCount: trends.categoryTrends.length });
+    } catch (error) {
+      logger.error('Error in getTrendAnalysis controller', {
+        error: String(error),
+        userId: req.user?.userId,
+      });
+
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+      });
+    }
+  };
+
+  /**
+   * Train a predictive model
+   * POST /api/analytics/predictive/train
+   */
+  trainModel = async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<void> => {
+    try {
+      const userId = req.user?.userId;
+      if (!userId) {
+        res.status(401).json({
+          success: false,
+          message: 'Authentication required',
+        });
+        return;
+      }
+
+      const { modelType, parameters } = req.body;
+
+      if (!modelType) {
+        res.status(400).json({
+          success: false,
+          message: 'Model type is required',
+        });
+        return;
+      }
+
+      const model = await this.predictiveAnalyticsService.trainModel(userId, modelType, parameters || {});
+
+      res.status(200).json({
+        success: true,
+        data: model,
+      });
+
+      logger.info('Model training completed via API', { userId, modelType, modelId: model.id });
+    } catch (error) {
+      logger.error('Error in trainModel controller', {
         error: String(error),
         userId: req.user?.userId,
       });

@@ -181,7 +181,7 @@ describe('Performance Middleware - Coverage Tests', () => {
       expect(logger.warn).toHaveBeenCalledWith(
         'High memory usage detected',
         expect.objectContaining({
-          usagePercent: expect.any(String)
+          usagePercent: expect.any(Number)
         })
       );
 
@@ -205,7 +205,7 @@ describe('Performance Middleware - Coverage Tests', () => {
       expect(logger.warn).toHaveBeenCalledWith(
         'High memory usage detected',
         expect.objectContaining({
-          usagePercent: expect.any(String)
+          usagePercent: expect.any(Number)
         })
       );
       expect(mockNext).toHaveBeenCalled();

@@ -207,11 +207,7 @@ describe('Validation Middleware - Branch Coverage', () => {
         name: Joi.string().required(),
       });
 
-      const middleware = validateRequest(customSchema, 'body', {
-        abortEarly: false,
-        allowUnknown: true,
-        stripUnknown: true,
-      });
+      const middleware = validateRequest(customSchema, 'body');
       
       mockRequest.body = {
         name: 'John Doe',
@@ -230,7 +226,7 @@ describe('Validation Middleware - Branch Coverage', () => {
         email: Joi.string().email().required(),
       });
 
-      const middleware = validateRequest(schema, 'body', { abortEarly: true });
+      const middleware = validateRequest(schema, 'body');
       
       mockRequest.body = {
         name: '',
@@ -257,7 +253,7 @@ describe('Validation Middleware - Branch Coverage', () => {
       const sources = ['body', 'query', 'params', 'headers'] as const;
       
       sources.forEach(source => {
-        const middleware = validateRequest(schema, source);
+        const middleware = validateRequest(schema, source as 'body' | 'query' | 'params');
         
         (mockRequest as any)[source] = {
           name: 'John Doe',
@@ -630,11 +626,7 @@ describe('Validation Middleware - Branch Coverage', () => {
     });
 
     it('should handle validation with custom options for multiple sources', () => {
-      const middleware = validateMultiple(schemas, {
-        abortEarly: false,
-        allowUnknown: true,
-        stripUnknown: true,
-      });
+      const middleware = validateMultiple(schemas);
       
       mockRequest.body = {
         name: 'John Doe',

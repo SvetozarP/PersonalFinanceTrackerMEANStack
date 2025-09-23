@@ -1,7 +1,5 @@
 import { Request, Response } from 'express';
 import { databaseOptimizationService } from '../services/database-optimization.service';
-import { advancedCacheService } from '../services/redis-cache.service';
-import { djangoCacheService } from '../services/django-cache.service';
 import { logger } from '../services/logger.service';
 
 /**
@@ -234,59 +232,6 @@ export class OptimizationController {
     }
   }
 
-  /**
-   * Get cache statistics
-   */
-  async getCacheStats(req: Request, res: Response): Promise<void> {
-    try {
-      const stats = await advancedCacheService.getStats();
-      
-      res.status(200).json({
-        success: true,
-        data: stats,
-        message: 'Cache statistics retrieved successfully'
-      });
-    } catch (error) {
-      logger.error('Error getting cache statistics', { error: String(error) });
-      res.status(500).json({
-        success: false,
-        message: 'Failed to retrieve cache statistics',
-        error: String(error)
-      });
-    }
-  }
-
-  /**
-   * Clear cache
-   */
-  async clearCache(req: Request, res: Response): Promise<void> {
-    try {
-      const { pattern, version } = req.query;
-      const versionNum = version ? parseInt(version as string) : 1;
-      
-      if (pattern) {
-        const deletedCount = await advancedCacheService.delPattern(pattern as string, versionNum);
-        res.status(200).json({
-          success: true,
-          message: `Cache cleared for pattern: ${pattern}`,
-          deletedCount
-        });
-      } else {
-        await advancedCacheService.clear();
-        res.status(200).json({
-          success: true,
-          message: 'All cache cleared successfully'
-        });
-      }
-    } catch (error) {
-      logger.error('Error clearing cache', { error: String(error) });
-      res.status(500).json({
-        success: false,
-        message: 'Failed to clear cache',
-        error: String(error)
-      });
-    }
-  }
 
   /**
    * Get database metrics

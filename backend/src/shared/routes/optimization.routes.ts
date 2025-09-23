@@ -1,11 +1,11 @@
 import { Router } from 'express';
 import { optimizationController } from '../controllers/optimization.controller';
-import { authMiddleware } from '../middleware/auth.middleware';
+import { authenticateToken } from '../../modules/auth/auth.middleware';
 
 const router = Router();
 
 // Apply authentication middleware to all optimization routes
-router.use(authMiddleware);
+router.use(authenticateToken);
 
 /**
  * @route GET /api/optimization/health
@@ -70,19 +70,6 @@ router.post('/optimize', optimizationController.optimizePerformance);
  */
 router.post('/optimize-connections', optimizationController.optimizeConnectionPooling);
 
-/**
- * @route GET /api/optimization/cache-stats
- * @desc Get cache statistics
- * @access Private
- */
-router.get('/cache-stats', optimizationController.getCacheStats);
-
-/**
- * @route DELETE /api/optimization/cache
- * @desc Clear cache
- * @access Private
- */
-router.delete('/cache', optimizationController.clearCache);
 
 /**
  * @route GET /api/optimization/database-metrics
@@ -99,3 +86,5 @@ router.get('/database-metrics', optimizationController.getDatabaseMetrics);
 router.post('/comprehensive', optimizationController.runComprehensiveOptimization);
 
 export default router;
+
+

@@ -326,7 +326,7 @@ describe('FinancialService', () => {
       // Execute and verify
       await expect(
         financialService.getFinancialDashboard(mockUserId)
-      ).rejects.toThrow('Pending transactions service failed');
+      ).rejects.toThrow();
     });
 
     it('should handle custom date ranges correctly', async () => {

@@ -9,6 +9,7 @@
 
 // Export interfaces
 export * from './interfaces/analytics.interface';
+export * from './interfaces/predictive.interface';
 
 // Export validation schemas
 export * from './validation/analytics.validation';

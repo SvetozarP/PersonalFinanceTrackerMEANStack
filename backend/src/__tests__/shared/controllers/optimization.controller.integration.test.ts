@@ -2,13 +2,9 @@ import request from 'supertest';
 import express from 'express';
 import { optimizationController } from '../../../shared/controllers/optimization.controller';
 import { databaseOptimizationService } from '../../../shared/services/database-optimization.service';
-import { advancedCacheService } from '../../../shared/services/redis-cache.service';
-import { djangoCacheService } from '../../../shared/services/django-cache.service';
 
 // Mock the services
 jest.mock('../../../shared/services/database-optimization.service');
-jest.mock('../../../shared/services/redis-cache.service');
-jest.mock('../../../shared/services/django-cache.service');
 
 // Mock logger
 jest.mock('../../../shared/services/logger.service', () => ({
@@ -21,8 +17,6 @@ jest.mock('../../../shared/services/logger.service', () => ({
 }));
 
 const mockDatabaseOptimizationService = databaseOptimizationService as jest.Mocked<typeof databaseOptimizationService>;
-const mockAdvancedCacheService = advancedCacheService as jest.Mocked<typeof advancedCacheService>;
-const mockDjangoCacheService = djangoCacheService as jest.Mocked<typeof djangoCacheService>;
 
 describe('OptimizationController Integration Tests', () => {
   let app: express.Application;
@@ -41,8 +35,6 @@ describe('OptimizationController Integration Tests', () => {
     app.post('/create-indexes', optimizationController.createMissingIndexes);
     app.post('/optimize', optimizationController.optimizePerformance);
     app.post('/optimize-connections', optimizationController.optimizeConnectionPooling);
-    app.get('/cache-stats', optimizationController.getCacheStats);
-    app.delete('/cache', optimizationController.clearCache);
     app.get('/database-metrics', optimizationController.getDatabaseMetrics);
     app.post('/comprehensive', optimizationController.runComprehensiveOptimization);
 
@@ -64,10 +56,6 @@ describe('OptimizationController Integration Tests', () => {
         },
         performance: {
           'transactions:find': { avgTime: 50, hitRate: 80 }
-        },
-        cache: {
-          totalEntries: 100,
-          memoryUsage: 1024000
         },
         healthScore: 85,
         recommendations: ['Consider adding more indexes']
@@ -96,7 +84,7 @@ describe('OptimizationController Integration Tests', () => {
       expect(response.body).toEqual({
         success: false,
         message: 'Failed to retrieve database health report',
-        error: 'Database error'
+        error: 'Error: Database error'
       });
     });
   });
@@ -182,7 +170,7 @@ describe('OptimizationController Integration Tests', () => {
   describe('POST /analyze-execution-plan', () => {
     it('should analyze query execution plan', async () => {
       const queryData = {
-        query: { userId: '123', date: { $gte: new Date() } },
+        query: { userId: '123', date: { $gte: new Date().toISOString() } },
         collection: 'transactions'
       };
 
@@ -366,69 +354,6 @@ describe('OptimizationController Integration Tests', () => {
     });
   });
 
-  describe('GET /cache-stats', () => {
-    it('should return cache statistics', async () => {
-      const mockCacheStats = {
-        django: {
-          hits: 1000,
-          misses: 200,
-          sets: 500,
-          deletes: 50,
-          hitRate: 83.33,
-          cacheSize: 100,
-          memoryUsage: 1024000
-        },
-        redis: {
-          isConnected: false,
-          available: false
-        }
-      };
-
-      mockAdvancedCacheService.getStats.mockResolvedValue(mockCacheStats);
-
-      const response = await request(app)
-        .get('/cache-stats')
-        .expect(200);
-
-      expect(response.body).toEqual({
-        success: true,
-        data: mockCacheStats,
-        message: 'Cache statistics retrieved successfully'
-      });
-    });
-  });
-
-  describe('DELETE /cache', () => {
-    it('should clear all cache', async () => {
-      mockAdvancedCacheService.clear.mockResolvedValue(true);
-
-      const response = await request(app)
-        .delete('/cache')
-        .expect(200);
-
-      expect(response.body).toEqual({
-        success: true,
-        message: 'All cache cleared successfully'
-      });
-    });
-
-    it('should clear cache by pattern', async () => {
-      mockAdvancedCacheService.delPattern.mockResolvedValue(5);
-
-      const response = await request(app)
-        .delete('/cache')
-        .query({ pattern: 'user:*' })
-        .expect(200);
-
-      expect(response.body).toEqual({
-        success: true,
-        message: 'Cache cleared for pattern: user:*',
-        deletedCount: 5
-      });
-
-      expect(mockAdvancedCacheService.delPattern).toHaveBeenCalledWith('user:*', 1);
-    });
-  });
 
   describe('GET /database-metrics', () => {
     it('should return database metrics', async () => {
@@ -474,7 +399,6 @@ describe('OptimizationController Integration Tests', () => {
         database: { collections: 3 },
         collections: {},
         performance: {},
-        cache: { totalEntries: 50 },
         recommendations: ['Database is performing well']
       };
 
@@ -512,7 +436,6 @@ describe('OptimizationController Integration Tests', () => {
         database: { collections: 3 },
         collections: {},
         performance: {},
-        cache: { totalEntries: 50 },
         recommendations: ['Consider adding more indexes']
       };
 
@@ -530,3 +453,5 @@ describe('OptimizationController Integration Tests', () => {
     });
   });
 });
+
+

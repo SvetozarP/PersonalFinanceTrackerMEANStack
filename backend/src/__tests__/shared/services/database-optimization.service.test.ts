@@ -189,15 +189,26 @@ describe('DatabaseOptimizationService', () => {
 
   describe('validateCriticalIndexes', () => {
     it('should validate that critical indexes exist', async () => {
-      const mockIndexes = [
-        { key: { userId: 1, date: -1 } },
-        { key: { userId: 1, categoryId: 1, date: -1 } },
-        { key: { userId: 1, type: 1, date: -1 } },
-        { key: { userId: 1, accountId: 1, date: -1 } }
-      ];
-
-      mockDb.collection.mockReturnValue({
-        indexes: jest.fn().mockResolvedValue(mockIndexes)
+      mockDb.collection.mockImplementation((collectionName) => {
+        const collectionIndexes = {
+          'transactions': [
+            { key: { userId: 1, date: -1 } },
+            { key: { userId: 1, categoryId: 1, date: -1 } },
+            { key: { userId: 1, type: 1, date: -1 } },
+            { key: { userId: 1, accountId: 1, date: -1 } }
+          ],
+          'budgets': [
+            { key: { userId: 1, status: 1 } },
+            { key: { userId: 1, startDate: 1, endDate: 1 } }
+          ],
+          'categories': [
+            { key: { userId: 1, parentId: 1, name: 1 } },
+            { key: { userId: 1, isActive: 1 } }
+          ]
+        };
+        return {
+          indexes: jest.fn().mockResolvedValue(collectionIndexes[collectionName] || [])
+        };
       });
 
       const result = await service.validateCriticalIndexes();
@@ -456,3 +467,5 @@ describe('DatabaseOptimizationService', () => {
     });
   });
 });
+
+

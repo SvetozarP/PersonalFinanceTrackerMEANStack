@@ -29,6 +29,22 @@ jest.mock('mongoose', () => ({
   }
 }));
 
+// Mock process.memoryUsage
+const originalMemoryUsage = process.memoryUsage;
+beforeEach(() => {
+  process.memoryUsage = jest.fn().mockReturnValue({
+    rss: 1048576000,
+    heapTotal: 1048576000,
+    heapUsed: 943718400,
+    external: 0,
+    arrayBuffers: 0
+  });
+});
+
+afterEach(() => {
+  process.memoryUsage = originalMemoryUsage;
+});
+
 describe('Performance Middleware Tests', () => {
   let mockReq: Partial<Request>;
   let mockRes: Partial<Response>;
@@ -188,7 +204,7 @@ describe('Performance Middleware Tests', () => {
       expect(logger.warn).toHaveBeenCalledWith(
         'High memory usage detected',
         expect.objectContaining({
-          usagePercent: expect.any(String)
+          usagePercent: expect.any(Number)
         })
       );
 

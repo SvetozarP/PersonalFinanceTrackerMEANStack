@@ -344,6 +344,95 @@ router.get(
   analyticsController.exportBudgetReport
 );
 
+// ==================== PREDICTIVE ANALYTICS ROUTES ====================
+
+/**
+ * @route   GET /api/analytics/predictive/insights
+ * @desc    Get comprehensive predictive insights
+ * @access  Private
+ * @query   startDate, endDate, categories, transactionTypes, accounts, includeRecurring, confidenceThreshold, modelType, algorithm
+ */
+router.get(
+  '/predictive/insights',
+  validateRequest(analyticsQuerySchema, 'query'),
+  analyticsController.getPredictiveInsights
+);
+
+/**
+ * @route   GET /api/analytics/predictive/spending
+ * @desc    Get spending prediction
+ * @access  Private
+ * @query   startDate, endDate, categories, transactionTypes, accounts, includeRecurring, confidenceThreshold, modelType, algorithm
+ */
+router.get(
+  '/predictive/spending',
+  validateRequest(analyticsQuerySchema, 'query'),
+  analyticsController.getSpendingPrediction
+);
+
+/**
+ * @route   GET /api/analytics/predictive/anomalies
+ * @desc    Get anomaly detection results
+ * @access  Private
+ * @query   startDate, endDate, categories, transactionTypes, accounts, includeRecurring, confidenceThreshold, modelType, algorithm
+ */
+router.get(
+  '/predictive/anomalies',
+  validateRequest(analyticsQuerySchema, 'query'),
+  analyticsController.getAnomalyDetection
+);
+
+/**
+ * @route   GET /api/analytics/predictive/forecast
+ * @desc    Get financial forecast
+ * @access  Private
+ * @query   startDate, endDate, categories, transactionTypes, accounts, includeRecurring, confidenceThreshold, modelType, algorithm
+ */
+router.get(
+  '/predictive/forecast',
+  validateRequest(analyticsQuerySchema, 'query'),
+  analyticsController.getFinancialForecast
+);
+
+/**
+ * @route   GET /api/analytics/predictive/cashflow
+ * @desc    Get cash flow prediction
+ * @access  Private
+ * @query   startDate, endDate, categories, transactionTypes, accounts, includeRecurring, confidenceThreshold, modelType, algorithm
+ */
+router.get(
+  '/predictive/cashflow',
+  validateRequest(analyticsQuerySchema, 'query'),
+  analyticsController.getCashFlowPrediction
+);
+
+/**
+ * @route   GET /api/analytics/predictive/trends
+ * @desc    Get trend analysis
+ * @access  Private
+ * @query   startDate, endDate, categories, transactionTypes, accounts, includeRecurring, confidenceThreshold, modelType, algorithm
+ */
+router.get(
+  '/predictive/trends',
+  validateRequest(analyticsQuerySchema, 'query'),
+  analyticsController.getTrendAnalysis
+);
+
+/**
+ * @route   POST /api/analytics/predictive/train
+ * @desc    Train a predictive model
+ * @access  Private
+ * @body    modelType, parameters
+ */
+router.post(
+  '/predictive/train',
+  validateRequest(Joi.object({
+    modelType: Joi.string().valid('spending_prediction', 'anomaly_detection', 'forecasting', 'trend_analysis', 'budget_prediction').required(),
+    parameters: Joi.object().optional(),
+  }), 'body'),
+  analyticsController.trainModel
+);
+
 /**
  * @route   GET /api/analytics/health
  * @desc    Health check endpoint for analytics service

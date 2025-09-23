@@ -79,7 +79,7 @@ describe('Auth Service', () => {
 
       expect(result).toBeDefined();
       expect(result.email).toBe('new@example.com');
-      expect(result.password).toBeUndefined();
+      expect(result).not.toHaveProperty('password');
       expect(newUser.save).toHaveBeenCalled();
     });
 
