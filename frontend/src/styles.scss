@@ -8,6 +8,9 @@
 @use 'styles/shared.scss' as *;
 @use 'styles/responsive.scss' as *;
 
+// Import FontAwesome
+@import '@fortawesome/fontawesome-free/css/all.min.css';
+
 
 
 html {

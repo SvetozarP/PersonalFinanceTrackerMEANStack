@@ -491,13 +491,22 @@ export class BudgetManagementComponent implements OnInit, AfterViewInit, OnDestr
     this.overallProgress = this.totalBudget > 0 ? (this.totalSpent / this.totalBudget) * 100 : 0;
   }
 
-  private calculateDaysRemaining(endDate: Date): number {
+  private calculateDaysRemaining(endDate: Date | string): number {
     if (!endDate) {
       return 0;
     }
     
+    // Convert string to Date if needed
+    const endDateObj = typeof endDate === 'string' ? new Date(endDate) : endDate;
+    
+    // Check if the date is valid
+    if (isNaN(endDateObj.getTime())) {
+      console.warn('Invalid endDate provided:', endDate);
+      return 0;
+    }
+    
     const now = new Date();
-    const diffTime = endDate.getTime() - now.getTime();
+    const diffTime = endDateObj.getTime() - now.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     return Math.max(0, diffDays);
   }

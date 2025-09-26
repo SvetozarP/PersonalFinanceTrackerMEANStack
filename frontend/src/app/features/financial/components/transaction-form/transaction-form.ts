@@ -227,7 +227,7 @@ export class TransactionFormComponent implements OnInit, OnDestroy {
       status: transaction.status,
       categoryId: transaction.categoryId,
       subcategoryId: transaction.subcategoryId || '',
-      date: new Date(transaction.date),
+      date: this.formatDateForInput(transaction.date),
       time: transaction.time || '',
       timezone: transaction.timezone || 'UTC',
       locationName: transaction.location?.name || '',
@@ -242,7 +242,7 @@ export class TransactionFormComponent implements OnInit, OnDestroy {
       isRecurring: transaction.isRecurring || false,
       recurrencePattern: transaction.recurrencePattern || RecurrencePattern.NONE,
       recurrenceInterval: transaction.recurrenceInterval || 1,
-      recurrenceEndDate: transaction.recurrenceEndDate ? new Date(transaction.recurrenceEndDate) : null,
+      recurrenceEndDate: transaction.recurrenceEndDate ? this.formatDateForInput(transaction.recurrenceEndDate) : null,
       notes: transaction.notes || '',
       source: transaction.source || 'manual'
     });
@@ -295,6 +295,25 @@ export class TransactionFormComponent implements OnInit, OnDestroy {
     }
     
     return [];
+  }
+
+  private formatDateForInput(date: Date | string): string {
+    if (!date) return '';
+    
+    const dateObj = typeof date === 'string' ? new Date(date) : date;
+    
+    // Check if the date is valid
+    if (isNaN(dateObj.getTime())) {
+      console.warn('Invalid date provided:', date);
+      return '';
+    }
+    
+    // Format as yyyy-MM-dd for HTML date input
+    const year = dateObj.getFullYear();
+    const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const day = String(dateObj.getDate()).padStart(2, '0');
+    
+    return `${year}-${month}-${day}`;
   }
 
   onSubmit(): void {
@@ -414,7 +433,7 @@ export class TransactionFormComponent implements OnInit, OnDestroy {
         status: TransactionStatus.COMPLETED,
         categoryId: '',
         subcategoryId: '',
-        date: new Date(),
+        date: this.formatDateForInput(new Date()),
         time: '',
         timezone: 'UTC',
         locationName: '',

@@ -1,7 +1,6 @@
 {
   "name": "finance-tracker-backend",
   "version": "1.0.0",
-
   "description": "Backend API for Personal Finance Tracker",
   "main": "dist/app.js",
   "scripts": {
@@ -18,7 +17,17 @@
     "format:check": "prettier --check src/**/*.{ts,js,json}",
     "type-check": "tsc --noEmit",
     "optimize-db": "ts-node src/scripts/optimize-database.ts",
-    "validate-performance": "ts-node src/scripts/validate-performance.ts"
+    "validate-performance": "ts-node src/scripts/validate-performance.ts",
+    "mock-data": "ts-node scripts/mock-data.ts",
+    "mock-data:insert": "ts-node scripts/mock-data.ts insert",
+    "mock-data:clear": "ts-node scripts/mock-data.ts clear",
+    "mock-data:reset": "ts-node scripts/mock-data.ts both",
+    "superuser": "ts-node scripts/create-superuser.ts",
+    "superuser:create": "ts-node scripts/create-superuser.ts create",
+    "superuser:list": "ts-node scripts/create-superuser.ts list",
+    "user:delete": "ts-node scripts/delete-user.ts",
+    "user:list": "ts-node scripts/delete-user.ts list",
+    "user:delete-all": "ts-node scripts/delete-user.ts delete-all"
   },
   "keywords": [
     "finance",
@@ -57,7 +66,7 @@
     "typescript": "^5.9.2"
   },
   "dependencies": {
-    "axios": "^1.11.0",
+    "axios": "^1.12.2",
     "bcryptjs": "^3.0.2",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",

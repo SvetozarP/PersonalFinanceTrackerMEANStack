@@ -462,19 +462,55 @@ export class CategoryListComponent implements OnInit, OnDestroy {
 
   // Helper methods
   getCategoryIcon(category: Category): string {
-    if (category.icon) return category.icon;
+    if (category.icon) {
+      // If it's already a FontAwesome class, return it
+      if (category.icon.startsWith('fa-')) {
+        return category.icon;
+      }
+      // If it's an emoji or other format, convert to FontAwesome
+      return this.convertToFontAwesome(category.icon);
+    }
     
     // Default icons based on category type or level
     switch (category.level) {
-      case 0: return '🏠'; // Root categories
-      case 1: return '📁'; // Main categories
+      case 0: return 'fa-home'; // Root categories
+      case 1: return 'fa-folder'; // Main categories
       case 2: return '��'; // Subcategories
-      default: return '📄'; // Deep subcategories
+      default: return 'fa-file-alt'; // Deep subcategories
     }
   }
 
   getCategoryLevelClass(level: number): string {
     return `level-${level}`;
+  }
+
+  private convertToFontAwesome(icon: string): string {
+    // Map common emoji icons to FontAwesome classes
+    const iconMap: { [key: string]: string } = {
+      '🏠': 'fa-home',
+      '📁': 'fa-folder',
+      '📄': 'fa-file',
+      '💰': 'fa-money-bill',
+      '🛒': 'fa-shopping-cart',
+      '🍕': 'fa-utensils',
+      '🚗': 'fa-car',
+      '🏥': 'fa-hospital',
+      '💼': 'fa-briefcase',
+      '🎓': 'fa-graduation-cap',
+      '💡': 'fa-lightbulb',
+      '🔧': 'fa-tools',
+      '📱': 'fa-mobile-alt',
+      '💻': 'fa-laptop',
+      '🎮': 'fa-gamepad',
+      '🏃': 'fa-running',
+      '🎵': 'fa-music',
+      '📚': 'fa-book',
+      '✈️': 'fa-plane',
+      '🏨': 'fa-bed',
+      '🍔': 'fa-hamburger'
+    };
+    
+    return iconMap[icon] || 'fa-tag';
   }
 
   getCategoryStatusClass(category: Category): string {

@@ -4,7 +4,7 @@ import { Subject, takeUntil, fromEvent } from 'rxjs';
 import { debounceTime } from 'rxjs/operators';
 import { ResponsiveLayoutComponent, NavigationItem } from '../../../shared/components/responsive-layout/responsive-layout';
 import { GridItem } from '../../../shared/components/responsive-grid/responsive-grid';
-import { ResponsiveChartComponent, ChartData, ChartConfig } from '../../../shared/components/responsive-chart/responsive-chart';
+import { ResponsiveChartComponent, CustomChartData, ChartConfig } from '../../../shared/components/responsive-chart/responsive-chart';
 import { AuthService } from '../../auth/services/auth.service';
 import { Router } from '@angular/router';
 
@@ -77,7 +77,7 @@ export class ResponsiveDemoComponent implements OnInit, OnDestroy {
   ];
 
   // Sample data for charts
-  spendingData: ChartData[] = [
+  spendingData: CustomChartData[] = [
     { label: 'Food & Dining', value: 1200, color: '#3182ce' },
     { label: 'Transportation', value: 800, color: '#38a169' },
     { label: 'Entertainment', value: 600, color: '#e53e3e' },
@@ -85,13 +85,13 @@ export class ResponsiveDemoComponent implements OnInit, OnDestroy {
     { label: 'Utilities', value: 300, color: '#d69e2e' }
   ];
 
-  incomeData: ChartData[] = [
+  incomeData: CustomChartData[] = [
     { label: 'Salary', value: 5000, color: '#38a169' },
     { label: 'Freelance', value: 1200, color: '#3182ce' },
     { label: 'Investments', value: 800, color: '#805ad5' }
   ];
 
-  trendData: ChartData[] = [
+  trendData: CustomChartData[] = [
     { label: 'Jan', value: 3200 },
     { label: 'Feb', value: 2800 },
     { label: 'Mar', value: 3500 },

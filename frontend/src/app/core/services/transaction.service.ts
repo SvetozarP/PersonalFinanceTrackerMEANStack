@@ -181,9 +181,21 @@ export class TransactionService {
       options.tags.forEach(tag => params = params.append('tags', tag));
     }
 
-    return this.http.get<ApiResponse<PaginatedResponse<Transaction>>>(this.baseUrl, { params })
+    return this.http.get<ApiResponse<any>>(this.baseUrl, { params })
       .pipe(
-        map(response => response.data),
+        map(response => {
+          // Backend returns { success: true, data: { transactions: [], total, page, totalPages } }
+          const backendData = response.data;
+          return {
+            data: backendData.transactions || [],
+            pagination: {
+              page: backendData.page || 1,
+              limit: options.limit || 20,
+              total: backendData.total || 0,
+              totalPages: backendData.totalPages || 1
+            }
+          };
+        }),
         tap(result => {
           // Update cache for basic queries
           if (this.isBasicQuery(options)) {

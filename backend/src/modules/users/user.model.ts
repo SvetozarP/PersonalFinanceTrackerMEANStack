@@ -1,14 +1,22 @@
 import mongoose, { Document, Schema } from 'mongoose';
 import bcrypt from 'bcryptjs';
 
-// User interface
+// User roles enum
+export enum UserRole {
+  USER = 'user',
+  ADMIN = 'admin',
+  SUPERUSER = 'superuser',
+}
 
+// User interface
 export interface IUser extends Document {
   email: string;
   password: string;
   firstName: string;
   lastName: string;
   isActive: boolean;
+  role: UserRole;
+  isSuperuser: boolean;
   lastLogin?: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -66,6 +74,20 @@ const userSchema = new Schema<IUser>(
     isActive: {
       type: Boolean,
       default: true,
+    },
+    role: {
+      type: String,
+      enum: {
+        values: Object.values(UserRole),
+        message: 'Invalid user role',
+      },
+      default: UserRole.USER,
+      index: true,
+    },
+    isSuperuser: {
+      type: Boolean,
+      default: false,
+      index: true,
     },
     lastLogin: {
       type: Date,

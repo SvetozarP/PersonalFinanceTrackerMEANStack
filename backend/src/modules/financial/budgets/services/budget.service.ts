@@ -339,12 +339,33 @@ export class BudgetService {
     budget: IBudget
   ): Promise<IBudgetAnalytics> {
     try {
+      // Add null check for budget object
+      if (!budget) {
+        this.logger.error('Budget object is null or undefined');
+        throw new Error('Budget object is required for analytics calculation');
+      }
       // Get transactions within budget period
       const transactions = await this.transactionRepository.findByDateRange(
         budget.userId.toString(),
         budget.startDate,
         budget.endDate
       );
+
+      // Add null check for transactions
+      if (!transactions || !Array.isArray(transactions)) {
+        this.logger.warn(`No transactions found for budget ${budget._id}`);
+        return {
+          budgetId: (budget._id as any).toString(),
+          totalSpent: 0,
+          totalAllocated: budget.totalAmount,
+          totalRemaining: budget.totalAmount,
+          progressPercentage: 0,
+          isOverBudget: false,
+          categoryBreakdown: [],
+          spendingTrend: [],
+          alerts: []
+        };
+      }
 
       // Calculate total spent
       const totalSpent = transactions.reduce(
@@ -359,6 +380,22 @@ export class BudgetService {
 
       // Calculate category breakdown
       const categoryBreakdown: ICategoryBudgetBreakdown[] = [];
+
+      // Add null check for categoryAllocations
+      if (!budget.categoryAllocations || !Array.isArray(budget.categoryAllocations)) {
+        this.logger.warn(`Budget ${budget._id} has no categoryAllocations`);
+        return {
+          budgetId: (budget._id as any).toString(),
+          totalSpent: totalSpent,
+          totalAllocated: budget.totalAmount,
+          totalRemaining: budget.totalAmount - totalSpent,
+          progressPercentage: budget.totalAmount > 0 ? (totalSpent / budget.totalAmount) * 100 : 0,
+          isOverBudget: totalSpent > budget.totalAmount,
+          categoryBreakdown: [],
+          spendingTrend: [],
+          alerts: []
+        };
+      }
 
       for (const allocation of budget.categoryAllocations) {
         const categoryTransactions = transactions.filter(

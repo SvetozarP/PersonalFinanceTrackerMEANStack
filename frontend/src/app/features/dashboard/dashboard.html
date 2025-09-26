@@ -109,20 +109,21 @@
               </div>
             </div>
             <div class="chart-content">
-              <div *ngIf="isLoading()" class="chart-loading">
-                <app-loading-spinner [size]="'medium'" [message]="'Loading chart...'"></app-loading-spinner>
-              </div>
-              <div *ngIf="!isLoading() && spendingChartData() && spendingChartData().length > 0" class="chart-container">
-                <!-- Chart component would go here -->
-                <div class="chart-placeholder">
-                  <i class="fas fa-chart-area"></i>
-                  <p>Spending trend chart</p>
-                </div>
-              </div>
-              <div *ngIf="!isLoading() && (!spendingChartData() || spendingChartData().length === 0)" class="chart-empty">
-                <i class="fas fa-chart-area"></i>
-                <p>No spending data available</p>
-              </div>
+              <app-responsive-chart
+                [data]="spendingChartData()"
+                [config]="{
+                  type: 'line',
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  showLegend: true,
+                  showTooltips: true,
+                  showLabels: true,
+                  animation: true,
+                  colors: ['#e53e3e', '#38a169', '#3182ce']
+                }"
+                [loading]="isLoading()"
+                [emptyMessage]="'No spending data available'">
+              </app-responsive-chart>
             </div>
           </div>
   
@@ -138,20 +139,21 @@
               </div>
             </div>
             <div class="chart-content">
-              <div *ngIf="isLoading()" class="chart-loading">
-                <app-loading-spinner [size]="'medium'" [message]="'Loading chart...'"></app-loading-spinner>
-              </div>
-              <div *ngIf="!isLoading() && incomeChartData() && incomeChartData().length > 0" class="chart-container">
-                <!-- Chart component would go here -->
-                <div class="chart-placeholder">
-                  <i class="fas fa-chart-line"></i>
-                  <p>Income trend chart</p>
-                </div>
-              </div>
-              <div *ngIf="!isLoading() && (!incomeChartData() || incomeChartData().length === 0)" class="chart-empty">
-                <i class="fas fa-chart-line"></i>
-                <p>No income data available</p>
-              </div>
+              <app-responsive-chart
+                [data]="incomeChartData()"
+                [config]="{
+                  type: 'bar',
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  showLegend: true,
+                  showTooltips: true,
+                  showLabels: true,
+                  animation: true,
+                  colors: ['#38a169', '#3182ce', '#e53e3e']
+                }"
+                [loading]="isLoading()"
+                [emptyMessage]="'No income data available'">
+              </app-responsive-chart>
             </div>
           </div>
         </div>
@@ -161,27 +163,28 @@
           <div class="chart-header">
             <h3>Spending by Category</h3>
             <div class="chart-actions">
-              <button class="btn btn-sm btn-secondary" (click)="refreshCategoryStats()" [disabled]="isCategoryStatsLoading()">
+              <button class="btn btn-sm btn-secondary" (click)="refreshCategoryStats()" [disabled]="isLoading()">
                 <i class="fas fa-redo"></i>
                 Refresh
               </button>
             </div>
           </div>
           <div class="chart-content">
-            <div *ngIf="isCategoryStatsLoading()" class="chart-loading">
-              <app-loading-spinner [size]="'medium'" [message]="'Loading category data...'"></app-loading-spinner>
-            </div>
-            <div *ngIf="!isCategoryStatsLoading() && categoryChartData() && categoryChartData().length > 0" class="chart-container">
-              <!-- Chart component would go here -->
-              <div class="chart-placeholder">
-                <i class="fas fa-chart-pie"></i>
-                <p>Category spending chart</p>
-              </div>
-            </div>
-            <div *ngIf="!isCategoryStatsLoading() && (!categoryChartData() || categoryChartData().length === 0)" class="chart-empty">
-              <i class="fas fa-chart-pie"></i>
-              <p>No category data available</p>
-            </div>
+            <app-responsive-chart
+              [data]="categoryChartData()"
+              [config]="{
+                type: 'pie',
+                responsive: true,
+                maintainAspectRatio: false,
+                showLegend: true,
+                showTooltips: true,
+                showLabels: true,
+                animation: true,
+                colors: ['#3182ce', '#38a169', '#e53e3e', '#805ad5', '#d69e2e']
+              }"
+              [loading]="isLoading()"
+              [emptyMessage]="'No category data available'">
+            </app-responsive-chart>
           </div>
         </div>
       </div>

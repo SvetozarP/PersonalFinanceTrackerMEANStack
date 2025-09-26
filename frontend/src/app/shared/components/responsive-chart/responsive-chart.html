@@ -37,20 +37,19 @@
 
     <!-- Chart Content -->
     <div 
-      *ngIf="!isLoading && !hasError && !isEmpty" 
       class="chart-content"
       [style]="getChartContainerStyle()"
     >
       <!-- Chart Canvas/Container -->
-      <div 
-        #chartContainer
-        class="chart-container"
-        [style]="getChartStyle()"
-        (click)="onChartClick($event)"
-        (mouseover)="onChartHover($event)"
-      >
-        <!-- Placeholder for actual chart implementation -->
-        <div class="chart-placeholder">
+      <div class="chart-container" [style]="getChartStyle()">
+        <canvas 
+          #chartContainer
+          (click)="onChartClick($event)"
+          (mouseover)="onChartHover($event)"
+        ></canvas>
+        
+        <!-- Fallback placeholder for when chart is not ready -->
+        <div *ngIf="!isChartReady() && !isLoading && !hasError && !isEmpty" class="chart-placeholder">
           <div class="chart-type-indicator">
             <i class="fas fa-chart-{{ config.type }}"></i>
           </div>

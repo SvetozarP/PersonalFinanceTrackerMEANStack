@@ -148,7 +148,8 @@ export class RealtimeBudgetProgressService implements OnDestroy {
           switchMap(transactionResponse => 
             this.categoryService.getUserCategories().pipe(
               switchMap(categories => {
-                const progressData = this.calculateRealtimeProgress(budgets, transactionResponse.data, categories);
+                const transactions = transactionResponse.data || [];
+                const progressData = this.calculateRealtimeProgress(budgets, transactions, categories || []);
                 this.realtimeProgress$.next(progressData);
                 this.updateBudgetStats(progressData);
                 this.checkForAlerts(progressData);
@@ -173,8 +174,24 @@ export class RealtimeBudgetProgressService implements OnDestroy {
     transactions: Transaction[], 
     categories: any[]
   ): RealtimeBudgetProgress[] {
+    // Add null checks for input parameters
+    if (!budgets || !Array.isArray(budgets)) {
+      console.warn('Budgets array is undefined or not an array:', budgets);
+      return [];
+    }
+    
+    if (!transactions || !Array.isArray(transactions)) {
+      console.warn('Transactions array is undefined or not an array:', transactions);
+      return [];
+    }
+    
+    if (!categories || !Array.isArray(categories)) {
+      console.warn('Categories array is undefined or not an array:', categories);
+      return [];
+    }
+    
     return budgets
-      .filter(budget => budget.isActive)
+      .filter(budget => budget && budget.isActive)
       .map(budget => {
         const categoryProgress = this.calculateCategoryProgress(
           budget, 
@@ -212,6 +229,18 @@ export class RealtimeBudgetProgressService implements OnDestroy {
     transactions: Transaction[], 
     categories: any[]
   ): CategoryProgress[] {
+    // Add null check for budget object
+    if (!budget) {
+      console.warn('Budget object is undefined or null:', budget);
+      return [];
+    }
+    
+    // Add null check for categoryAllocations
+    if (!budget.categoryAllocations || !Array.isArray(budget.categoryAllocations)) {
+      console.warn('Budget categoryAllocations is undefined or not an array:', budget);
+      return [];
+    }
+    
     return budget.categoryAllocations.map(allocation => {
       const categoryTransactions = transactions.filter(t => 
         t.categoryId === allocation.categoryId && 

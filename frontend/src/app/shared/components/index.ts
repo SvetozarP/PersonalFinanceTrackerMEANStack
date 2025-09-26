@@ -6,4 +6,4 @@ export type { NavigationItem } from './responsive-layout/responsive-layout';
 export { ResponsiveGridComponent } from './responsive-grid/responsive-grid';
 export type { GridBreakpoint, GridItem } from './responsive-grid/responsive-grid';
 export { ResponsiveChartComponent } from './responsive-chart/responsive-chart';
-export type { ChartData, ChartConfig } from './responsive-chart/responsive-chart';
+export type { CustomChartData, ChartConfig } from './responsive-chart/responsive-chart';

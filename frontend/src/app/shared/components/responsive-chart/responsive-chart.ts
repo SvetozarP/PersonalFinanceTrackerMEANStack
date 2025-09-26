@@ -2,8 +2,9 @@ import { Component, Input, OnInit, OnDestroy, inject, signal, ElementRef, ViewCh
 import { CommonModule } from '@angular/common';
 import { Subject, takeUntil, fromEvent } from 'rxjs';
 import { debounceTime } from 'rxjs/operators';
+import { Chart, ChartConfiguration, ChartData as ChartJSData, ChartType, registerables } from 'chart.js';
 
-export interface ChartData {
+export interface CustomChartData {
   label: string;
   value: number;
   color?: string;
@@ -30,7 +31,7 @@ export interface ChartConfig {
   styleUrls: ['./responsive-chart.scss']
 })
 export class ResponsiveChartComponent implements OnInit, OnDestroy, AfterViewInit {
-  @Input() data: ChartData[] = [];
+  @Input() data: CustomChartData[] = [];
   @Input() config: ChartConfig = {
     type: 'bar',
     responsive: true,
@@ -51,6 +52,7 @@ export class ResponsiveChartComponent implements OnInit, OnDestroy, AfterViewIni
   @ViewChild('chartContainer', { static: false }) chartContainer!: ElementRef;
 
   private destroy$ = new Subject<void>();
+  private chart: Chart | null = null;
   
   // Responsive state
   isMobile = signal(false);
@@ -79,6 +81,12 @@ export class ResponsiveChartComponent implements OnInit, OnDestroy, AfterViewIni
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
+    
+    // Clean up Chart.js instance
+    if (this.chart) {
+      this.chart.destroy();
+      this.chart = null;
+    }
   }
 
   private setupResponsiveListeners(): void {
@@ -134,24 +142,93 @@ export class ResponsiveChartComponent implements OnInit, OnDestroy, AfterViewIni
   }
 
   initializeChart(): void {
-    if (!this.chartContainer) return;
+    console.log('🔄 Chart: Initializing chart...');
+    console.log('🔄 Chart: chartContainer available:', !!this.chartContainer);
+    console.log('🔄 Chart: data available:', this.data);
+    console.log('🔄 Chart: data length:', this.data?.length);
+    
+    if (!this.chartContainer) {
+      console.log('❌ Chart: chartContainer not available, retrying...');
+      // Retry after a short delay
+      setTimeout(() => {
+        this.initializeChart();
+      }, 100);
+      return;
+    }
 
     try {
-      // In a real implementation, you would initialize your chart library here
-      // For now, we'll just simulate chart initialization
+      // Destroy existing chart if it exists
+      if (this.chart) {
+        this.chart.destroy();
+        this.chart = null;
+      }
+
+      // Register Chart.js components
+      Chart.register(...registerables);
+
+      // Create Chart.js configuration
+      const chartConfig = this.createChartConfig();
+      
+      // Create the chart
+      this.chart = new Chart(this.chartContainer.nativeElement, chartConfig);
+      
+      console.log('✅ Chart: Chart.js chart created successfully');
       this.isChartReady.set(true);
       this.chartError.set(null);
     } catch (error) {
+      console.error('❌ Chart: Initialization error:', error);
       this.chartError.set('Failed to initialize chart');
-      console.error('Chart initialization error:', error);
     }
   }
 
-  private resizeChart(): void {
-    if (!this.isChartReady()) return;
+  private createChartConfig(): ChartConfiguration {
+    const chartData: ChartJSData = {
+      labels: this.data.map(item => item.label),
+      datasets: [{
+        label: this.title || 'Data',
+        data: this.data.map(item => item.value),
+        backgroundColor: this.data.map((item, index) => 
+          item.color || this.config.colors[index % this.config.colors.length]
+        ),
+        borderColor: this.data.map((item, index) => 
+          item.color || this.config.colors[index % this.config.colors.length]
+        ),
+        borderWidth: 1
+      }]
+    };
 
-    // In a real implementation, you would resize your chart here
-    // This would typically call the chart library's resize method
+    const chartType: ChartType = this.config.type === 'area' ? 'line' : this.config.type as ChartType;
+
+    return {
+      type: chartType,
+      data: chartData,
+      options: {
+        responsive: this.config.responsive,
+        maintainAspectRatio: this.config.maintainAspectRatio,
+        plugins: {
+          legend: {
+            display: this.config.showLegend,
+            position: this.getLegendPosition()
+          },
+          tooltip: {
+            enabled: this.config.showTooltips
+          }
+        },
+        animation: this.config.animation ? {} : false,
+        scales: chartType !== 'pie' && chartType !== 'doughnut' ? {
+          y: {
+            beginAtZero: true
+          }
+        } : undefined
+      }
+    };
+  }
+
+  private resizeChart(): void {
+    if (!this.isChartReady() || !this.chart) return;
+
+    // Resize the Chart.js chart
+    this.chart.resize();
     console.log('Chart resized for screen width:', this.screenWidth());
   }
 
@@ -196,7 +273,7 @@ export class ResponsiveChartComponent implements OnInit, OnDestroy, AfterViewIni
   }
 
   // Chart data processing
-  getProcessedData(): ChartData[] {
+  getProcessedData(): CustomChartData[] {
     if (!this.data || this.data.length === 0) return [];
     
     return this.data.map((item, index) => ({

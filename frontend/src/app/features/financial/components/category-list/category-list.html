@@ -217,7 +217,7 @@
       <div class="categories-table">
         <div *ngFor="let category of filteredCategories" class="category-item">
           <div class="category-icon" [style.background-color]="category.color">
-            <span class="icon">{{ getCategoryIcon(category) }}</span>
+            <i class="fas {{ getCategoryIcon(category) }}"></i>
           </div>
           
           <div class="category-details">
@@ -267,7 +267,7 @@
         <div *ngFor="let rootCategory of getRootCategories()" class="tree-node">
           <div class="node-content">
             <div class="node-icon" [style.background-color]="rootCategory.color">
-              <span class="icon">{{ getCategoryIcon(rootCategory) }}</span>
+              <i class="fas {{ getCategoryIcon(rootCategory) }}"></i>
             </div>
             <div class="node-details">
               <div class="node-name">{{ rootCategory.name }}</div>
@@ -292,7 +292,7 @@
             <div *ngFor="let subcategory of getSubcategories(rootCategory._id)" class="tree-node sub-node">
               <div class="node-content">
                 <div class="node-icon" [style.background-color]="subcategory.color">
-                  <span class="icon">{{ getCategoryIcon(subcategory) }}</span>
+                  <i class="fas {{ getCategoryIcon(subcategory) }}"></i>
                 </div>
                 <div class="node-details">
                   <div class="node-name">{{ subcategory.name }}</div>
@@ -322,7 +322,7 @@
       <div *ngFor="let category of filteredCategories" class="category-card">
         <div class="card-header" [style.background-color]="category.color">
           <div class="card-icon">
-            <span class="icon">{{ getCategoryIcon(category) }}</span>
+            <i class="fas {{ getCategoryIcon(category) }}"></i>
           </div>
           <div class="card-actions">
             <button class="btn btn-sm btn-outline-light" [routerLink]="['/financial/categories', category._id]">

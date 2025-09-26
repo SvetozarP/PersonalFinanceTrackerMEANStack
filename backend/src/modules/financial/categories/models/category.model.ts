@@ -86,6 +86,10 @@ categorySchema.index({ userId: 1, level: 1, isActive: 1, name: 1 });
 
 // Virtual for full path
 categorySchema.virtual('fullPath').get(function () {
+  // Add null check for path field
+  if (!this.path || !Array.isArray(this.path)) {
+    return this.name || 'Unknown Category';
+  }
   const pathArray = [...this.path];
   if (this.name) {
     pathArray.push(this.name);

@@ -31,7 +31,7 @@ export class CategoryFormComponent implements OnInit, OnDestroy {
     name: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(50)]],
     description: ['', [Validators.maxLength(200)]],
     color: ['#667eea', Validators.required],
-    icon: ['🏷️', Validators.required],
+    icon: ['fa-tag', Validators.required],
     parentId: [''],
     isActive: [true]
   });
@@ -195,11 +195,18 @@ export class CategoryFormComponent implements OnInit, OnDestroy {
   }
 
   private populateForm(category: Category): void {
+    // Convert emoji icons to FontAwesome classes if needed
+    let iconValue = category.icon || 'fa-tag';
+    if (iconValue && !iconValue.startsWith('fa-')) {
+      // If it's an emoji, convert to FontAwesome
+      iconValue = this.convertToFontAwesome(iconValue);
+    }
+    
     this.categoryForm.patchValue({
       name: category.name,
       description: category.description || '',
       color: category.color || '#667eea',
-      icon: category.icon || '🏷️',
+      icon: iconValue,
       parentId: category.parentId || '',
       isActive: category.isActive !== undefined ? category.isActive : true
     });
@@ -209,6 +216,36 @@ export class CategoryFormComponent implements OnInit, OnDestroy {
     // This method is called when parent category changes
     // You can add logic here if needed
     console.log('Parent category changed to:', parentId);
+  }
+
+  private convertToFontAwesome(icon: string): string {
+    // Map common emoji icons to FontAwesome classes
+    const iconMap: { [key: string]: string } = {
+      '🏠': 'fa-home',
+      '📁': 'fa-folder',
+      '📄': 'fa-file',
+      '💰': 'fa-money-bill',
+      '🛒': 'fa-shopping-cart',
+      '🍕': 'fa-utensils',
+      '🚗': 'fa-car',
+      '🏥': 'fa-hospital',
+      '💼': 'fa-briefcase',
+      '🎓': 'fa-graduation-cap',
+      '💡': 'fa-lightbulb',
+      '🔧': 'fa-tools',
+      '📱': 'fa-mobile-alt',
+      '💻': 'fa-laptop',
+      '🎮': 'fa-gamepad',
+      '🏃': 'fa-running',
+      '🎵': 'fa-music',
+      '📚': 'fa-book',
+      '✈️': 'fa-plane',
+      '🏨': 'fa-bed',
+      '🍔': 'fa-hamburger',
+      '🏷️': 'fa-tag'
+    };
+    
+    return iconMap[icon] || 'fa-tag';
   }
 
   onColorSelect(color: string): void {
@@ -284,7 +321,7 @@ export class CategoryFormComponent implements OnInit, OnDestroy {
         name: '',
         description: '',
         color: '#667eea',
-        icon: '🏷️',
+        icon: 'fa-tag',
         parentId: '',
         isActive: true
       });
