@@ -142,10 +142,10 @@ export class BudgetController {
         return;
       }
 
-      if (isNaN(limitNum) || limitNum < 1 || limitNum > 100) {
+      if (isNaN(limitNum) || limitNum < 1 || limitNum > 1000) {
         res
           .status(400)
-          .json({ error: 'Invalid limit (must be between 1 and 100)' });
+          .json({ error: 'Invalid limit (must be between 1 and 1000)' });
         return;
       }
 
@@ -197,11 +197,10 @@ export class BudgetController {
       );
       res.status(200).json({
         success: true,
-        data: result.budgets,
-        pagination: {
-          page: result.page,
-          limit: limitNum,
+        data: {
+          budgets: result.budgets,
           total: result.total,
+          page: result.page,
           totalPages: result.totalPages,
         },
       });

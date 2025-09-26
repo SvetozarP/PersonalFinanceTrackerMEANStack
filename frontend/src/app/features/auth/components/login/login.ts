@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectorRef, OnDestroy } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef, OnDestroy, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
@@ -35,10 +35,10 @@ import { LoadingSpinnerComponent } from '../../../../shared/components/loading-s
 })
 export class LoginComponent implements OnInit, OnDestroy {
   loginForm!: FormGroup;
-  isFormLoading = false;
-  isSubmitting = false;
-  error: string | null = null;
-  hidePassword = true;
+  isFormLoading = signal(false);
+  isSubmitting = signal(false);
+  error = signal<string | null>(null);
+  hidePassword = signal(true);
   private destroy$ = new Subject<void>();
 
   constructor(
@@ -65,9 +65,9 @@ export class LoginComponent implements OnInit, OnDestroy {
   }
 
   onSubmit(): void {
-    if (this.loginForm.valid && !this.isSubmitting) {
-      this.isSubmitting = true;
-      this.error = null;
+    if (this.loginForm.valid && !this.isSubmitting()) {
+      this.isSubmitting.set(true);
+      this.error.set(null);
       
       const credentials = this.loginForm.value;
       
@@ -75,7 +75,7 @@ export class LoginComponent implements OnInit, OnDestroy {
         takeUntil(this.destroy$)
       ).subscribe({
         next: () => {
-          this.isSubmitting = false;
+          this.isSubmitting.set(false);
           this.snackBar.open('Login successful!', 'Close', {
             duration: 3000,
             horizontalPosition: 'center',
@@ -84,7 +84,7 @@ export class LoginComponent implements OnInit, OnDestroy {
           this.router.navigate(['/dashboard']);
         },
         error: (error) => {
-          this.isSubmitting = false;
+          this.isSubmitting.set(false);
           let errorMessage = 'Login failed. Please try again.';
           
           if (error.error?.errors && Array.isArray(error.error.errors)) {
@@ -101,7 +101,7 @@ export class LoginComponent implements OnInit, OnDestroy {
             errorMessage = 'Account locked';
           }
           
-          this.error = errorMessage;
+          this.error.set(errorMessage);
           this.snackBar.open(errorMessage, 'Close', {
             duration: 5000,
             horizontalPosition: 'center',

@@ -4,6 +4,12 @@
 import 'zone.js';
 import 'zone.js/testing';
 
+// Type declarations for test globals
+declare global {
+  function beforeEach(fn: () => void): void;
+  function afterEach(fn: () => void): void;
+}
+
 // Suppress zone.js warnings in test environment
 const originalConsoleWarn = console.warn;
 console.warn = function(...args: any[]) {
@@ -19,7 +25,7 @@ import {
   BrowserDynamicTestingModule,
   platformBrowserDynamicTesting,
 } from '@angular/platform-browser-dynamic/testing';
-import { TestCleanup } from './app/test-utils/test-cleanup';
+import { TestCleanup } from './test-utils/test-cleanup';
 
 declare const require: {
   context(path: string, deep?: boolean, filter?: RegExp): {
@@ -35,49 +41,53 @@ getTestBed().initTestEnvironment(
 );
 
 // Global test cleanup to prevent interference between tests
-beforeEach(() => {
-  // Use comprehensive cleanup utility
-  TestCleanup.cleanup();
-  
-  // Additional aggressive cleanup for window.confirm
-  if (window.confirm && (window.confirm as any).and) {
-    try {
-      (window.confirm as any).and.restore();
-    } catch (e) {
-      // If restore fails, reset to original function
+if (typeof beforeEach !== 'undefined') {
+  beforeEach(() => {
+    // Use comprehensive cleanup utility
+    TestCleanup.cleanup();
+    
+    // Additional aggressive cleanup for window.confirm
+    if (window.confirm && (window.confirm as any).and) {
+      try {
+        (window.confirm as any).and.restore();
+      } catch (e) {
+        // If restore fails, reset to original function
+        (window as any).confirm = function(message?: string): boolean {
+          return true; // Default to true for tests
+        };
+      }
+    } else {
+      // Reset to original function if not spied
       (window as any).confirm = function(message?: string): boolean {
         return true; // Default to true for tests
       };
     }
-  } else {
-    // Reset to original function if not spied
-    (window as any).confirm = function(message?: string): boolean {
-      return true; // Default to true for tests
-    };
-  }
-});
+  });
+}
 
-afterEach(() => {
-  // Use comprehensive cleanup utility
-  TestCleanup.cleanup();
-  
-  // Additional aggressive cleanup for window.confirm
-  if (window.confirm && (window.confirm as any).and) {
-    try {
-      (window.confirm as any).and.restore();
-    } catch (e) {
-      // If restore fails, reset to original function
+if (typeof afterEach !== 'undefined') {
+  afterEach(() => {
+    // Use comprehensive cleanup utility
+    TestCleanup.cleanup();
+    
+    // Additional aggressive cleanup for window.confirm
+    if (window.confirm && (window.confirm as any).and) {
+      try {
+        (window.confirm as any).and.restore();
+      } catch (e) {
+        // If restore fails, reset to original function
+        (window as any).confirm = function(message?: string): boolean {
+          return true; // Default to true for tests
+        };
+      }
+    } else {
+      // Reset to original function if not spied
       (window as any).confirm = function(message?: string): boolean {
         return true; // Default to true for tests
       };
     }
-  } else {
-    // Reset to original function if not spied
-    (window as any).confirm = function(message?: string): boolean {
-      return true; // Default to true for tests
-    };
-  }
-});
+  });
+}
 
 // Then we find all the tests.
 const context = require.context('./', true, /\.spec\.ts$/);

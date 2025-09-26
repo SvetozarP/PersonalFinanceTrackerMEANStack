@@ -17,7 +17,7 @@
           Print
         </button>
         
-        <button class="btn btn-primary" (click)="showBudgetWizard()">
+        <button class="btn btn-primary" (click)="budgetWizard.openWizard()">
           <i class="fas fa-magic"></i>
           Create Budget Wizard
         </button>
@@ -117,7 +117,7 @@
     </div>
   
     <!-- Add Budget Form -->
-    <div class="add-budget-form" *ngIf="showAddBudget">
+    <div class="add-budget-form" *ngIf="showAddBudget" style="position: relative; z-index: 1000;">
       <div class="form-header">
         <h3>Add New Budget</h3>
         <button class="btn btn-outline-secondary" (click)="hideAddBudgetForm()">
@@ -387,7 +387,7 @@
     </div>
 
     <!-- Budget Wizard Component -->
-    <app-budget-wizard (budgetCreated)="onBudgetCreated($event)"></app-budget-wizard>
+    <app-budget-wizard #budgetWizard (budgetCreated)="onBudgetCreated($event)"></app-budget-wizard>
 
     <!-- Export Modal -->
     <div class="modal fade" [class.show]="showExportModal" [style.display]="showExportModal ? 'block' : 'none'" tabindex="-1" role="dialog">

@@ -126,6 +126,17 @@ const startServer = async () => {
       console.error('❌ Failed to import analytics routes:', error);
     }
 
+    // Add budget routes import and mounting
+    try {
+      const budgetRoutes = await import(
+        './modules/financial/budgets/routes/budget.routes'
+      );
+      app.use('/api/budgets', budgetRoutes.default);
+      console.log('✅ Budget routes mounted at /api/budgets');
+    } catch (error) {
+      console.error('❌ Failed to import budget routes:', error);
+    }
+
     console.log('Routes mounting completed');
 
     // 404 handler - Register AFTER routes are mounted

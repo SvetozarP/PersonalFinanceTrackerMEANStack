@@ -7,7 +7,7 @@ import { TransactionListComponent } from './transaction-list';
 import { TransactionService } from '../../../../core/services/transaction.service';
 import { CategoryService } from '../../../../core/services/category.service';
 import { Transaction, TransactionType, TransactionStatus, PaymentMethod } from '../../../../core/models/financial.model';
-import { createWindowSpyWithCleanup } from '../../../../test-utils/test-cleanup';
+import { createWindowSpyWithCleanup } from '../../../../../test-utils/test-cleanup';
 
 // Helper function to create mock transactions
 function createMockTransaction(overrides: Partial<Transaction> = {}): Transaction {
@@ -151,7 +151,10 @@ describe('TransactionListComponent', () => {
   });
 
   it('should handle transaction deletion error', () => {
-    createWindowSpyWithCleanup('confirm').and.returnValue(true);
+    const confirmSpy = createWindowSpyWithCleanup('confirm');
+    if (confirmSpy) {
+      confirmSpy.and.returnValue(true);
+    }
     transactionService.deleteTransaction.and.returnValue(throwError(() => new Error('API Error')));
 
     component.deleteTransaction('1');
@@ -296,7 +299,10 @@ describe('TransactionListComponent', () => {
 
   // Pagination tests
   it('should handle pagination when current page becomes empty', () => {
-    createWindowSpyWithCleanup('confirm').and.returnValue(true);
+    const confirmSpy = createWindowSpyWithCleanup('confirm');
+    if (confirmSpy) {
+      confirmSpy.and.returnValue(true);
+    }
     component.transactions = [createMockTransaction({ title: 'Test' })];
     component.currentPage = 2;
 
@@ -306,7 +312,10 @@ describe('TransactionListComponent', () => {
   });
 
   it('should not change page when current page is first page', () => {
-    createWindowSpyWithCleanup('confirm').and.returnValue(true);
+    const confirmSpy = createWindowSpyWithCleanup('confirm');
+    if (confirmSpy) {
+      confirmSpy.and.returnValue(true);
+    }
     component.transactions = [createMockTransaction({ title: 'Test' })];
     component.currentPage = 1;
 
@@ -546,14 +555,20 @@ describe('TransactionListComponent', () => {
   });
 
   it('should handle transaction deletion', () => {
-    createWindowSpyWithCleanup('confirm').and.returnValue(true);
+    const confirmSpy = createWindowSpyWithCleanup('confirm');
+    if (confirmSpy) {
+      confirmSpy.and.returnValue(true);
+    }
     component.onTransactionDelete('1');
     
     expect(transactionService.deleteTransaction).toHaveBeenCalledWith('1');
   });
 
   it('should not delete transaction when user cancels', () => {
-    createWindowSpyWithCleanup('confirm').and.returnValue(false);
+    const confirmSpy = createWindowSpyWithCleanup('confirm');
+    if (confirmSpy) {
+      confirmSpy.and.returnValue(false);
+    }
     component.onTransactionDelete('1');
     
     expect(transactionService.deleteTransaction).not.toHaveBeenCalled();
@@ -647,7 +662,10 @@ describe('TransactionListComponent', () => {
     });
 
     it('should handle transaction deletion error', () => {
-      createWindowSpyWithCleanup('confirm').and.returnValue(true);
+      const confirmSpy = createWindowSpyWithCleanup('confirm');
+    if (confirmSpy) {
+      confirmSpy.and.returnValue(true);
+    }
       transactionService.deleteTransaction.and.returnValue(throwError(() => new Error('API Error')));
       
       component.onTransactionDelete('1');
@@ -689,7 +707,10 @@ describe('TransactionListComponent', () => {
       component.totalItems = 1;
       component.totalPages = 1;
       
-      createWindowSpyWithCleanup('confirm').and.returnValue(true);
+      const confirmSpy = createWindowSpyWithCleanup('confirm');
+    if (confirmSpy) {
+      confirmSpy.and.returnValue(true);
+    }
       component.onTransactionDelete('1');
       
       expect(component.currentPage).toBe(1);
@@ -892,7 +913,10 @@ describe('TransactionListComponent', () => {
     });
 
     it('should have both deleteTransaction and onTransactionDelete methods', () => {
-      createWindowSpyWithCleanup('confirm').and.returnValue(true);
+      const confirmSpy = createWindowSpyWithCleanup('confirm');
+    if (confirmSpy) {
+      confirmSpy.and.returnValue(true);
+    }
       
       component.deleteTransaction('1');
       expect(transactionService.deleteTransaction).toHaveBeenCalledWith('1');

@@ -1,14 +1,14 @@
 <div class="dashboard-container">
     <!-- Loading State -->
-    <div *ngIf="isLoading" class="loading-container">
+    <div *ngIf="isLoading()" class="loading-container">
       <app-loading-spinner [size]="'large'" [message]="'Loading dashboard...'"></app-loading-spinner>
     </div>
   
     <!-- Error State -->
-    <div *ngIf="error && !isLoading" class="error-container">
+    <div *ngIf="error() && !isLoading()" class="error-container">
       <div class="error-message">
         <i class="fas fa-exclamation-triangle"></i>
-        <span>{{ error }}</span>
+        <span>{{ error() }}</span>
         <button class="btn btn-primary" (click)="refreshDashboard()">
           <i class="fas fa-redo"></i>
           Retry
@@ -17,7 +17,7 @@
     </div>
   
     <!-- Dashboard Content -->
-    <div *ngIf="isDataLoaded" class="dashboard-content">
+    <div *ngIf="isDataLoaded()" class="dashboard-content">
       <!-- Header Section -->
       <div class="header-section">
         <div class="title-section">
@@ -25,7 +25,7 @@
           <p class="subtitle">Overview of your financial health</p>
         </div>
         <div class="actions-section">
-          <button class="btn btn-secondary" (click)="refreshDashboard()" [disabled]="isLoading">
+          <button class="btn btn-secondary" (click)="refreshDashboard()" [disabled]="isLoading()">
             <i class="fas fa-redo"></i>
             Refresh
           </button>
@@ -102,24 +102,24 @@
             <div class="chart-header">
               <h3>Spending Trend</h3>
               <div class="chart-actions">
-                <button class="btn btn-sm btn-secondary" (click)="refreshDashboard()" [disabled]="isLoading">
+                <button class="btn btn-sm btn-secondary" (click)="refreshDashboard()" [disabled]="isLoading()">
                   <i class="fas fa-redo"></i>
                   Refresh
                 </button>
               </div>
             </div>
             <div class="chart-content">
-              <div *ngIf="isLoading" class="chart-loading">
+              <div *ngIf="isLoading()" class="chart-loading">
                 <app-loading-spinner [size]="'medium'" [message]="'Loading chart...'"></app-loading-spinner>
               </div>
-              <div *ngIf="!isLoading && spendingChartData && spendingChartData.length > 0" class="chart-container">
+              <div *ngIf="!isLoading() && spendingChartData() && spendingChartData().length > 0" class="chart-container">
                 <!-- Chart component would go here -->
                 <div class="chart-placeholder">
                   <i class="fas fa-chart-area"></i>
                   <p>Spending trend chart</p>
                 </div>
               </div>
-              <div *ngIf="!isLoading && (!spendingChartData || spendingChartData.length === 0)" class="chart-empty">
+              <div *ngIf="!isLoading() && (!spendingChartData() || spendingChartData().length === 0)" class="chart-empty">
                 <i class="fas fa-chart-area"></i>
                 <p>No spending data available</p>
               </div>
@@ -131,24 +131,24 @@
             <div class="chart-header">
               <h3>Income Trend</h3>
               <div class="chart-actions">
-                <button class="btn btn-sm btn-secondary" (click)="refreshDashboard()" [disabled]="isLoading">
+                <button class="btn btn-sm btn-secondary" (click)="refreshDashboard()" [disabled]="isLoading()">
                   <i class="fas fa-redo"></i>
                   Refresh
                 </button>
               </div>
             </div>
             <div class="chart-content">
-              <div *ngIf="isLoading" class="chart-loading">
+              <div *ngIf="isLoading()" class="chart-loading">
                 <app-loading-spinner [size]="'medium'" [message]="'Loading chart...'"></app-loading-spinner>
               </div>
-              <div *ngIf="!isLoading && incomeChartData && incomeChartData.length > 0" class="chart-container">
+              <div *ngIf="!isLoading() && incomeChartData() && incomeChartData().length > 0" class="chart-container">
                 <!-- Chart component would go here -->
                 <div class="chart-placeholder">
                   <i class="fas fa-chart-line"></i>
                   <p>Income trend chart</p>
                 </div>
               </div>
-              <div *ngIf="!isLoading && (!incomeChartData || incomeChartData.length === 0)" class="chart-empty">
+              <div *ngIf="!isLoading() && (!incomeChartData() || incomeChartData().length === 0)" class="chart-empty">
                 <i class="fas fa-chart-line"></i>
                 <p>No income data available</p>
               </div>
@@ -161,24 +161,24 @@
           <div class="chart-header">
             <h3>Spending by Category</h3>
             <div class="chart-actions">
-              <button class="btn btn-sm btn-secondary" (click)="refreshCategoryStats()" [disabled]="isCategoryStatsLoading">
+              <button class="btn btn-sm btn-secondary" (click)="refreshCategoryStats()" [disabled]="isCategoryStatsLoading()">
                 <i class="fas fa-redo"></i>
                 Refresh
               </button>
             </div>
           </div>
           <div class="chart-content">
-            <div *ngIf="isCategoryStatsLoading" class="chart-loading">
+            <div *ngIf="isCategoryStatsLoading()" class="chart-loading">
               <app-loading-spinner [size]="'medium'" [message]="'Loading category data...'"></app-loading-spinner>
             </div>
-            <div *ngIf="!isCategoryStatsLoading && categoryChartData && categoryChartData.length > 0" class="chart-container">
+            <div *ngIf="!isCategoryStatsLoading() && categoryChartData() && categoryChartData().length > 0" class="chart-container">
               <!-- Chart component would go here -->
               <div class="chart-placeholder">
                 <i class="fas fa-chart-pie"></i>
                 <p>Category spending chart</p>
               </div>
             </div>
-            <div *ngIf="!isCategoryStatsLoading && (!categoryChartData || categoryChartData.length === 0)" class="chart-empty">
+            <div *ngIf="!isCategoryStatsLoading() && (!categoryChartData() || categoryChartData().length === 0)" class="chart-empty">
               <i class="fas fa-chart-pie"></i>
               <p>No category data available</p>
             </div>
@@ -191,7 +191,7 @@
         <div class="section-header">
           <h3>Recent Transactions</h3>
           <div class="section-actions">
-            <button class="btn btn-sm btn-secondary" (click)="refreshTransactions()" [disabled]="isRecentTransactionsLoading">
+            <button class="btn btn-sm btn-secondary" (click)="refreshTransactions()" [disabled]="isRecentTransactionsLoading()">
               <i class="fas fa-redo"></i>
               Refresh
             </button>
@@ -202,12 +202,12 @@
         </div>
         
         <div class="transactions-content">
-          <div *ngIf="isRecentTransactionsLoading" class="transactions-loading">
+          <div *ngIf="isRecentTransactionsLoading()" class="transactions-loading">
             <app-loading-spinner [size]="'medium'" [message]="'Loading transactions...'"></app-loading-spinner>
           </div>
           
-          <div *ngIf="!isRecentTransactionsLoading && recentTransactions && recentTransactions.length > 0" class="transactions-list">
-            <div *ngFor="let transaction of recentTransactions" class="transaction-item">
+          <div *ngIf="!isRecentTransactionsLoading() && recentTransactions() && recentTransactions().length > 0" class="transactions-list">
+            <div *ngFor="let transaction of recentTransactions()" class="transaction-item">
               <div class="transaction-icon">
                 <i class="fas fa-credit-card"></i>
               </div>
@@ -222,7 +222,7 @@
             </div>
           </div>
           
-          <div *ngIf="!isRecentTransactionsLoading && (!recentTransactions || recentTransactions.length === 0)" class="transactions-empty">
+          <div *ngIf="!isRecentTransactionsLoading() && (!recentTransactions() || recentTransactions().length === 0)" class="transactions-empty">
             <i class="fas fa-receipt"></i>
             <p>No recent transactions</p>
             <button class="btn btn-primary" routerLink="/financial/transactions/new">

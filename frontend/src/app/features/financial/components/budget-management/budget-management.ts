@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, inject, ViewChild, effect } from '@angular/core';
+import { Component, OnInit, OnDestroy, AfterViewInit, inject, ViewChild, effect, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
@@ -41,8 +41,8 @@ interface BudgetProgress {
   templateUrl: './budget-management.html',
   styleUrls: ['./budget-management.scss']
 })
-export class BudgetManagementComponent implements OnInit, OnDestroy {
-  @ViewChild(BudgetWizardComponent) budgetWizard!: BudgetWizardComponent;
+export class BudgetManagementComponent implements OnInit, AfterViewInit, OnDestroy {
+  @ViewChild(BudgetWizardComponent, { static: false }) budgetWizard!: BudgetWizardComponent;
   
   private destroy$ = new Subject<void>();
   private financialService = inject(FinancialService);
@@ -52,6 +52,7 @@ export class BudgetManagementComponent implements OnInit, OnDestroy {
   private analyticsService = inject(AnalyticsService);
   private advancedFilterService = inject(AdvancedFilterService);
   private fb = inject(FormBuilder);
+  private cdr = inject(ChangeDetectorRef);
 
   // Setup advanced filters effect in field initializer
   private filterEffect = effect(() => {
@@ -175,6 +176,10 @@ export class BudgetManagementComponent implements OnInit, OnDestroy {
     if (!this.isTestEnvironment()) {
       this.loadData();
     }
+  }
+
+  ngAfterViewInit(): void {
+    // ViewChild is now available
   }
 
   private isTestEnvironment(): boolean {
@@ -392,10 +397,12 @@ export class BudgetManagementComponent implements OnInit, OnDestroy {
         this.transactions = response.data || [];
         this.calculateBudgetProgress();
         this.isLoading = false;
+        this.cdr.detectChanges();
       },
       error: (error) => {
         console.error('Error loading transactions:', error);
         this.isLoading = false;
+        this.cdr.detectChanges();
       }
     });
   }

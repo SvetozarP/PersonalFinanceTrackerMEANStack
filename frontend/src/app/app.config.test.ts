@@ -1,4 +1,4 @@
-import { ApplicationConfig, provideBrowserGlobalErrorListeners, provideZoneChangeDetection } from '@angular/core';
+import { ApplicationConfig, provideBrowserGlobalErrorListeners, provideZonelessChangeDetection } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideAnimations } from '@angular/platform-browser/animations';
@@ -9,7 +9,7 @@ import { authInterceptor } from './features/auth/interceptors/auth.interceptor';
 export const testConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
-    provideZoneChangeDetection({ eventCoalescing: true }), // Use Zone.js for testing
+    provideZonelessChangeDetection(), // Use zoneless for testing
     provideRouter(routes), 
     provideHttpClient(withInterceptors([authInterceptor])),
     provideAnimations()

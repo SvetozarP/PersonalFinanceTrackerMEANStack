@@ -1,6 +1,14 @@
 /**
  * Test cleanup utilities to prevent test interference
+ * This file is only used in test environments
  */
+
+/// <reference path="./types.d.ts" />
+
+// Type guard to check if we're in a test environment
+function isTestEnvironment(): boolean {
+  return typeof (globalThis as any).jasmine !== 'undefined' && typeof (globalThis as any).beforeEach !== 'undefined';
+}
 
 export class TestCleanup {
   private static spies: jasmine.Spy[] = [];
@@ -9,13 +17,17 @@ export class TestCleanup {
    * Register a spy for cleanup
    */
   static registerSpy(spy: jasmine.Spy): void {
-    this.spies.push(spy);
+    if (isTestEnvironment()) {
+      this.spies.push(spy);
+    }
   }
 
   /**
    * Clean up all registered spies
    */
   static cleanupSpies(): void {
+    if (!isTestEnvironment()) return;
+    
     this.spies.forEach(spy => {
       try {
         if (spy && typeof spy.and !== 'undefined' && (spy.and as any).restore) {
@@ -32,6 +44,8 @@ export class TestCleanup {
    * Clean up window object spies
    */
   static cleanupWindowSpies(): void {
+    if (!isTestEnvironment()) return;
+    
     // Clean up window.confirm
     if (window.confirm && (window.confirm as any).and) {
       try {
@@ -64,6 +78,8 @@ export class TestCleanup {
    * Clean up storage
    */
   static cleanupStorage(): void {
+    if (!isTestEnvironment()) return;
+    
     localStorage.clear();
     sessionStorage.clear();
   }
@@ -72,6 +88,8 @@ export class TestCleanup {
    * Clean up global state
    */
   static cleanupGlobalState(): void {
+    if (!isTestEnvironment()) return;
+    
     // Reset location hash
     if (window.location) {
       window.location.hash = '';
@@ -87,6 +105,8 @@ export class TestCleanup {
    * Comprehensive cleanup
    */
   static cleanup(): void {
+    if (!isTestEnvironment()) return;
+    
     this.cleanupSpies();
     this.cleanupWindowSpies();
     this.cleanupStorage();
@@ -97,16 +117,23 @@ export class TestCleanup {
 /**
  * Jasmine helper to create spies with automatic cleanup
  */
-export function createSpyWithCleanup<T>(object: any, method: string): jasmine.Spy {
-  const spy = spyOn(object, method);
-  TestCleanup.registerSpy(spy);
-  return spy;
+export function createSpyWithCleanup<T>(object: any, method: string): jasmine.Spy | null {
+  if (!isTestEnvironment()) return null;
+  
+  // Use dynamic import to avoid Jasmine types in production
+  const spy = (globalThis as any).spyOn?.(object, method);
+  if (spy) {
+    TestCleanup.registerSpy(spy);
+  }
+  return spy || null;
 }
 
 /**
  * Jasmine helper to create spies on window object with automatic cleanup
  */
-export function createWindowSpyWithCleanup(method: keyof Window): jasmine.Spy {
+export function createWindowSpyWithCleanup(method: keyof Window): jasmine.Spy | null {
+  if (!isTestEnvironment()) return null;
+  
   // Check if already spied upon and restore first
   if ((window[method] as any).and) {
     try {
@@ -119,7 +146,9 @@ export function createWindowSpyWithCleanup(method: keyof Window): jasmine.Spy {
     }
   }
   
-  const spy = spyOn(window, method);
-  TestCleanup.registerSpy(spy);
-  return spy;
+  const spy = (globalThis as any).spyOn?.(window, method);
+  if (spy) {
+    TestCleanup.registerSpy(spy);
+  }
+  return spy || null;
 }

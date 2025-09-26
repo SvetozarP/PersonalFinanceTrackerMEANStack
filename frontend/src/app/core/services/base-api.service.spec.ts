@@ -3,7 +3,7 @@ import { HttpClientTestingModule, HttpTestingController } from '@angular/common/
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { throwError } from 'rxjs';
 import { BaseApiService } from './base-api.service';
-import { Injectable, provideZoneChangeDetection } from '@angular/core';
+import { Injectable, provideZonelessChangeDetection } from '@angular/core';
 
 // Create a concrete test implementation of the abstract BaseApiService
 @Injectable()
@@ -20,7 +20,7 @@ describe('BaseApiService', () => {
       imports: [HttpClientTestingModule],
       providers: [
         TestApiService,
-        provideZoneChangeDetection({ eventCoalescing: true })
+        provideZonelessChangeDetection()
       ]
     });
     service = TestBed.inject(TestApiService);

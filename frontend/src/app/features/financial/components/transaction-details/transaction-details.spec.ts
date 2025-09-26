@@ -6,7 +6,7 @@ import { TransactionDetailsComponent } from './transaction-details';
 import { TransactionService } from '../../../../core/services/transaction.service';
 import { CategoryService } from '../../../../core/services/category.service';
 import { Transaction, TransactionType, TransactionStatus, PaymentMethod, RecurrencePattern } from '../../../../core/models/financial.model';
-import { provideZoneChangeDetection } from '@angular/core';
+import { provideZonelessChangeDetection } from '@angular/core';
 
 describe('TransactionDetailsComponent', () => {
   let component: TransactionDetailsComponent;
@@ -107,7 +107,7 @@ describe('TransactionDetailsComponent', () => {
     await TestBed.configureTestingModule({
       imports: [TransactionDetailsComponent],
       providers: [
-        provideZoneChangeDetection(),
+        provideZonelessChangeDetection(),
         { provide: TransactionService, useValue: transactionServiceSpy },
         { provide: CategoryService, useValue: categoryServiceSpy },
         { provide: Router, useValue: routerSpy },

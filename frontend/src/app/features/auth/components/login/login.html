@@ -8,14 +8,14 @@
       <mat-card-content>
         <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="login-form">
           <!-- Loading spinner when form is loading -->
-          <div *ngIf="isFormLoading" class="loading-overlay">
+          <div *ngIf="isFormLoading()" class="loading-overlay">
             <app-loading-spinner></app-loading-spinner>
           </div>
         
           <!-- Error message -->
-          <div *ngIf="error" class="error-message">
-            {{ error }}
-            <button type="button" (click)="error = null" class="error-close">×</button>
+          <div *ngIf="error()" class="error-message">
+            {{ error() }}
+            <button type="button" (click)="error.set(null)" class="error-close">×</button>
           </div>
           <mat-form-field appearance="fill" class="full-width">
             <mat-label>Email</mat-label>
@@ -31,9 +31,9 @@
 
           <mat-form-field appearance="fill" class="full-width">
             <mat-label>Password</mat-label>
-            <input matInput [type]="hidePassword ? 'password' : 'text'" formControlName="password">
-            <button mat-icon-button matSuffix (click)="hidePassword = !hidePassword" type="button">
-              <mat-icon>{{hidePassword ? 'visibility_off' : 'visibility'}}</mat-icon>
+            <input matInput [type]="hidePassword() ? 'password' : 'text'" formControlName="password">
+            <button mat-icon-button matSuffix (click)="hidePassword.set(!hidePassword())" type="button">
+              <mat-icon>{{hidePassword() ? 'visibility_off' : 'visibility'}}</mat-icon>
             </button>
             <mat-error *ngIf="loginForm.get('password')?.hasError('required')">
               Password is required
@@ -54,11 +54,11 @@
 
           <button 
           type="submit" 
-          [disabled]="loginForm.invalid || isSubmitting"
-          [class.loading]="isSubmitting"
+          [disabled]="loginForm.invalid || isSubmitting()"
+          [class.loading]="isSubmitting()"
           class="submit-btn">
-          <span *ngIf="!isSubmitting">Login</span>
-          <span *ngIf="isSubmitting">Logging in...</span>
+          <span *ngIf="!isSubmitting()">Login</span>
+          <span *ngIf="isSubmitting()">Logging in...</span>
         </button>
       </form>
       </mat-card-content>

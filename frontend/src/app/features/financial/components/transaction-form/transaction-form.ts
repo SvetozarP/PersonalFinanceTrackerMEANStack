@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, ActivatedRoute, Router } from '@angular/router';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, AbstractControl } from '@angular/forms';
@@ -34,40 +34,10 @@ export class TransactionFormComponent implements OnInit, OnDestroy {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private fb = inject(FormBuilder);
+  private cdr = inject(ChangeDetectorRef);
 
   // Initialize the form group
-  transactionForm: FormGroup = this.fb.group({
-    title: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(100)]],
-    description: ['', [Validators.maxLength(500)]],
-    amount: [null, [Validators.required, Validators.min(0.01)]],
-    currency: ['USD', Validators.required],
-    type: [TransactionType.EXPENSE, Validators.required],
-    status: [TransactionStatus.COMPLETED, Validators.required],
-    categoryId: ['', Validators.required],
-    subcategoryId: [''],
-    date: [new Date(), Validators.required],
-    time: [''],
-    timezone: ['UTC'],
-    location: this.fb.group({
-      name: [''],
-      address: [''],
-      coordinates: this.fb.group({
-        latitude: [null],
-        longitude: [null]
-      })
-    }),
-    paymentMethod: [PaymentMethod.CASH, Validators.required],
-    paymentReference: [''],
-    merchantName: [''],
-    merchantId: [''],
-    tags: [[]],
-    isRecurring: [false],
-    recurrencePattern: [RecurrencePattern.NONE],
-    recurrenceInterval: [1],
-    recurrenceEndDate: [null],
-    notes: [''],
-    source: ['manual']
-  });
+  transactionForm!: FormGroup;
 
   transaction: Transaction | null = null;
   categories: Category[] = [];
@@ -114,73 +84,45 @@ export class TransactionFormComponent implements OnInit, OnDestroy {
     return this.isAnyActionLoading;
   }
 
+
   ngOnInit(): void {
+    this.initializeForm();
     this.loadCategories();
     this.checkEditMode();
-    this.setupFormControlStates();
   }
 
-  private setupFormControlStates(): void {
-    // Set up disabled states for form controls
-    this.transactionForm.get('categoryId')?.disable();
-    this.transactionForm.get('subcategoryId')?.disable();
-    
-    // Enable category control when categories are loaded
-    this.categoryService.isLoading$.subscribe(isLoading => {
-      if (!isLoading) {
-        this.transactionForm.get('categoryId')?.enable();
-      }
-    });
-
-    // Handle subcategory state based on category selection
-    this.transactionForm.get('categoryId')?.valueChanges.subscribe(categoryId => {
-      const subcategoryControl = this.transactionForm.get('subcategoryId');
-      if (categoryId) {
-        subcategoryControl?.enable();
-      } else {
-        subcategoryControl?.disable();
-        subcategoryControl?.setValue('');
-      }
-    });
-
-    // Handle subcategory loading state
-    this.categoryService.isLoading$.subscribe(isLoading => {
-      const subcategoryControl = this.transactionForm.get('subcategoryId');
-      if (isLoading) {
-        subcategoryControl?.disable();
-      } else if (this.transactionForm.get('categoryId')?.value) {
-        subcategoryControl?.enable();
-      }
-    });
-
-    // Handle recurrence controls state
-    this.transactionForm.get('isRecurring')?.valueChanges.subscribe(isRecurring => {
-      const recurrencePatternControl = this.transactionForm.get('recurrencePattern');
-      const recurrenceIntervalControl = this.transactionForm.get('recurrenceInterval');
-      const recurrenceEndDateControl = this.transactionForm.get('recurrenceEndDate');
-      
-      if (isRecurring) {
-        recurrencePatternControl?.enable();
-        recurrenceIntervalControl?.enable();
-        recurrenceEndDateControl?.enable();
-      } else {
-        recurrencePatternControl?.disable();
-        recurrenceIntervalControl?.disable();
-        recurrenceEndDateControl?.disable();
-      }
-    });
-
-    // Handle recurrence pattern changes
-    this.transactionForm.get('recurrencePattern')?.valueChanges.subscribe(pattern => {
-      const intervalControl = this.transactionForm.get('recurrenceInterval');
-      if (pattern === RecurrencePattern.DAILY) {
-        intervalControl?.setValue(1);
-        intervalControl?.disable();
-      } else {
-        intervalControl?.enable();
-      }
+  private initializeForm(): void {
+    this.transactionForm = this.fb.group({
+      title: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(100)]],
+      description: ['', [Validators.maxLength(500)]],
+      amount: [null, [Validators.required, Validators.min(0.01)]],
+      currency: ['USD', Validators.required],
+      type: [TransactionType.EXPENSE, Validators.required],
+      status: [TransactionStatus.COMPLETED, Validators.required],
+      categoryId: ['', Validators.required],
+      subcategoryId: [''],
+      date: [new Date(), Validators.required],
+      time: [''],
+      timezone: ['UTC'],
+      locationName: [''],
+      locationAddress: [''],
+      locationLatitude: [null],
+      locationLongitude: [null],
+      paymentMethod: [PaymentMethod.CASH, Validators.required],
+      paymentReference: [''],
+      merchantName: [''],
+      merchantId: [''],
+      tags: [[]],
+      isRecurring: [false],
+      recurrencePattern: [RecurrencePattern.NONE],
+      recurrenceInterval: [1],
+      recurrenceEndDate: [null],
+      notes: [''],
+      source: ['manual']
     });
   }
+
+
 
   ngOnDestroy(): void {
     this.destroy$.next();
@@ -242,11 +184,13 @@ export class TransactionFormComponent implements OnInit, OnDestroy {
         next: (categories) => {
           this.categories = categories.filter(cat => cat.isActive);
           this.isCategoriesLoading = false;
+          this.cdr.detectChanges();
         },
         error: (error) => {
           console.error('Error loading categories:', error);
           this.isCategoriesLoading = false;
           this.error = 'Failed to load categories';
+          this.cdr.detectChanges();
         }
       });
   }
@@ -286,14 +230,10 @@ export class TransactionFormComponent implements OnInit, OnDestroy {
       date: new Date(transaction.date),
       time: transaction.time || '',
       timezone: transaction.timezone || 'UTC',
-      location: transaction.location || {
-        name: '',
-        address: '',
-        coordinates: {
-          latitude: null,
-          longitude: null
-        }
-      },
+      locationName: transaction.location?.name || '',
+      locationAddress: transaction.location?.address || '',
+      locationLatitude: transaction.location?.coordinates?.latitude || null,
+      locationLongitude: transaction.location?.coordinates?.longitude || null,
       paymentMethod: transaction.paymentMethod,
       paymentReference: transaction.paymentReference || '',
       merchantName: transaction.merchantName || '',
@@ -377,7 +317,14 @@ export class TransactionFormComponent implements OnInit, OnDestroy {
         date: formData.date instanceof Date ? formData.date : new Date(formData.date),
         time: formData.time || null,
         timezone: formData.timezone,
-        location: formData.location && (formData.location.name || formData.location.address) ? formData.location : null,
+        location: (formData.locationName || formData.locationAddress) ? {
+          name: formData.locationName || '',
+          address: formData.locationAddress || '',
+          coordinates: (formData.locationLatitude && formData.locationLongitude) ? {
+            latitude: formData.locationLatitude,
+            longitude: formData.locationLongitude
+          } : undefined
+        } : undefined,
         paymentMethod: formData.paymentMethod,
         paymentReference: formData.paymentReference || null,
         merchantName: formData.merchantName || null,
@@ -470,14 +417,10 @@ export class TransactionFormComponent implements OnInit, OnDestroy {
         date: new Date(),
         time: '',
         timezone: 'UTC',
-        location: {
-          name: '',
-          address: '',
-          coordinates: {
-            latitude: null,
-            longitude: null
-          }
-        },
+        locationName: '',
+        locationAddress: '',
+        locationLatitude: null,
+        locationLongitude: null,
         paymentMethod: PaymentMethod.CASH,
         paymentReference: '',
         merchantName: '',
@@ -591,19 +534,19 @@ export class TransactionFormComponent implements OnInit, OnDestroy {
   }
 
   // Form validation helpers - using the proper methods
-  get titleError(): string | null {
+  get titleError(): string {
     return this.getFieldError('title');
   }
 
-  get amountError(): string | null {
+  get amountError(): string {
     return this.getFieldError('amount');
   }
 
-  get categoryError(): string | null {
+  get categoryError(): string {
     return this.getFieldError('categoryId');
   }
 
-  get dateError(): string | null {
+  get dateError(): string {
     return this.getFieldError('date');
   }
 }

@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink, RouterLinkActive, RouterModule } from '@angular/router';
 import { Subject, takeUntil, combineLatest } from 'rxjs';
@@ -37,22 +37,32 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
 
   // Loading states
-  isDashboardLoading = false;
-  isChartDataLoading = false;
-  isRecentTransactionsLoading = false;
-  isCategoryStatsLoading = false;
-  isQuickActionsLoading = false;
+  isDashboardLoading = signal(false);
+  isChartDataLoading = signal(false);
+  isRecentTransactionsLoading = signal(false);
+  isCategoryStatsLoading = signal(false);
+  isQuickActionsLoading = signal(false);
 
   // Data properties
-  dashboardData: FinancialDashboard | null = null;
-  recentTransactions: Transaction[] = [];
-  categoryStats: CategoryStats | null = null;
-  error: string | null = null;
+  dashboardData = signal<FinancialDashboard | null>(null);
+  recentTransactions = signal<Transaction[]>([]);
+  categoryStats = signal<CategoryStats | null>(null);
+  error = signal<string | null>(null);
 
   // Chart data
-  spendingChartData: any[] = [];
-  incomeChartData: any[] = [];
-  categoryChartData: any[] = [];
+  spendingChartData = signal<any[]>([]);
+  incomeChartData = signal<any[]>([]);
+  categoryChartData = signal<any[]>([]);
+
+  // Computed properties
+  isLoading = computed(() => 
+    this.isDashboardLoading() || this.isChartDataLoading() || this.isRecentTransactionsLoading() || 
+    this.isCategoryStatsLoading() || this.isQuickActionsLoading()
+  );
+
+  isDataLoaded = computed(() => 
+    !this.isLoading() && !this.error() && this.dashboardData() !== null
+  );
 
   ngOnInit(): void {
     this.loadDashboardData();
@@ -64,8 +74,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   private loadDashboardData(): void {
-    this.isDashboardLoading = true;
-    this.error = null;
+    this.isDashboardLoading.set(true);
+    this.error.set(null);
 
     // Load all dashboard data in parallel
     const dashboardData$ = this.financialService.getFinancialDashboard();
@@ -76,53 +86,55 @@ export class DashboardComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: ([dashboardData, transactionsResponse, stats]) => {
-          this.dashboardData = dashboardData;
-          this.recentTransactions = transactionsResponse.data;
-          this.categoryStats = stats;
+          this.dashboardData.set(dashboardData);
+          this.recentTransactions.set(transactionsResponse.data);
+          this.categoryStats.set(stats);
           
           // Prepare chart data
           this.prepareChartData();
           
-          this.isDashboardLoading = false;
+          this.isDashboardLoading.set(false);
         },
         error: (error) => {
-          this.error = 'Failed to load dashboard data';
+          this.error.set('Failed to load dashboard data');
           console.error('Dashboard loading error:', error);
-          this.isDashboardLoading = false;
+          this.isDashboardLoading.set(false);
         }
       });
   }
 
   private prepareChartData(): void {
-    if (this.dashboardData) {
+    const dashboardData = this.dashboardData();
+    if (dashboardData) {
       // Prepare spending trends data - using spendingTrends from FinancialDashboard
-      this.spendingChartData = this.dashboardData.spendingTrends?.map(item => ({
+      this.spendingChartData.set(dashboardData.spendingTrends?.map(item => ({
         month: item.month,
         amount: item.expenses || 0
-      })) || [];
+      })) || []);
 
       // Prepare income data - using monthly income from overview
-      this.incomeChartData = [{
+      this.incomeChartData.set([{
         month: 'Current Month',
-        amount: this.dashboardData.overview?.monthlyIncome || 0
-      }];
+        amount: dashboardData.overview?.monthlyIncome || 0
+      }]);
 
       // Prepare category data from top categories
-      this.categoryChartData = this.dashboardData.topCategories?.map(item => ({
+      this.categoryChartData.set(dashboardData.topCategories?.map(item => ({
         category: item.name,
         amount: item.totalAmount || item.amount || 0,
         percentage: item.percentage
-      })) || [];
+      })) || []);
     }
   }
 
   private updateCategoryChartData(): void {
-    if (this.categoryStats?.topCategories) {
-      this.categoryChartData = this.categoryStats.topCategories.map(item => ({
+    const categoryStats = this.categoryStats();
+    if (categoryStats?.topCategories) {
+      this.categoryChartData.set(categoryStats.topCategories.map(item => ({
         category: item.name,
         amount: item.totalAmount,
         percentage: item.percentage
-      }));
+      })));
     }
   }
 
@@ -132,29 +144,29 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   refreshTransactions(): void {
-    this.isRecentTransactionsLoading = true;
+    this.isRecentTransactionsLoading.set(true);
     this.transactionService.getUserTransactions({ limit: 5 })
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {
-          this.recentTransactions = response.data;
-          this.isRecentTransactionsLoading = false;
+          this.recentTransactions.set(response.data);
+          this.isRecentTransactionsLoading.set(false);
         },
         error: (error) => {
-          this.error = 'Failed to refresh transactions';
+          this.error.set('Failed to refresh transactions');
           console.error('Transaction refresh error:', error);
-          this.isRecentTransactionsLoading = false;
+          this.isRecentTransactionsLoading.set(false);
         }
       });
   }
 
   refreshCategoryStats(): void {
-    this.isCategoryStatsLoading = true;
+    this.isCategoryStatsLoading.set(true);
     this.categoryService.getCategoryStats()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (stats) => {
-          this.categoryStats = stats;
+          this.categoryStats.set(stats);
           // Update the chart data when category stats are refreshed
           this.updateCategoryChartData();
           
@@ -163,73 +175,64 @@ export class DashboardComponent implements OnInit, OnDestroy {
             .pipe(takeUntil(this.destroy$))
             .subscribe({
               next: (dashboardData) => {
-                this.dashboardData = dashboardData;
+                this.dashboardData.set(dashboardData);
                 // Update category chart data from dashboard data if available
                 if (dashboardData.topCategories) {
-                  this.categoryChartData = dashboardData.topCategories.map(item => ({
+                  this.categoryChartData.set(dashboardData.topCategories.map(item => ({
                     category: item.name || item.category || 'Unknown',
                     amount: item.totalAmount || item.amount || 0,
                     percentage: item.percentage || 0
-                  }));
+                  })));
                 }
-                this.isCategoryStatsLoading = false;
+                this.isCategoryStatsLoading.set(false);
               },
               error: (error) => {
                 console.error('Failed to refresh dashboard data:', error);
-                this.isCategoryStatsLoading = false;
+                this.isCategoryStatsLoading.set(false);
               }
             });
         },
         error: (error) => {
-          this.error = 'Failed to refresh category stats';
+          this.error.set('Failed to refresh category stats');
           console.error('Category stats refresh error:', error);
-          this.isCategoryStatsLoading = false;
+          this.isCategoryStatsLoading.set(false);
         }
       });
   }
 
   // Helper methods
   getTotalBalance(): number {
-    return this.dashboardData?.overview?.totalBalance || 0;
+    return this.dashboardData()?.overview?.totalBalance || 0;
   }
 
   getTotalIncome(): number {
-    return this.dashboardData?.overview?.monthlyIncome || 0;
+    return this.dashboardData()?.overview?.monthlyIncome || 0;
   }
 
   getTotalExpenses(): number {
-    return this.dashboardData?.overview?.monthlyExpenses || 0;
+    return this.dashboardData()?.overview?.monthlyExpenses || 0;
   }
 
   getSavingsRate(): number {
-    if (!this.dashboardData?.overview?.monthlyIncome) return 0;
-    return ((this.dashboardData.overview.monthlyIncome - this.dashboardData.overview.monthlyExpenses) / this.dashboardData.overview.monthlyIncome) * 100;
+    const dashboardData = this.dashboardData();
+    if (!dashboardData?.overview?.monthlyIncome) return 0;
+    return ((dashboardData.overview.monthlyIncome - dashboardData.overview.monthlyExpenses) / dashboardData.overview.monthlyIncome) * 100;
   }
 
   getNetWorth(): number {
-    return this.dashboardData?.overview?.monthlyNet || 0;
+    return this.dashboardData()?.overview?.monthlyNet || 0;
   }
 
   // Get category name by ID
   getCategoryName(categoryId: string): string {
-    if (!categoryId || !this.categoryStats?.topCategories) return 'Unknown';
-    const category = this.categoryStats.topCategories.find(cat => cat.categoryId === categoryId);
+    if (!categoryId || !this.categoryStats()?.topCategories) return 'Unknown';
+    const category = this.categoryStats()!.topCategories.find(cat => cat.categoryId === categoryId);
     return category?.name || 'Unknown';
   }
 
   // Error handling
   clearError(): void {
-    this.error = null;
-  }
-
-  // Loading state helpers
-  get isLoading(): boolean {
-    return this.isDashboardLoading || this.isChartDataLoading || this.isRecentTransactionsLoading || 
-           this.isCategoryStatsLoading || this.isQuickActionsLoading;
-  }
-
-  get isDataLoaded(): boolean {
-    return !this.isLoading && !this.error && this.dashboardData !== null;
+    this.error.set(null);
   }
 
   logout(): void {
