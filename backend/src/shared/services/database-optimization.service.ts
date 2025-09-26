@@ -16,12 +16,15 @@ export class DatabaseOptimizationService {
     count: 50, // ms
     distinct: 50, // ms
   };
+  private cleanupInterval: NodeJS.Timeout | null = null;
 
   private constructor() {
-    // Clean up expired cache entries every 5 minutes
-    setInterval(() => {
-      this.cleanupExpiredCache();
-    }, 5 * 60 * 1000);
+    // Only start cleanup interval in non-test environments
+    if (process.env.NODE_ENV !== 'test') {
+      this.cleanupInterval = setInterval(() => {
+        this.cleanupExpiredCache();
+      }, 5 * 60 * 1000);
+    }
   }
 
   public static getInstance(): DatabaseOptimizationService {
@@ -923,6 +926,19 @@ export class DatabaseOptimizationService {
     }
 
     return recommendations;
+  }
+
+  /**
+   * Clean up resources and clear intervals
+   * This should be called when the service is no longer needed
+   */
+  public cleanup(): void {
+    if (this.cleanupInterval) {
+      clearInterval(this.cleanupInterval);
+      this.cleanupInterval = null;
+    }
+    this.queryCache.clear();
+    this.performanceMetrics.clear();
   }
 }
 

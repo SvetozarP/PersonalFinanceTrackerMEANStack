@@ -2,12 +2,21 @@ import { AuthService } from '../../../modules/auth/auth.service';
 import mongoose from 'mongoose';
 
 // Mock the entire user model module
-jest.mock('../../../modules/users/user.model', () => ({
-  User: {
-    findOne: jest.fn(),
-    findById: jest.fn(),
-  },
-}));
+jest.mock('../../../modules/users/user.model', () => {
+  const mockUserInstance = {
+    save: jest.fn(),
+    comparePassword: jest.fn(),
+    toObject: jest.fn(),
+  };
+  
+  const UserConstructor = jest.fn(() => mockUserInstance) as any;
+  UserConstructor.findOne = jest.fn();
+  UserConstructor.findById = jest.fn();
+  
+  return {
+    User: UserConstructor,
+  };
+});
 
 // Mock JWT
 jest.mock('jsonwebtoken', () => ({
@@ -68,12 +77,13 @@ describe('Auth Service', () => {
         save: jest.fn().mockResolvedValue(mockUser),
         toObject: jest.fn().mockReturnValue({
           ...mockUser,
+          email: 'new@example.com',
           password: undefined,
         }),
       };
 
       (mockUserModel.findOne as any).mockResolvedValue(null);
-      (mockUserModel as any).mockImplementation(() => newUser);
+      (mockUserModel as any).mockReturnValue(newUser);
 
       const result = await authService.register(userData);
 
@@ -113,7 +123,7 @@ describe('Auth Service', () => {
       };
 
       (mockUserModel.findOne as any).mockResolvedValue(null);
-      (mockUserModel as any).mockImplementation(() => newUser);
+      (mockUserModel as any).mockReturnValue(newUser);
 
       await expect(authService.register(userData)).rejects.toThrow(
         'Database error'
@@ -473,9 +483,13 @@ describe('Auth Service', () => {
         authService
       );
 
-      await expect(generateTokensMethod(userId)).rejects.toThrow(
-        'JWT signing failed'
-      );
+      // The error is thrown synchronously in signJWT, so we need to wrap it
+      try {
+        await generateTokensMethod(userId);
+        fail('Expected generateTokens to throw an error');
+      } catch (error) {
+        expect((error as Error).message).toBe('JWT signing failed');
+      }
     });
   });
 });

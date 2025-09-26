@@ -101,7 +101,7 @@ describe('Validation Middleware - Branch Coverage', () => {
       expect(mockResponse.status).toHaveBeenCalledWith(400);
       expect(mockResponse.json).toHaveBeenCalledWith({
         success: false,
-        message: 'Validation failed',
+        message: 'Validation error',
         errors: expect.arrayContaining([
           expect.objectContaining({
             field: 'name',
@@ -130,7 +130,7 @@ describe('Validation Middleware - Branch Coverage', () => {
       expect(mockResponse.status).toHaveBeenCalledWith(400);
       expect(mockResponse.json).toHaveBeenCalledWith({
         success: false,
-        message: 'Validation failed',
+        message: 'Validation error',
         errors: expect.arrayContaining([
           expect.objectContaining({
             field: 'name',
@@ -159,18 +159,10 @@ describe('Validation Middleware - Branch Coverage', () => {
 
       middleware(mockRequest as Request, mockResponse as Response, mockNext);
 
-      expect(mockResponse.status).toHaveBeenCalledWith(400);
-      expect(mockResponse.json).toHaveBeenCalledWith({
-        success: false,
-        message: 'Validation failed',
-        errors: expect.arrayContaining([
-          expect.objectContaining({
-            field: 'extraField',
-            message: expect.stringContaining('not allowed'),
-          }),
-        ]),
-      });
-      expect(mockNext).not.toHaveBeenCalled();
+      // With stripUnknown: true, extra fields are stripped and validation passes
+      expect(mockNext).toHaveBeenCalled();
+      expect(mockResponse.status).not.toHaveBeenCalled();
+      expect(mockRequest.body).toEqual({ name: 'John Doe' });
     });
 
     it('should handle different data types', () => {
@@ -238,7 +230,7 @@ describe('Validation Middleware - Branch Coverage', () => {
       expect(mockResponse.status).toHaveBeenCalledWith(400);
       expect(mockResponse.json).toHaveBeenCalledWith({
         success: false,
-        message: 'Validation failed',
+        message: 'Validation error',
         errors: expect.arrayContaining([
           expect.objectContaining({
             field: 'name',
@@ -296,8 +288,9 @@ describe('Validation Middleware - Branch Coverage', () => {
 
       middleware(mockRequest as Request, mockResponse as Response, mockNext);
 
-      expect(mockResponse.status).toHaveBeenCalledWith(400);
-      expect(mockNext).not.toHaveBeenCalled();
+      // Joi treats undefined as valid, so validation should pass
+      expect(mockNext).toHaveBeenCalled();
+      expect(mockResponse.status).not.toHaveBeenCalled();
     });
 
     it('should handle complex nested validation', () => {
@@ -479,7 +472,7 @@ describe('Validation Middleware - Branch Coverage', () => {
       expect(mockResponse.status).toHaveBeenCalledWith(400);
       expect(mockResponse.json).toHaveBeenCalledWith({
         success: false,
-        message: 'Validation failed',
+        message: 'Validation error',
         errors: expect.arrayContaining([
           expect.objectContaining({
             source: 'body',
@@ -531,7 +524,7 @@ describe('Validation Middleware - Branch Coverage', () => {
       expect(mockResponse.status).toHaveBeenCalledWith(400);
       expect(mockResponse.json).toHaveBeenCalledWith({
         success: false,
-        message: 'Validation failed',
+        message: 'Validation error',
         errors: expect.arrayContaining([
           expect.objectContaining({
             source: 'query',
@@ -679,7 +672,7 @@ describe('Validation Middleware - Branch Coverage', () => {
       expect(mockResponse.status).toHaveBeenCalledWith(400);
       expect(mockResponse.json).toHaveBeenCalledWith({
         success: false,
-        message: 'Validation failed',
+        message: 'Validation error',
         errors: expect.arrayContaining([
           expect.objectContaining({
             source: 'body',

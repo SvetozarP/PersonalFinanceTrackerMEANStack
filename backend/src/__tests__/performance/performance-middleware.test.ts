@@ -32,7 +32,7 @@ jest.mock('mongoose', () => ({
 // Mock process.memoryUsage
 const originalMemoryUsage = process.memoryUsage;
 beforeEach(() => {
-  process.memoryUsage = jest.fn().mockReturnValue({
+  (process.memoryUsage as any) = jest.fn().mockReturnValue({
     rss: 1048576000,
     heapTotal: 1048576000,
     heapUsed: 943718400,
@@ -42,7 +42,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  process.memoryUsage = originalMemoryUsage;
+  (process.memoryUsage as any) = originalMemoryUsage;
 });
 
 describe('Performance Middleware Tests', () => {

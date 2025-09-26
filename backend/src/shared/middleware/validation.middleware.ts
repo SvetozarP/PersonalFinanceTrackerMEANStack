@@ -20,7 +20,7 @@ export const validateRequest = (
         convert: true,
       });
 
-      if (error) {
+      if (error && error.details) {
         const errors = error.details.map(detail => ({
           field: detail.path.join('.'),
           message: detail.message,
@@ -81,7 +81,7 @@ export const validateMultiple = (schemas: {
           stripUnknown: true,
           convert: true,
         });
-        if (error) {
+        if (error && error.details) {
           errors.push(
             ...error.details.map(detail => ({
               source: 'body',
@@ -101,7 +101,7 @@ export const validateMultiple = (schemas: {
           stripUnknown: true,
           convert: true,
         });
-        if (error) {
+        if (error && error.details) {
           errors.push(
             ...error.details.map(detail => ({
               source: 'query',
@@ -121,7 +121,7 @@ export const validateMultiple = (schemas: {
           stripUnknown: true,
           convert: true,
         });
-        if (error) {
+        if (error && error.details) {
           errors.push(
             ...error.details.map(detail => ({
               source: 'params',

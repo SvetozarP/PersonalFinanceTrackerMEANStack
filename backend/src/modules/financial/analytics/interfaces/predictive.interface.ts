@@ -411,3 +411,5 @@ export interface IPredictiveInsights {
     action: string;
   }>;
 }
+
+

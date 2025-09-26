@@ -189,8 +189,8 @@ describe('DatabaseOptimizationService', () => {
 
   describe('validateCriticalIndexes', () => {
     it('should validate that critical indexes exist', async () => {
-      mockDb.collection.mockImplementation((collectionName) => {
-        const collectionIndexes = {
+      mockDb.collection.mockImplementation((collectionName: string) => {
+        const collectionIndexes: { [key: string]: any[] } = {
           'transactions': [
             { key: { userId: 1, date: -1 } },
             { key: { userId: 1, categoryId: 1, date: -1 } },

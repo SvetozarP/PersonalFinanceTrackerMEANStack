@@ -46,6 +46,14 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  // Clean up DatabaseOptimizationService
+  try {
+    const { databaseOptimizationService } = await import('../shared/services/database-optimization.service');
+    databaseOptimizationService.cleanup();
+  } catch (error) {
+    // Ignore errors if service is not available
+  }
+
   // Clean up
   await mongoose.disconnect();
   await mongod.stop();
