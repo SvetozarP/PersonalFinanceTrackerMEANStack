@@ -7,3 +7,4 @@ export { ResponsiveGridComponent } from './responsive-grid/responsive-grid';
 export type { GridBreakpoint, GridItem } from './responsive-grid/responsive-grid';
 export { ResponsiveChartComponent } from './responsive-chart/responsive-chart';
 export type { CustomChartData, ChartConfig } from './responsive-chart/responsive-chart';
+export { NavbarComponent } from './navbar/navbar';

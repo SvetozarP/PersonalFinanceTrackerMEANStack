@@ -1,0 +1,77 @@
+<nav class="navbar" *ngIf="isAuthenticated()">
+  <div class="navbar-container">
+    <!-- Logo/Brand -->
+    <div class="navbar-brand">
+      <a routerLink="/dashboard" class="brand-link">
+        <span class="brand-icon">💰</span>
+        <span class="brand-text">Finance Tracker</span>
+      </a>
+    </div>
+
+    <!-- Desktop Navigation -->
+    <div class="navbar-nav desktop-nav">
+      <a 
+        *ngFor="let item of navItems" 
+        [routerLink]="item.path"
+        class="nav-link"
+        [class.active]="isActiveRoute(item.path)"
+        (click)="navigateTo(item.path)">
+        <span class="nav-icon">{{ item.icon }}</span>
+        <span class="nav-label">{{ item.label }}</span>
+      </a>
+    </div>
+
+    <!-- User Menu -->
+    <div class="navbar-user">
+      <div class="user-info">
+        <div class="user-avatar">
+          {{ getUserInitials() }}
+        </div>
+        <div class="user-details">
+          <span class="user-name">{{ getUserDisplayName() }}</span>
+        </div>
+      </div>
+      <button class="logout-btn" (click)="logout()" title="Logout">
+        <span class="logout-icon">🚪</span>
+        <span class="logout-text">Logout</span>
+      </button>
+    </div>
+
+    <!-- Mobile Menu Toggle -->
+    <button class="mobile-menu-toggle" (click)="toggleMobileMenu()" [class.active]="isMenuOpen()">
+      <span class="hamburger-line"></span>
+      <span class="hamburger-line"></span>
+      <span class="hamburger-line"></span>
+    </button>
+  </div>
+
+  <!-- Mobile Navigation Menu -->
+  <div class="mobile-nav" [class.open]="isMenuOpen()">
+    <div class="mobile-nav-content">
+      <a 
+        *ngFor="let item of navItems" 
+        [routerLink]="item.path"
+        class="mobile-nav-link"
+        [class.active]="isActiveRoute(item.path)"
+        (click)="navigateTo(item.path)">
+        <span class="mobile-nav-icon">{{ item.icon }}</span>
+        <span class="mobile-nav-label">{{ item.label }}</span>
+      </a>
+      
+      <div class="mobile-user-section">
+        <div class="mobile-user-info">
+          <div class="mobile-user-avatar">
+            {{ getUserInitials() }}
+          </div>
+          <div class="mobile-user-details">
+            <span class="mobile-user-name">{{ getUserDisplayName() }}</span>
+          </div>
+        </div>
+        <button class="mobile-logout-btn" (click)="logout()">
+          <span class="mobile-logout-icon">🚪</span>
+          <span class="mobile-logout-text">Logout</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</nav>
