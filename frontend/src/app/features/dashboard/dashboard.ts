@@ -79,8 +79,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   private loadDashboardData(): void {
-    console.log('🔄 Dashboard: Starting to load data...');
-    
     // Reset all loading states
     this.isDashboardLoading.set(true);
     this.isChartDataLoading.set(false);
@@ -95,17 +93,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
     const categoryStats$ = this.categoryService.getCategoryStats();
     const categories$ = this.categoryService.getUserCategories();
 
-    console.log('🔄 Dashboard: API calls created, subscribing to combineLatest...');
-
     combineLatest([dashboardData$, recentTransactions$, categoryStats$, categories$])
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: ([dashboardData, transactionsResponse, stats, categories]) => {
-          console.log('✅ Dashboard: Data loaded successfully');
-          console.log('📊 Dashboard data:', dashboardData);
-          console.log('📋 Transactions response:', transactionsResponse);
-          console.log('📂 Category stats:', stats);
-          console.log('📂 Categories:', categories);
           
           this.dashboardData.set(dashboardData);
           this.recentTransactions.set(transactionsResponse.data);
@@ -122,10 +113,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
           this.isCategoryStatsLoading.set(false);
           this.isQuickActionsLoading.set(false);
           
-          console.log('✅ Dashboard: Loading states reset, data should be visible');
         },
         error: (error) => {
-          console.error('❌ Dashboard: Error loading data:', error);
           this.error.set('Failed to load dashboard data');
           // Reset all loading states on error
           this.isDashboardLoading.set(false);
@@ -138,9 +127,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   private prepareChartData(): void {
-    console.log('📊 Dashboard: Preparing chart data...');
     const dashboardData = this.dashboardData();
-    console.log('📊 Dashboard data for charts:', dashboardData);
     
     if (dashboardData) {
       // Prepare spending trends data - using spendingTrends from FinancialDashboard
@@ -148,7 +135,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
         label: item.month,
         value: item.expenses || 0
       })) || [];
-      console.log('📈 Spending chart data:', spendingData);
       this.spendingChartData.set(spendingData);
 
       // Prepare income data - using monthly income from overview
@@ -156,7 +142,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
         label: 'Current Month',
         value: dashboardData.overview?.monthlyIncome || 0
       }];
-      console.log('💰 Income chart data:', incomeData);
       this.incomeChartData.set(incomeData);
 
       // Prepare category data from top categories
@@ -165,11 +150,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         label: item.categoryName || item.name || 'Unknown Category',
         value: item.total || item.totalAmount || 0
       })) || [];
-      console.log('📂 Category chart data:', categoryData);
-      console.log('📂 Raw topCategories data:', dashboardData.topCategories);
       this.categoryChartData.set(categoryData);
-    } else {
-      console.log('❌ No dashboard data available for charts');
     }
   }
 
@@ -186,23 +167,19 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   // Refresh methods
   refreshDashboard(): void {
-    console.log('🔄 Dashboard: Refresh dashboard button clicked');
     this.loadDashboardData();
   }
 
   refreshTransactions(): void {
-    console.log('🔄 Dashboard: Refresh transactions button clicked');
     this.isRecentTransactionsLoading.set(true);
     this.transactionService.getUserTransactions({ limit: 5 })
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {
-          console.log('✅ Dashboard: Transactions refreshed successfully');
           this.recentTransactions.set(response.data);
           this.isRecentTransactionsLoading.set(false);
         },
         error: (error) => {
-          console.error('❌ Dashboard: Transaction refresh error:', error);
           this.error.set('Failed to refresh transactions');
           this.isRecentTransactionsLoading.set(false);
         }
@@ -210,13 +187,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   refreshCategoryStats(): void {
-    console.log('🔄 Dashboard: Refresh category stats button clicked');
     this.isCategoryStatsLoading.set(true);
     this.categoryService.getCategoryStats()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (stats) => {
-          console.log('✅ Dashboard: Category stats refreshed successfully');
           this.categoryStats.set(stats);
           // Update the chart data when category stats are refreshed
           this.updateCategoryChartData();
@@ -226,7 +201,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
             .pipe(takeUntil(this.destroy$))
             .subscribe({
               next: (dashboardData) => {
-                console.log('✅ Dashboard: Dashboard data refreshed for category stats');
                 this.dashboardData.set(dashboardData);
                 // Update category chart data from dashboard data if available
                 if (dashboardData.topCategories) {
@@ -239,13 +213,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
                 this.isCategoryStatsLoading.set(false);
               },
               error: (error) => {
-                console.error('❌ Dashboard: Failed to refresh dashboard data:', error);
                 this.isCategoryStatsLoading.set(false);
               }
             });
         },
         error: (error) => {
-          console.error('❌ Dashboard: Category stats refresh error:', error);
           this.error.set('Failed to refresh category stats');
           this.isCategoryStatsLoading.set(false);
         }
@@ -277,15 +249,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   // Get category name by ID or category object
   getCategoryName(categoryId: string | any): string {
-    console.log('🔍 Looking up category for:', categoryId);
-    console.log('📂 Available categories:', this.categories());
-    console.log('📊 Top categories:', this.categoryStats()?.topCategories);
-    
     if (!categoryId) return 'Unknown';
     
     // If categoryId is an object with a name property, return the name directly
     if (typeof categoryId === 'object' && categoryId.name) {
-      console.log('✅ Category object provided, using name:', categoryId.name);
       return categoryId.name;
     }
     
@@ -293,7 +260,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
     const idString = typeof categoryId === 'string' ? categoryId : categoryId._id || categoryId.id;
     
     if (!idString) {
-      console.log('❌ No valid ID found in:', categoryId);
       return 'Unknown';
     }
     
@@ -301,7 +267,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
     if (this.categoryStats()?.topCategories) {
       const topCategory = this.categoryStats()!.topCategories.find(cat => cat.categoryId === idString);
       if (topCategory) {
-        console.log('✅ Found in top categories:', topCategory.name);
         return topCategory.name;
       }
     }
@@ -310,12 +275,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
     if (this.categories() && this.categories().length > 0) {
       const category = this.categories().find(cat => cat._id === idString);
       if (category) {
-        console.log('✅ Found in full categories:', category.name);
         return category.name;
       }
     }
     
-    console.log('❌ Category not found for ID:', idString);
     return 'Unknown';
   }
 

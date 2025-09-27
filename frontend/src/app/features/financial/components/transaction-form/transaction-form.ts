@@ -89,6 +89,14 @@ export class TransactionFormComponent implements OnInit, OnDestroy {
     this.initializeForm();
     this.loadCategories();
     this.checkEditMode();
+    
+    // Subscribe to transaction service loading state
+    this.transactionService.isLoading$.pipe(
+      takeUntil(this.destroy$)
+    ).subscribe(isLoading => {
+      this.isFormLoading = isLoading;
+      this.cdr.detectChanges();
+    });
   }
 
   private initializeForm(): void {
@@ -150,27 +158,21 @@ export class TransactionFormComponent implements OnInit, OnDestroy {
   }
 
   private loadTransaction(transactionId: string): void {
-    this.isFormLoading = true;
     this.error = null;
 
-    // Use getUserTransactions and filter by ID since getTransactionById might not exist
-    this.transactionService.getUserTransactions({ search: transactionId, limit: 1 })
+    this.transactionService.getTransactionById(transactionId)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (response) => {
-          if (response.data && response.data.length > 0) {
-            this.transaction = response.data[0];
-            this.populateForm(this.transaction);
-            this.loadSubcategories(this.transaction.categoryId);
-          } else {
-            this.error = 'Transaction not found';
-          }
-          this.isFormLoading = false;
+        next: (transaction) => {
+          this.transaction = transaction;
+          this.populateForm(this.transaction);
+          this.loadSubcategories(this.transaction.categoryId);
+          this.cdr.detectChanges();
         },
         error: (error) => {
           this.error = 'Failed to load transaction';
-          this.isFormLoading = false;
           console.error('Error loading transaction:', error);
+          this.cdr.detectChanges();
         }
       });
   }

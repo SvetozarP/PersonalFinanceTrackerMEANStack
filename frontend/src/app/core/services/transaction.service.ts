@@ -152,12 +152,12 @@ export class TransactionService {
     }
 
     // Set loading state
-          this.updateTransactionState({
-        transactions: this.transactionsCache || [],
-        isLoading: true,
-        error: null,
-        lastUpdated: this.transactionStateSubject.value.lastUpdated
-      });
+    this.updateTransactionState({
+      transactions: this.transactionsCache || [],
+      isLoading: true,
+      error: null,
+      lastUpdated: this.transactionStateSubject.value.lastUpdated
+    });
 
     // Build query parameters
     let params = new HttpParams();
@@ -201,6 +201,7 @@ export class TransactionService {
           if (this.isBasicQuery(options)) {
             this.transactionsCache = result.data;
           }
+          
           this.updateTransactionState({
             transactions: result.data,
             isLoading: false,
@@ -210,12 +211,12 @@ export class TransactionService {
         }),
         catchError(error => {
           const errorMessage = this.handleError(error);
-                  this.updateTransactionState({
-          transactions: this.transactionsCache || [],
-          isLoading: false,
-          error: errorMessage,
-          lastUpdated: this.transactionStateSubject.value.lastUpdated
-        });
+          this.updateTransactionState({
+            transactions: this.transactionsCache || [],
+            isLoading: false,
+            error: errorMessage,
+            lastUpdated: this.transactionStateSubject.value.lastUpdated
+          });
           return throwError(() => new Error(errorMessage));
         }),
         shareReplay(1)

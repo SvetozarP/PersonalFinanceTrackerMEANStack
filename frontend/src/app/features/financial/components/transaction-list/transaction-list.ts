@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, inject, effect } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, effect, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
@@ -30,6 +30,7 @@ export class TransactionListComponent implements OnInit, OnDestroy {
   private transactionService = inject(TransactionService);
   private categoryService = inject(CategoryService);
   private advancedFilterService = inject(AdvancedFilterService);
+  private cdr = inject(ChangeDetectorRef);
 
   // Setup advanced filters effect in field initializer
   private filterEffect = effect(() => {
@@ -150,6 +151,37 @@ export class TransactionListComponent implements OnInit, OnDestroy {
     this.loadCategories();
     this.loadTransactions();
     this.setupSearchDebounce();
+    
+    // Subscribe to transaction service loading state
+    this.transactionService.isLoading$.pipe(
+      takeUntil(this.destroy$)
+    ).subscribe(isLoading => {
+      this.isTransactionsLoading = isLoading;
+      this.cdr.detectChanges();
+    });
+    
+    // Subscribe to transaction service error state
+    this.transactionService.error$.pipe(
+      takeUntil(this.destroy$)
+    ).subscribe(error => {
+      if (error) {
+        this.error = error;
+      }
+    });
+
+    // Subscribe to transaction service transactions state
+    this.transactionService.transactions$.pipe(
+      takeUntil(this.destroy$)
+    ).subscribe(transactions => {
+      this.cdr.detectChanges();
+    });
+
+    // Subscribe to transaction service state
+    this.transactionService.transactionState$.pipe(
+      takeUntil(this.destroy$)
+    ).subscribe(state => {
+      // State is already handled by individual subscriptions above
+    });
   }
 
   ngOnDestroy(): void {
@@ -176,7 +208,6 @@ export class TransactionListComponent implements OnInit, OnDestroy {
           this.updateCategoryFilterOptions(categories);
         },
         error: (error) => {
-          console.error('Error loading categories:', error);
           this.isCategoriesLoading = false;
         }
       });
@@ -310,7 +341,6 @@ export class TransactionListComponent implements OnInit, OnDestroy {
   }
 
   private loadTransactions(): void {
-    this.isTransactionsLoading = true;
     this.error = null;
 
     const options: QueryOptions & {
@@ -347,12 +377,10 @@ export class TransactionListComponent implements OnInit, OnDestroy {
             this.totalPages = 1;
           }
           
-          this.isTransactionsLoading = false;
+          this.cdr.detectChanges();
         },
         error: (error) => {
           this.error = 'Failed to load transactions';
-          this.isTransactionsLoading = false;
-          console.error('Error loading transactions:', error);
         }
       });
   }
@@ -411,7 +439,6 @@ export class TransactionListComponent implements OnInit, OnDestroy {
           error: (error) => {
             this.error = 'Failed to delete transaction';
             this.isDeleting = false;
-            console.error('Error deleting transaction:', error);
           }
         });
     }
@@ -423,7 +450,6 @@ export class TransactionListComponent implements OnInit, OnDestroy {
     // Simulate export process
     setTimeout(() => {
       // This would trigger actual export logic
-      console.log('Exporting transactions...');
       this.isExporting = false;
     }, 2000);
   }
@@ -619,7 +645,6 @@ export class TransactionListComponent implements OnInit, OnDestroy {
           error: (error) => {
             this.error = 'Failed to delete transaction';
             this.isDeleting = false;
-            console.error('Error deleting transaction:', error);
           }
         });
     }
@@ -637,12 +662,10 @@ export class TransactionListComponent implements OnInit, OnDestroy {
   }
 
   onPresetApplied(preset: any): void {
-    console.log('Filter preset applied:', preset);
     // The filters are already applied by the advanced filter service
   }
 
   onSavedFilterLoaded(savedFilter: any): void {
-    console.log('Saved filter loaded:', savedFilter);
     // The filters are already applied by the advanced filter service
   }
 

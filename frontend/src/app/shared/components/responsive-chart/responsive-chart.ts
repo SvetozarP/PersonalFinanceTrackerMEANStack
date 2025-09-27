@@ -142,13 +142,7 @@ export class ResponsiveChartComponent implements OnInit, OnDestroy, AfterViewIni
   }
 
   initializeChart(): void {
-    console.log('🔄 Chart: Initializing chart...');
-    console.log('🔄 Chart: chartContainer available:', !!this.chartContainer);
-    console.log('🔄 Chart: data available:', this.data);
-    console.log('🔄 Chart: data length:', this.data?.length);
-    
     if (!this.chartContainer) {
-      console.log('❌ Chart: chartContainer not available, retrying...');
       // Retry after a short delay
       setTimeout(() => {
         this.initializeChart();
@@ -172,11 +166,9 @@ export class ResponsiveChartComponent implements OnInit, OnDestroy, AfterViewIni
       // Create the chart
       this.chart = new Chart(this.chartContainer.nativeElement, chartConfig);
       
-      console.log('✅ Chart: Chart.js chart created successfully');
       this.isChartReady.set(true);
       this.chartError.set(null);
     } catch (error) {
-      console.error('❌ Chart: Initialization error:', error);
       this.chartError.set('Failed to initialize chart');
     }
   }
@@ -229,7 +221,6 @@ export class ResponsiveChartComponent implements OnInit, OnDestroy, AfterViewIni
 
     // Resize the Chart.js chart
     this.chart.resize();
-    console.log('Chart resized for screen width:', this.screenWidth());
   }
 
   getChartStyle(): { [key: string]: string } {
@@ -322,11 +313,11 @@ export class ResponsiveChartComponent implements OnInit, OnDestroy, AfterViewIni
 
   // Event handlers
   onChartClick(event: any): void {
-    console.log('Chart clicked:', event);
+    // Handle chart click events
   }
 
   onChartHover(event: any): void {
-    console.log('Chart hovered:', event);
+    // Handle chart hover events
   }
 
   // Loading and error states

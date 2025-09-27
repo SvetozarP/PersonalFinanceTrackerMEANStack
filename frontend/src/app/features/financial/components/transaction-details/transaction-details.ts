@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, ActivatedRoute, Router } from '@angular/router';
 import { Subject, takeUntil, switchMap, of } from 'rxjs';
@@ -22,6 +22,7 @@ export class TransactionDetailsComponent implements OnInit, OnDestroy {
   private categoryService = inject(CategoryService);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
+  private cdr = inject(ChangeDetectorRef);
 
   transaction: Transaction | null = null;
   category: any = null;
@@ -37,6 +38,14 @@ export class TransactionDetailsComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.loadTransaction();
+    
+    // Subscribe to transaction service loading state
+    this.transactionService.isLoading$.pipe(
+      takeUntil(this.destroy$)
+    ).subscribe(isLoading => {
+      this.isLoading = isLoading;
+      this.cdr.detectChanges();
+    });
   }
 
   ngOnDestroy(): void {
@@ -45,7 +54,6 @@ export class TransactionDetailsComponent implements OnInit, OnDestroy {
   }
 
   private loadTransaction(): void {
-    this.isLoading = true;
     this.error = null;
 
     this.route.params.pipe(
@@ -65,12 +73,12 @@ export class TransactionDetailsComponent implements OnInit, OnDestroy {
         } else {
           this.error = 'Transaction not found';
         }
-        this.isLoading = false;
+        this.cdr.detectChanges();
       },
       error: (error) => {
         this.error = 'Failed to load transaction';
-        this.isLoading = false;
         console.error('Error loading transaction:', error);
+        this.cdr.detectChanges();
       }
     });
   }
