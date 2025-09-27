@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, inject, effect } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, effect, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
@@ -27,6 +27,7 @@ export class CategoryListComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
   private categoryService = inject(CategoryService);
   private advancedFilterService = inject(AdvancedFilterService);
+  private cdr = inject(ChangeDetectorRef);
 
   // Setup advanced filters effect in field initializer
   private filterEffect = effect(() => {
@@ -35,6 +36,7 @@ export class CategoryListComponent implements OnInit, OnDestroy {
   });
 
   categories: Category[] = [];
+  allCategories: Category[] = []; // Store all categories for client-side operations
   filteredCategories: Category[] = [];
   categoryTree: Category[] = [];
   stats: CategoryStats | null = null;
@@ -68,6 +70,9 @@ export class CategoryListComponent implements OnInit, OnDestroy {
   
   // View modes
   viewMode: 'list' | 'tree' | 'grid' = 'list';
+  
+  // Tree view expansion state
+  expandedCategories = new Set<string>();
   
   // Category levels for filter dropdown
   categoryLevels = [0, 1, 2, 3, 4, 5];
@@ -154,8 +159,9 @@ export class CategoryListComponent implements OnInit, OnDestroy {
       isActive?: boolean;
       isSystem?: boolean;
     } = {
-      page: this.currentPage,
-      limit: this.pageSize,
+      // Don't send page and limit to API - we'll handle pagination client-side
+      // page: this.currentPage,
+      // limit: this.pageSize,
       sortBy: this.sortBy,
       sortOrder: this.sortOrder,
       search: this.searchTerm || undefined,
@@ -167,17 +173,49 @@ export class CategoryListComponent implements OnInit, OnDestroy {
     this.categoryService.getUserCategories(options)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (categories) => {
+        next: (response: any) => {
+          // Handle both array response and paginated response
+          let categories: Category[];
+          let totalItems: number;
+          
+          if (Array.isArray(response)) {
+            // Direct array response - this means the API is not paginating
+            // We need to handle pagination and sorting client-side
+            this.allCategories = response;
+            totalItems = this.allCategories.length;
+            
+            // Apply client-side sorting
+            let sortedCategories = [...this.allCategories];
+            if (this.sortBy && this.sortOrder) {
+              sortedCategories = this.sortCategories(sortedCategories, this.sortBy, this.sortOrder);
+            }
+            
+            // Apply client-side pagination
+            const startIndex = (this.currentPage - 1) * this.pageSize;
+            const endIndex = startIndex + this.pageSize;
+            categories = sortedCategories.slice(startIndex, endIndex);
+          } else if (response && typeof response === 'object' && 'data' in response) {
+            // Paginated response
+            categories = response.data || [];
+            totalItems = response.total || response.count || categories.length;
+          } else {
+            // Fallback
+            categories = [];
+            totalItems = 0;
+          }
+          
           this.categories = categories;
-          this.filteredCategories = [...categories]; // Initialize filtered categories
-          this.totalItems = categories.length; // Assuming no pagination from service
+          this.filteredCategories = [...categories];
+          this.totalItems = totalItems; // This should be the total count, not the paginated count
           this.totalPages = Math.ceil(this.totalItems / this.pageSize);
           this.isCategoriesLoading = false;
+          
+          // Force change detection
+          this.cdr.detectChanges();
         },
         error: (error) => {
           this.error = 'Failed to load categories';
           this.isCategoriesLoading = false;
-          console.error('Error loading categories:', error);
         }
       });
   }
@@ -191,9 +229,11 @@ export class CategoryListComponent implements OnInit, OnDestroy {
         next: (stats) => {
           this.stats = stats;
           this.isStatsLoading = false;
+          
+          // Force change detection
+          this.cdr.detectChanges();
         },
         error: (error) => {
-          console.error('Error loading category stats:', error);
           this.error = 'Failed to load category statistics';
           this.isStatsLoading = false;
         }
@@ -238,20 +278,11 @@ export class CategoryListComponent implements OnInit, OnDestroy {
       // Different column - reset to asc
       this.sortBy = newSortBy;
       this.sortOrder = 'asc';
-    } else if (newSortBy === undefined) {
-      // No parameter - check if sortBy was changed externally
-      if (this.sortBy !== this.previousSortBy) {
-        // sortBy was changed externally - reset to asc
-        this.sortOrder = 'asc';
-        this.previousSortBy = this.sortBy;
-      } else {
-        // Same column - toggle sort order
-        this.sortOrder = this.sortOrder === 'asc' ? 'desc' : 'asc';
-      }
     } else {
-      // Same column - toggle sort order
+      // Same column or no parameter - toggle sort order
       this.sortOrder = this.sortOrder === 'asc' ? 'desc' : 'asc';
     }
+    
     this.loadCategories();
   }
 
@@ -487,27 +518,60 @@ export class CategoryListComponent implements OnInit, OnDestroy {
   private convertToFontAwesome(icon: string): string {
     // Map common emoji icons to FontAwesome classes
     const iconMap: { [key: string]: string } = {
+      '🏷️': 'fa-tag',
       '🏠': 'fa-home',
+      '🏢': 'fa-building',
+      '🏪': 'fa-store',
+      '🏥': 'fa-hospital',
+      '🏦': 'fa-university',
+      '🏨': 'fa-bed',
+      '🏫': 'fa-school',
+      '🏬': 'fa-shopping-bag',
+      '🏭': 'fa-industry',
+      '🏯': 'fa-landmark',
+      '🏰': 'fa-monument',
+      '💼': 'fa-briefcase',
+      '📱': 'fa-mobile-alt',
+      '💻': 'fa-laptop',
+      '🎮': 'fa-gamepad',
+      '🎬': 'fa-film',
+      '🎵': 'fa-music',
+      '📚': 'fa-book',
+      '✈️': 'fa-plane',
+      '🚗': 'fa-car',
+      '🚌': 'fa-bus',
+      '🚲': 'fa-bicycle',
+      '🍕': 'fa-utensils',
+      '🍔': 'fa-hamburger',
+      '🍽️': 'fa-utensils',
+      '🍰': 'fa-birthday-cake',
+      '🍦': 'fa-ice-cream',
+      '☕': 'fa-coffee',
+      '🍺': 'fa-beer',
+      '🍷': 'fa-wine-glass',
+      '💊': 'fa-pills',
+      '🩺': 'fa-stethoscope',
+      '💉': 'fa-syringe',
+      '👕': 'fa-tshirt',
+      '👖': 'fa-tshirt',
+      '👗': 'fa-female',
+      '👠': 'fa-shoe-prints',
+      '👟': 'fa-running',
+      '👜': 'fa-shopping-bag',
+      '💄': 'fa-paint-brush',
+      '💍': 'fa-ring',
+      '💎': 'fa-gem',
+      '🎁': 'fa-gift',
+      '🎈': 'fa-birthday-cake',
+      // Legacy mappings
       '📁': 'fa-folder',
       '📄': 'fa-file',
       '💰': 'fa-money-bill',
       '🛒': 'fa-shopping-cart',
-      '🍕': 'fa-utensils',
-      '🚗': 'fa-car',
-      '🏥': 'fa-hospital',
-      '💼': 'fa-briefcase',
       '🎓': 'fa-graduation-cap',
       '💡': 'fa-lightbulb',
       '🔧': 'fa-tools',
-      '📱': 'fa-mobile-alt',
-      '💻': 'fa-laptop',
-      '🎮': 'fa-gamepad',
-      '🏃': 'fa-running',
-      '🎵': 'fa-music',
-      '📚': 'fa-book',
-      '✈️': 'fa-plane',
-      '🏨': 'fa-bed',
-      '🍔': 'fa-hamburger'
+      '🏃': 'fa-running'
     };
     
     return iconMap[icon] || 'fa-tag';
@@ -584,6 +648,58 @@ export class CategoryListComponent implements OnInit, OnDestroy {
 
   getPaginationEnd(): number {
     return Math.min(this.currentPage * this.pageSize, this.totalItems);
+  }
+
+  getSortOrderText(): string {
+    switch (this.sortBy) {
+      case 'name':
+        return this.sortOrder === 'asc' ? 'A-Z' : 'Z-A';
+      case 'level':
+        return this.sortOrder === 'asc' ? '0-9' : '9-0';
+      case 'createdAt':
+        return this.sortOrder === 'asc' ? 'Old-New' : 'New-Old';
+      case 'transactionCount':
+        return this.sortOrder === 'asc' ? 'Low-High' : 'High-Low';
+      default:
+        return this.sortOrder === 'asc' ? 'A-Z' : 'Z-A';
+    }
+  }
+
+  private sortCategories(categories: Category[], sortBy: string, sortOrder: string): Category[] {
+    const sorted = categories.sort((a, b) => {
+      let aValue: any;
+      let bValue: any;
+
+      switch (sortBy) {
+        case 'name':
+          aValue = a.name?.toLowerCase() || '';
+          bValue = b.name?.toLowerCase() || '';
+          break;
+        case 'level':
+          aValue = a.level || 0;
+          bValue = b.level || 0;
+          break;
+        case 'createdAt':
+          aValue = new Date(a.createdAt || '').getTime();
+          bValue = new Date(b.createdAt || '').getTime();
+          break;
+        case 'transactionCount':
+          aValue = (a as any).transactionCount || 0;
+          bValue = (b as any).transactionCount || 0;
+          break;
+        default:
+          aValue = a.name?.toLowerCase() || '';
+          bValue = b.name?.toLowerCase() || '';
+      }
+
+      if (sortOrder === 'asc') {
+        return aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
+      } else {
+        return aValue > bValue ? -1 : aValue < bValue ? 1 : 0;
+      }
+    });
+    
+    return sorted;
   }
 
   // Tree view helper methods
@@ -666,8 +782,15 @@ export class CategoryListComponent implements OnInit, OnDestroy {
     }
   
     toggleCategoryExpansion(categoryId: string): void {
-      // This would implement expand/collapse functionality
-      console.log('Toggle expansion for category:', categoryId);
+      if (this.expandedCategories.has(categoryId)) {
+        this.expandedCategories.delete(categoryId);
+      } else {
+        this.expandedCategories.add(categoryId);
+      }
+    }
+
+    isExpanded(categoryId: string): boolean {
+      return this.expandedCategories.has(categoryId);
     }
   
     // Grid view helper methods
@@ -736,5 +859,46 @@ export class CategoryListComponent implements OnInit, OnDestroy {
             }
           });
       }
+    }
+
+    // Icon color helper method
+    getCategoryIconColor(category: Category): string {
+      if (!category.icon) {
+        return '#6B7280'; // Default gray
+      }
+      
+      // Assign colors based on icon type/category
+      const iconColorMap: { [key: string]: string } = {
+        // Building/Home icons - Blue
+        '🏠': '#3B82F6', '🏢': '#3B82F6', '🏪': '#3B82F6', '🏥': '#3B82F6', 
+        '🏦': '#3B82F6', '🏨': '#3B82F6', '🏫': '#3B82F6', '🏬': '#3B82F6',
+        '🏭': '#3B82F6', '🏯': '#3B82F6', '🏰': '#3B82F6',
+        
+        // Technology icons - Purple
+        '💻': '#8B5CF6', '📱': '#8B5CF6', '🎮': '#8B5CF6', '🎬': '#8B5CF6',
+        '🎵': '#8B5CF6', '📚': '#8B5CF6',
+        
+        // Transportation icons - Green
+        '✈️': '#10B981', '🚗': '#10B981', '🚌': '#10B981', '🚲': '#10B981',
+        
+        // Food icons - Orange
+        '🍕': '#F59E0B', '🍔': '#F59E0B', '🍽️': '#F59E0B', '🍰': '#F59E0B',
+        '🍦': '#F59E0B', '☕': '#F59E0B', '🍺': '#F59E0B', '🍷': '#F59E0B',
+        
+        // Health icons - Red
+        '💊': '#EF4444', '🩺': '#EF4444', '💉': '#EF4444',
+        
+        // Clothing icons - Pink
+        '👕': '#EC4899', '👖': '#EC4899', '👗': '#EC4899', '👠': '#EC4899',
+        '👟': '#EC4899', '👜': '#EC4899', '💄': '#EC4899', '💍': '#EC4899',
+        
+        // Business icons - Indigo
+        '💼': '#6366F1', '💎': '#6366F1', '🎁': '#6366F1', '🎈': '#6366F1',
+        
+        // Default tag
+        '🏷️': '#6B7280'
+      };
+      
+      return iconColorMap[category.icon] || '#6B7280'; // Default gray for unmapped icons
     }
 }

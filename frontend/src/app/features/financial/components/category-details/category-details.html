@@ -1,0 +1,237 @@
+<div class="category-details-container">
+  <!-- Header Section -->
+  <div class="header-section">
+    <div class="title-section">
+      <button class="btn btn-outline-secondary back-btn" (click)="onBack()">
+        <i class="fas fa-arrow-left"></i>
+        Back to Categories
+      </button>
+      <h1>Category Details</h1>
+    </div>
+    <div class="actions-section" *ngIf="category">
+      <button class="btn btn-outline-secondary" (click)="onEdit()">
+        <i class="fas fa-edit"></i>
+        Edit Category
+      </button>
+      <button 
+        class="btn btn-outline-danger" 
+        (click)="onDelete()"
+        [disabled]="category.isSystem">
+        <i class="fas fa-trash"></i>
+        Delete Category
+      </button>
+    </div>
+  </div>
+
+  <!-- Error Display -->
+  <div *ngIf="error" class="alert alert-danger">
+    <i class="fas fa-exclamation-triangle"></i>
+    {{ error }}
+    <button class="btn-close" (click)="error = null">
+      <i class="fas fa-times"></i>
+    </button>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="isCategoryLoading" class="loading-container">
+    <app-loading-spinner 
+      message="Loading category details..." 
+      size="large" 
+      [overlay]="false">
+    </app-loading-spinner>
+  </div>
+
+  <!-- Category Details Content -->
+  <div *ngIf="!isCategoryLoading && category" class="category-content">
+    
+    <!-- Category Header -->
+    <div class="category-header">
+      <div class="category-icon" [style.background-color]="category.color">
+        <i class="fas {{ getCategoryIcon(category) }}"></i>
+      </div>
+      <div class="category-info">
+        <h2 class="category-name">{{ category.name }}</h2>
+        <div class="category-meta">
+          <span class="level" [class]="getCategoryLevelClass(category.level)">
+            Level {{ category.level }}
+          </span>
+          <span class="status" [class]="getCategoryStatusClass(category)">
+            {{ category.isActive ? 'Active' : 'Inactive' }}
+          </span>
+          <span class="system" *ngIf="category.isSystem">System Category</span>
+        </div>
+        <p class="category-description" *ngIf="category.description">
+          {{ category.description }}
+        </p>
+      </div>
+    </div>
+
+    <!-- Category Details Grid -->
+    <div class="details-grid">
+      
+      <!-- Basic Information -->
+      <div class="detail-card">
+        <div class="card-header">
+          <h3>
+            <i class="fas fa-info-circle"></i>
+            Basic Information
+          </h3>
+        </div>
+        <div class="card-body">
+          <div class="detail-row">
+            <label>Category Name:</label>
+            <span>{{ category.name }}</span>
+          </div>
+          <div class="detail-row" *ngIf="category.description">
+            <label>Description:</label>
+            <span>{{ category.description }}</span>
+          </div>
+          <div class="detail-row">
+            <label>Status:</label>
+            <span [class]="getCategoryStatusClass(category)">
+              {{ category.isActive ? 'Active' : 'Inactive' }}
+            </span>
+          </div>
+          <div class="detail-row">
+            <label>Type:</label>
+            <span>{{ category.isSystem ? 'System Category' : 'User Category' }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Visual Properties -->
+      <div class="detail-card">
+        <div class="card-header">
+          <h3>
+            <i class="fas fa-palette"></i>
+            Visual Properties
+          </h3>
+        </div>
+        <div class="card-body">
+          <div class="detail-row">
+            <label>Color:</label>
+            <div class="color-display">
+              <div class="color-preview" [style.background-color]="category.color"></div>
+              <span class="color-value">{{ category.color }}</span>
+            </div>
+          </div>
+          <div class="detail-row">
+            <label>Icon:</label>
+            <div class="icon-display">
+              <i class="fas {{ getCategoryIcon(category) }}"></i>
+              <span class="icon-name">{{ category.icon || 'fa-tag' }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Hierarchy Information -->
+      <div class="detail-card">
+        <div class="card-header">
+          <h3>
+            <i class="fas fa-sitemap"></i>
+            Hierarchy
+          </h3>
+        </div>
+        <div class="card-body">
+          <div class="detail-row">
+            <label>Level:</label>
+            <span [class]="getCategoryLevelClass(category.level)">
+              Level {{ category.level }}
+            </span>
+          </div>
+          <div class="detail-row" *ngIf="parentCategory">
+            <label>Parent Category:</label>
+            <div class="parent-category">
+              <div class="parent-icon" [style.background-color]="parentCategory.color">
+                <i class="fas {{ getCategoryIcon(parentCategory) }}"></i>
+              </div>
+              <span class="parent-name">{{ parentCategory.name }}</span>
+            </div>
+          </div>
+          <div class="detail-row" *ngIf="!parentCategory && category.parentId">
+            <label>Parent Category:</label>
+            <span class="loading-text" *ngIf="isParentLoading">Loading...</span>
+            <span class="error-text" *ngIf="!isParentLoading">Parent category not found</span>
+          </div>
+          <div class="detail-row" *ngIf="!category.parentId">
+            <label>Parent Category:</label>
+            <span class="text-muted">Top-level category</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Subcategories -->
+      <div class="detail-card" *ngIf="subcategories.length > 0 || isSubcategoriesLoading">
+        <div class="card-header">
+          <h3>
+            <i class="fas fa-folder-tree"></i>
+            Subcategories
+          </h3>
+        </div>
+        <div class="card-body">
+          <div *ngIf="isSubcategoriesLoading" class="loading-text">
+            Loading subcategories...
+          </div>
+          <div *ngIf="!isSubcategoriesLoading && subcategories.length === 0" class="text-muted">
+            No subcategories found
+          </div>
+          <div *ngIf="!isSubcategoriesLoading && subcategories.length > 0" class="subcategories-list">
+            <div *ngFor="let subcategory of subcategories" class="subcategory-item">
+              <div class="subcategory-icon" [style.background-color]="subcategory.color">
+                <i class="fas {{ getCategoryIcon(subcategory) }}"></i>
+              </div>
+              <div class="subcategory-info">
+                <div class="subcategory-name">{{ subcategory.name }}</div>
+                <div class="subcategory-meta">
+                  <span class="status" [class]="getCategoryStatusClass(subcategory)">
+                    {{ subcategory.isActive ? 'Active' : 'Inactive' }}
+                  </span>
+                </div>
+              </div>
+              <div class="subcategory-actions">
+                <button class="btn btn-sm btn-outline-primary" [routerLink]="['/financial/categories', subcategory._id]">
+                  <i class="fas fa-eye"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-secondary" [routerLink]="['/financial/categories', subcategory._id, 'edit']">
+                  <i class="fas fa-edit"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Timestamps -->
+      <div class="detail-card">
+        <div class="card-header">
+          <h3>
+            <i class="fas fa-clock"></i>
+            Timestamps
+          </h3>
+        </div>
+        <div class="card-body">
+          <div class="detail-row">
+            <label>Created:</label>
+            <span>{{ category.createdAt | date:'medium' }}</span>
+          </div>
+          <div class="detail-row">
+            <label>Last Updated:</label>
+            <span>{{ category.updatedAt | date:'medium' }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Not Found State -->
+  <div *ngIf="!isCategoryLoading && !category && !error" class="not-found-state">
+    <i class="fas fa-exclamation-circle"></i>
+    <h3>Category not found</h3>
+    <p>The category you're looking for doesn't exist or has been deleted.</p>
+    <button class="btn btn-primary" (click)="onBack()">
+      <i class="fas fa-arrow-left"></i>
+      Back to Categories
+    </button>
+  </div>
+</div>

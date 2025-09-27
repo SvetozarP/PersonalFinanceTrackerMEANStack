@@ -1,6 +1,6 @@
-/* Custom FontAwesome icons - only the ones we actually use */
-@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/fontawesome.min.css');
-@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/solid.min.css');
+/* Custom FontAwesome icons - using local installation */
+@import '../../../../node_modules/@fortawesome/fontawesome-free/css/fontawesome.min.css';
+@import '../../../../node_modules/@fortawesome/fontawesome-free/css/solid.min.css';
 
 /* Override the full FontAwesome import in angular.json with this optimized version */
 

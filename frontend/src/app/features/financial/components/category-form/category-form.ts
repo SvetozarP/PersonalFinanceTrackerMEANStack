@@ -1,8 +1,8 @@
-import { Component, OnInit, OnDestroy, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, ActivatedRoute, Router } from '@angular/router';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, AbstractControl } from '@angular/forms';
-import { Subject, takeUntil, switchMap, of } from 'rxjs';
+import { Subject, takeUntil, switchMap, of, take } from 'rxjs';
 import { Category } from '../../../../core/models/financial.model';
 import { CategoryService } from '../../../../core/services/category.service';
 import { LoadingSpinnerComponent } from '../../../../shared/components/loading-spinner/loading-spinner';
@@ -25,6 +25,7 @@ export class CategoryFormComponent implements OnInit, OnDestroy {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private fb = inject(FormBuilder);
+  private cdr = inject(ChangeDetectorRef);
 
   // Initialize the form group
   categoryForm: FormGroup = this.fb.group({
@@ -49,6 +50,7 @@ export class CategoryFormComponent implements OnInit, OnDestroy {
   // Form mode
   isEditMode = false;
   categoryId: string | null = null;
+  private isInitialized = false;
   
   // Color and icon options
   colorOptions = [
@@ -126,11 +128,19 @@ export class CategoryFormComponent implements OnInit, OnDestroy {
   }
 
   private checkEditMode(): void {
+    if (this.isInitialized) {
+      return;
+    }
+
     this.route.paramMap
       .pipe(
+        take(1), // Only take the first emission to prevent duplicate processing
         takeUntil(this.destroy$),
         switchMap(params => {
           const id = params.get('id');
+          
+          this.isInitialized = true; // Mark as initialized
+          
           if (id && id !== 'new') {
             this.isEditMode = true;
             this.categoryId = id;
@@ -147,6 +157,11 @@ export class CategoryFormComponent implements OnInit, OnDestroy {
   }
 
   private loadCategory(categoryId: string): void {
+    // Prevent duplicate loading if already loading or already loaded
+    if (this.isFormLoading || (this.category && this.category._id === categoryId)) {
+      return;
+    }
+
     this.isFormLoading = true;
     this.error = null;
 
@@ -157,11 +172,13 @@ export class CategoryFormComponent implements OnInit, OnDestroy {
           this.category = category;
           this.populateForm(category);
           this.isFormLoading = false;
+          
+          // Force change detection
+          this.cdr.detectChanges();
         },
         error: (error) => {
           this.error = 'Failed to load category';
           this.isFormLoading = false;
-          console.error('Error loading category:', error);
         }
       });
   }
@@ -186,7 +203,6 @@ export class CategoryFormComponent implements OnInit, OnDestroy {
           this.categoryForm.get('parentId')?.enable();
         },
         error: (error) => {
-          console.error('Error loading parent categories:', error);
           this.isParentCategoriesLoading = false;
           // Re-enable the parentId control even on error
           this.categoryForm.get('parentId')?.enable();
@@ -221,31 +237,108 @@ export class CategoryFormComponent implements OnInit, OnDestroy {
   private convertToFontAwesome(icon: string): string {
     // Map common emoji icons to FontAwesome classes
     const iconMap: { [key: string]: string } = {
+      '🏷️': 'fa-tag',
       '🏠': 'fa-home',
-      '📁': 'fa-folder',
-      '📄': 'fa-file',
-      '💰': 'fa-money-bill',
-      '🛒': 'fa-shopping-cart',
-      '🍕': 'fa-utensils',
-      '🚗': 'fa-car',
+      '🏢': 'fa-building',
+      '🏪': 'fa-store',
       '🏥': 'fa-hospital',
+      '🏦': 'fa-university',
+      '🏨': 'fa-bed',
+      '🏫': 'fa-school',
+      '🏬': 'fa-shopping-bag',
+      '🏭': 'fa-industry',
+      '🏯': 'fa-landmark',
+      '🏰': 'fa-monument',
       '💼': 'fa-briefcase',
-      '🎓': 'fa-graduation-cap',
-      '💡': 'fa-lightbulb',
-      '🔧': 'fa-tools',
       '📱': 'fa-mobile-alt',
       '💻': 'fa-laptop',
       '🎮': 'fa-gamepad',
-      '🏃': 'fa-running',
+      '🎬': 'fa-film',
       '🎵': 'fa-music',
       '📚': 'fa-book',
       '✈️': 'fa-plane',
-      '🏨': 'fa-bed',
+      '🚗': 'fa-car',
+      '🚌': 'fa-bus',
+      '🚲': 'fa-bicycle',
+      '🍕': 'fa-utensils',
       '🍔': 'fa-hamburger',
-      '🏷️': 'fa-tag'
+      '🍽️': 'fa-utensils',
+      '🍰': 'fa-birthday-cake',
+      '🍦': 'fa-ice-cream',
+      '☕': 'fa-coffee',
+      '🍺': 'fa-beer',
+      '🍷': 'fa-wine-glass',
+      '💊': 'fa-pills',
+      '🩺': 'fa-stethoscope',
+      '💉': 'fa-syringe',
+      '👕': 'fa-tshirt',
+      '👖': 'fa-tshirt',
+      '👗': 'fa-female',
+      '👠': 'fa-shoe-prints',
+      '👟': 'fa-running',
+      '👜': 'fa-shopping-bag',
+      '💄': 'fa-paint-brush',
+      '💍': 'fa-ring',
+      '💎': 'fa-gem',
+      '🎁': 'fa-gift',
+      '🎈': 'fa-birthday-cake'
     };
     
     return iconMap[icon] || 'fa-tag';
+  }
+
+
+  // Get FontAwesome class for icon
+  getIconClass(icon: string): string {
+    if (!icon) return 'fa-tag';
+    
+    // If it's already a FontAwesome class, return it
+    if (icon.startsWith('fa-')) {
+      return icon;
+    }
+    
+    // Convert emoji or other formats to FontAwesome
+    return this.convertToFontAwesome(icon);
+  }
+
+  getIconColor(icon: string): string {
+    if (!icon) {
+      return '#6B7280'; // Default gray
+    }
+    
+    // Assign colors based on icon type/category
+    const iconColorMap: { [key: string]: string } = {
+      // Building/Home icons - Blue
+      '🏠': '#3B82F6', '🏢': '#3B82F6', '🏪': '#3B82F6', '🏥': '#3B82F6', 
+      '🏦': '#3B82F6', '🏨': '#3B82F6', '🏫': '#3B82F6', '🏬': '#3B82F6',
+      '🏭': '#3B82F6', '🏯': '#3B82F6', '🏰': '#3B82F6',
+      
+      // Technology icons - Purple
+      '💻': '#8B5CF6', '📱': '#8B5CF6', '🎮': '#8B5CF6', '🎬': '#8B5CF6',
+      '🎵': '#8B5CF6', '📚': '#8B5CF6',
+      
+      // Transportation icons - Green
+      '✈️': '#10B981', '🚗': '#10B981', '🚌': '#10B981', '🚲': '#10B981',
+      
+      // Food icons - Orange
+      '🍕': '#F59E0B', '🍔': '#F59E0B', '🍽️': '#F59E0B', '🍰': '#F59E0B',
+      '🍦': '#F59E0B', '☕': '#F59E0B', '🍺': '#F59E0B', '🍷': '#F59E0B',
+      
+      // Health icons - Red
+      '💊': '#EF4444', '🩺': '#EF4444', '💉': '#EF4444',
+      
+      // Clothing icons - Pink
+      '👕': '#EC4899', '👖': '#EC4899', '👗': '#EC4899', '👠': '#EC4899',
+      '👟': '#EC4899', '👜': '#EC4899', '💄': '#EC4899', '💍': '#EC4899',
+      
+      // Business icons - Indigo
+      '💼': '#6366F1', '💎': '#6366F1', '🎁': '#6366F1', '🎈': '#6366F1',
+      
+      // Default tag
+      '🏷️': '#6B7280'
+    };
+    
+    return iconColorMap[icon] || '#6B7280'; // Default gray for unmapped icons
   }
 
   onColorSelect(color: string): void {
@@ -285,7 +378,6 @@ export class CategoryFormComponent implements OnInit, OnDestroy {
             error: (error) => {
               this.error = 'Failed to update category';
               this.isSubmitting = false;
-              console.error('Error updating category:', error);
             }
           });
       } else {
@@ -300,7 +392,6 @@ export class CategoryFormComponent implements OnInit, OnDestroy {
             error: (error) => {
               this.error = 'Failed to create category';
               this.isSubmitting = false;
-              console.error('Error creating category:', error);
             }
           });
       }

@@ -183,41 +183,46 @@
     </app-loading-spinner>
   </div>
 
+  <!-- Sorting and Pagination Controls -->
+  <div *ngIf="hasCategories" class="controls-section">
+    <div class="sorting-controls">
+      <label for="sortBy">Sort by:</label>
+      <select id="sortBy" [(ngModel)]="sortBy" (change)="onSortChange()" class="form-control">
+        <option value="name">Name</option>
+        <option value="level">Level</option>
+        <option value="createdAt">Created Date</option>
+        <option value="transactionCount">Transaction Count</option>
+      </select>
+      
+      <button class="btn btn-outline-secondary sort-order-btn" 
+              (click)="onSortChange()"
+              [title]="'Sort ' + (sortOrder === 'asc' ? 'Descending' : 'Ascending')">
+        <i class="fas" [class.fa-sort-up]="sortOrder === 'asc'" [class.fa-sort-down]="sortOrder === 'desc'"></i>
+        <span class="sort-order-text">{{ getSortOrderText() }}</span>
+      </button>
+    </div>
+
+    <div class="page-size-controls">
+      <label for="pageSize">Page size:</label>
+      <select id="pageSize" [(ngModel)]="pageSize" (change)="onPageSizeChange(pageSize)" class="form-control">
+        <option value="10">10</option>
+        <option value="20">20</option>
+        <option value="50">50</option>
+        <option value="100">100</option>
+      </select>
+    </div>
+  </div>
+
   <!-- Categories Content -->
   <div *ngIf="!isCategoriesLoading" class="categories-content">
     
     <!-- List View -->
     <div *ngIf="viewMode === 'list' && hasCategories" class="categories-list">
-      <div class="list-header">
-        <div class="sorting-controls">
-          <label for="sortBy">Sort by:</label>
-          <select id="sortBy" [(ngModel)]="sortBy" (change)="onSortChange()" class="form-control">
-            <option value="name">Name</option>
-            <option value="level">Level</option>
-            <option value="createdAt">Created Date</option>
-            <option value="transactionCount">Transaction Count</option>
-          </select>
-          
-          <button class="btn btn-outline-secondary" (click)="sortOrder = sortOrder === 'asc' ? 'desc' : 'asc'; onSortChange()">
-            <i class="fas" [class.fa-sort-up]="sortOrder === 'asc'" [class.fa-sort-down]="sortOrder === 'desc'"></i>
-          </button>
-        </div>
-
-        <div class="page-size-controls">
-          <label for="pageSize">Page size:</label>
-          <select id="pageSize" [(ngModel)]="pageSize" (change)="onPageSizeChange(pageSize)" class="form-control">
-            <option value="10">10</option>
-            <option value="20">20</option>
-            <option value="50">50</option>
-            <option value="100">100</option>
-          </select>
-        </div>
-      </div>
 
       <div class="categories-table">
         <div *ngFor="let category of filteredCategories" class="category-item">
           <div class="category-icon" [style.background-color]="category.color">
-            <i class="fas {{ getCategoryIcon(category) }}"></i>
+            <i class="fas {{ getCategoryIcon(category) }}" [style.color]="getCategoryIconColor(category)"></i>
           </div>
           
           <div class="category-details">
@@ -237,16 +242,17 @@
           </div>
           
           <div class="category-actions">
-            <button class="btn btn-sm btn-outline-primary" [routerLink]="['/financial/categories', category._id]">
+            <button class="btn btn-sm btn-action btn-view" [routerLink]="['/financial/categories', category._id]" title="View Category">
               <i class="fas fa-eye"></i>
             </button>
-            <button class="btn btn-sm btn-outline-secondary" [routerLink]="['/financial/categories', category._id, 'edit']">
+            <button class="btn btn-sm btn-action btn-edit" [routerLink]="['/financial/categories', category._id, 'edit']" title="Edit Category">
               <i class="fas fa-edit"></i>
             </button>
             <button 
-              class="btn btn-sm btn-outline-danger" 
+              class="btn btn-sm btn-action btn-delete" 
               (click)="deleteCategory(category._id)"
-              [disabled]="isDeleting || category.isSystem">
+              [disabled]="isDeleting || category.isSystem"
+              title="Delete Category">
               <i class="fas fa-trash"></i>
             </button>
           </div>
@@ -264,50 +270,84 @@
       </div>
       
       <div *ngIf="!isTreeLoading" class="tree-content">
-        <div *ngFor="let rootCategory of getRootCategories()" class="tree-node">
+        <div *ngFor="let rootCategory of getRootCategories()" class="tree-node root-node">
           <div class="node-content">
+            <div class="node-expand" *ngIf="hasChildren(rootCategory._id)">
+              <button class="expand-btn" (click)="toggleCategoryExpansion(rootCategory._id)">
+                <i class="fas" [class.fa-chevron-right]="!isExpanded(rootCategory._id)" [class.fa-chevron-down]="isExpanded(rootCategory._id)"></i>
+              </button>
+            </div>
             <div class="node-icon" [style.background-color]="rootCategory.color">
-              <i class="fas {{ getCategoryIcon(rootCategory) }}"></i>
+              <i class="fas {{ getCategoryIcon(rootCategory) }}" [style.color]="getCategoryIconColor(rootCategory)"></i>
             </div>
             <div class="node-details">
               <div class="node-name">{{ rootCategory.name }}</div>
               <div class="node-meta">
+                <span class="level">Level {{ rootCategory.level }}</span>
                 <span class="status" [class]="getCategoryStatusClass(rootCategory)">
                   {{ rootCategory.isActive ? 'Active' : 'Inactive' }}
                 </span>
+                <span class="system" *ngIf="rootCategory.isSystem">System</span>
+              </div>
+              <div class="node-description" *ngIf="rootCategory.description">
+                {{ rootCategory.description }}
               </div>
             </div>
             <div class="node-actions">
-              <button class="btn btn-sm btn-outline-primary" [routerLink]="['/financial/categories', rootCategory._id]">
+              <button class="btn btn-sm btn-action btn-view" [routerLink]="['/financial/categories', rootCategory._id]" title="View Category">
                 <i class="fas fa-eye"></i>
               </button>
-              <button class="btn btn-sm btn-outline-secondary" [routerLink]="['/financial/categories', rootCategory._id, 'edit']">
+              <button class="btn btn-sm btn-action btn-edit" [routerLink]="['/financial/categories', rootCategory._id, 'edit']" title="Edit Category">
                 <i class="fas fa-edit"></i>
+              </button>
+              <button 
+                class="btn btn-sm btn-action btn-delete" 
+                (click)="deleteCategory(rootCategory._id)"
+                [disabled]="isDeleting || rootCategory.isSystem"
+                title="Delete Category">
+                <i class="fas fa-trash"></i>
               </button>
             </div>
           </div>
           
           <!-- Subcategories -->
-          <div *ngIf="hasSubcategories(rootCategory._id)" class="subcategories">
-            <div *ngFor="let subcategory of getSubcategories(rootCategory._id)" class="tree-node sub-node">
+          <div *ngIf="hasChildren(rootCategory._id) && isExpanded(rootCategory._id)" class="subcategories">
+            <div *ngFor="let subcategory of getChildCategories(rootCategory._id)" class="tree-node sub-node">
               <div class="node-content">
+                <div class="node-expand" *ngIf="hasChildren(subcategory._id)">
+                  <button class="expand-btn" (click)="toggleCategoryExpansion(subcategory._id)">
+                    <i class="fas" [class.fa-chevron-right]="!isExpanded(subcategory._id)" [class.fa-chevron-down]="isExpanded(subcategory._id)"></i>
+                  </button>
+                </div>
                 <div class="node-icon" [style.background-color]="subcategory.color">
-                  <i class="fas {{ getCategoryIcon(subcategory) }}"></i>
+                  <i class="fas {{ getCategoryIcon(subcategory) }}" [style.color]="getCategoryIconColor(subcategory)"></i>
                 </div>
                 <div class="node-details">
                   <div class="node-name">{{ subcategory.name }}</div>
                   <div class="node-meta">
+                    <span class="level">Level {{ subcategory.level }}</span>
                     <span class="status" [class]="getCategoryStatusClass(subcategory)">
                       {{ subcategory.isActive ? 'Active' : 'Inactive' }}
                     </span>
+                    <span class="system" *ngIf="subcategory.isSystem">System</span>
+                  </div>
+                  <div class="node-description" *ngIf="subcategory.description">
+                    {{ subcategory.description }}
                   </div>
                 </div>
                 <div class="node-actions">
-                  <button class="btn btn-sm btn-outline-primary" [routerLink]="['/financial/categories', subcategory._id]">
+                  <button class="btn btn-sm btn-action btn-view" [routerLink]="['/financial/categories', subcategory._id]" title="View Category">
                     <i class="fas fa-eye"></i>
                   </button>
-                  <button class="btn btn-sm btn-outline-secondary" [routerLink]="['/financial/categories', subcategory._id, 'edit']">
+                  <button class="btn btn-sm btn-action btn-edit" [routerLink]="['/financial/categories', subcategory._id, 'edit']" title="Edit Category">
                     <i class="fas fa-edit"></i>
+                  </button>
+                  <button 
+                    class="btn btn-sm btn-action btn-delete" 
+                    (click)="deleteCategory(subcategory._id)"
+                    [disabled]="isDeleting || subcategory.isSystem"
+                    title="Delete Category">
+                    <i class="fas fa-trash"></i>
                   </button>
                 </div>
               </div>
@@ -322,14 +362,21 @@
       <div *ngFor="let category of filteredCategories" class="category-card">
         <div class="card-header" [style.background-color]="category.color">
           <div class="card-icon">
-            <i class="fas {{ getCategoryIcon(category) }}"></i>
+            <i class="fas {{ getCategoryIcon(category) }}" [style.color]="getCategoryIconColor(category)"></i>
           </div>
           <div class="card-actions">
-            <button class="btn btn-sm btn-outline-light" [routerLink]="['/financial/categories', category._id]">
+            <button class="btn btn-sm btn-action btn-view" [routerLink]="['/financial/categories', category._id]" title="View Category">
               <i class="fas fa-eye"></i>
             </button>
-            <button class="btn btn-sm btn-outline-light" [routerLink]="['/financial/categories', category._id, 'edit']">
+            <button class="btn btn-sm btn-action btn-edit" [routerLink]="['/financial/categories', category._id, 'edit']" title="Edit Category">
               <i class="fas fa-edit"></i>
+            </button>
+            <button 
+              class="btn btn-sm btn-action btn-delete" 
+              (click)="deleteCategory(category._id)"
+              [disabled]="isDeleting || category.isSystem"
+              title="Delete Category">
+              <i class="fas fa-trash"></i>
             </button>
           </div>
         </div>
@@ -343,6 +390,7 @@
             <span class="status" [class]="getCategoryStatusClass(category)">
               {{ category.isActive ? 'Active' : 'Inactive' }}
             </span>
+            <span class="system" *ngIf="category.isSystem">System</span>
           </div>
         </div>
       </div>

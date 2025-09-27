@@ -54,6 +54,12 @@ export const FINANCIAL_ROUTES: Routes = [
         title: 'New Category'
       },
       {
+        path: 'categories/:id',
+        loadComponent: () => import('./components/category-details/category-details')
+          .then(m => m.CategoryDetailsComponent),
+        title: 'Category Details'
+      },
+      {
         path: 'categories/:id/edit',
         loadComponent: () => import('./components/category-form/category-form')
           .then(m => m.CategoryFormComponent),

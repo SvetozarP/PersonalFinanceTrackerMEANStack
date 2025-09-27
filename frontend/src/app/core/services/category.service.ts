@@ -61,8 +61,9 @@ export class CategoryService {
    * Get all categories for the current user
    */
   getUserCategories(options: QueryOptions = {}): Observable<Category[]> {
-    // Check cache first
-    if (this.categoriesCache.length > 0 && this.isCacheValid()) {
+    // Check cache first, but only if no pagination/sorting options are provided
+    if (this.categoriesCache.length > 0 && this.isCacheValid() && 
+        !options.page && !options.limit && !options.sortBy && !options.sortOrder && !options.search) {
       this.updateCategoryState({
         categories: this.categoriesCache,
         isLoading: false,

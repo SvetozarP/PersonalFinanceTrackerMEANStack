@@ -19,6 +19,7 @@
     {{ error }}
   </div>
 
+
   <!-- Main Loading State -->
   <div *ngIf="isFormLoading" class="loading-container">
     <app-loading-spinner 
@@ -82,7 +83,7 @@
               <label for="color">Color *</label>
               <div class="color-picker">
                 <div class="color-preview" [ngStyle]="getPreviewStyle()">
-                  <span class="preview-icon" [title]="getIconDescription(getFieldControl('icon')?.value || '🏷️')">{{ getFieldControl('icon')?.value || '🏷️' }}</span>
+                  <i class="fas {{ getIconClass(getFieldControl('icon')?.value || '🏷️') }}" [title]="getIconDescription(getFieldControl('icon')?.value || '🏷️')" style="color: white;"></i>
                 </div>
                 <input
                   type="color"
@@ -115,7 +116,7 @@
               <label for="icon">Icon *</label>
               <div class="icon-picker">
                 <div class="icon-preview" [ngStyle]="getPreviewStyle()">
-                  <span class="preview-icon" [title]="getIconDescription(getFieldControl('icon')?.value || '🏷️')">{{ getFieldControl('icon')?.value || '🏷️' }}</span>
+                  <i class="fas {{ getIconClass(getFieldControl('icon')?.value || '🏷️') }}" [title]="getIconDescription(getFieldControl('icon')?.value || '🏷️')" style="color: white;"></i>
                 </div>
                 <div class="icon-options">
                   <div class="icon-option-label">Quick Select:</div>
@@ -129,7 +130,7 @@
                       [attr.aria-label]="'Select icon ' + icon"
                       [title]="getIconDescription(icon)"
                     >
-                      {{ icon }}
+                      <i class="fas {{ getIconClass(icon) }}" [style.color]="getIconColor(icon)" style="font-size: 18px;"></i>
                     </button>
                   </div>
                 </div>
@@ -213,7 +214,7 @@
           <div class="preview-container">
             <div class="category-preview" [ngStyle]="getPreviewStyle()">
               <div class="preview-content">
-                <span class="preview-icon" [title]="getIconDescription(getFieldControl('icon')?.value || '🏷️')">{{ getFieldControl('icon')?.value || '🏷️' }}</span>
+                <i class="fas {{ getIconClass(getFieldControl('icon')?.value || '🏷️') }}" [title]="getIconDescription(getFieldControl('icon')?.value || '🏷️')"></i>
                 <div class="preview-details">
                   <div class="preview-name">{{ getFieldControl('name')?.value || 'Category Name' }}</div>
                   <div class="preview-description" *ngIf="getFieldControl('description')?.value">

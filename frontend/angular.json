@@ -32,7 +32,10 @@
             ],
             "styles": [
               "src/styles.scss",
-              "src/app/shared/icons/icons.scss"
+              "node_modules/@fortawesome/fontawesome-free/css/fontawesome.min.css",
+              "node_modules/@fortawesome/fontawesome-free/css/solid.min.css",
+              "node_modules/@fortawesome/fontawesome-free/css/regular.min.css",
+              "node_modules/@fortawesome/fontawesome-free/css/brands.min.css"
             ],
             "outputMode": "static"
           },
