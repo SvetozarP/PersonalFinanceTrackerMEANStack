@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { BudgetService } from '../services/budget.service';
 import { logger } from '../../../../shared/services/logger.service';
 import { AuthenticatedRequest } from '../../../auth/auth.middleware';
-import { validateBudgetInput } from '../validation/budget.validation';
+import { validateBudgetInput, budgetValidation } from '../validation/budget.validation';
 
 export class BudgetController {
   constructor(private readonly budgetService: BudgetService) {}
@@ -228,9 +228,17 @@ export class BudgetController {
         return;
       }
 
+      // Debug: Log the request body and validation schema
+      console.log('=== BUDGET UPDATE DEBUG START ===');
+      console.log('Update budget request body:', JSON.stringify(req.body, null, 2));
+      console.log('Validation schema keys:', Object.keys(budgetValidation.updateBudget.describe().keys || {}));
+      console.log('Period field in schema:', budgetValidation.updateBudget.describe().keys?.period);
+      console.log('=== BUDGET UPDATE DEBUG END ===');
+      
       // Validate input using Joi validation
       const { error, value } = validateBudgetInput.updateBudget(req.body);
       if (error) {
+        console.log('Validation error details:', error.details);
         res.status(400).json({
           error: 'Validation failed',
           details: error.details.map(d => d.message),

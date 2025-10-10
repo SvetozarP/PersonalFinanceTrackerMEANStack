@@ -6,6 +6,7 @@ import { HttpClient, HttpParams } from "@angular/common/http";
 
 export interface FinancialState {
     dashboard: FinancialDashboard | null;
+    currencyDashboards: Map<string, FinancialDashboard> | null;
     isLoading: boolean;
     error: string | null;
     lastUpdated: Date | null;
@@ -23,6 +24,7 @@ export class FinancialService {
    // Reactive State Management
    private dashboardStateSubject = new BehaviorSubject<FinancialState>({
     dashboard: null,
+    currencyDashboards: null,
     isLoading: false,
     error: null,
     lastUpdated: null,
@@ -32,6 +34,10 @@ export class FinancialService {
    public readonly dashboardState$ = this.dashboardStateSubject.asObservable();
    public readonly dashboard$ = this.dashboardState$.pipe(
     map((state) => state.dashboard),
+   );
+
+   public readonly currencyDashboards$ = this.dashboardState$.pipe(
+    map((state) => state.currencyDashboards),
    );
 
    public readonly isLoading$ = this.dashboardState$.pipe(
@@ -109,6 +115,85 @@ export class FinancialService {
         // Update error state
         this.updateDashboardState({
             dashboard: null,
+            isLoading: false,
+            error: errorMessage,
+            lastUpdated: this.dashboardStateSubject.value.lastUpdated,
+        });
+        // Propagate error to the caller
+        return throwError(() => error);
+    }),
+    shareReplay(1)
+  );
+}
+
+  /**
+   * Get currency-separated financial dashboard data
+   */
+  getCurrencySeparatedDashboard(options: {
+    startDate?: Date;
+    endDate?: Date;
+    accountId?: string;
+    forceRefresh?: boolean;
+  } = {}): Observable<Map<string, FinancialDashboard>> {
+    const {forceRefresh = false} = options;
+
+    // Check cache first (unless forced refresh)
+    if (!forceRefresh && this.dashboardStateSubject.value.currencyDashboards && this.isCacheValid()) {
+        this.updateDashboardState({
+            currencyDashboards: this.dashboardStateSubject.value.currencyDashboards,
+            isLoading: false,
+            error: null,
+            lastUpdated: new Date(),
+        });
+        return of(this.dashboardStateSubject.value.currencyDashboards!);
+    }
+
+    // Set loading state
+    this.updateDashboardState({
+      currencyDashboards: this.dashboardStateSubject.value.currencyDashboards,
+      isLoading: true,
+      error: null,
+      lastUpdated: this.dashboardStateSubject.value.lastUpdated,
+    });
+
+    // Build query parameters
+    let params = new HttpParams();
+    if (options.startDate) {
+      params = params.set('startDate', options.startDate.toISOString());
+    }
+    if (options.endDate) {
+      params = params.set('endDate', options.endDate.toISOString());
+    }
+    if (options.accountId) {
+      params = params.set('accountId', options.accountId);
+    }
+    params = params.set('separateByCurrency', 'true');
+
+    return this.http.get<ApiResponse<{[currency: string]: FinancialDashboard}>>(`${this.baseUrl}/dashboard`, {params})
+    .pipe(
+      map(response => {
+        // Convert object to Map
+        const currencyMap = new Map<string, FinancialDashboard>();
+        Object.entries(response.data).forEach(([currency, dashboard]) => {
+          currencyMap.set(currency, dashboard);
+        });
+        return currencyMap;
+      }),
+      tap((currencyDashboards) => {
+        // Update state
+        this.updateDashboardState({
+            currencyDashboards: currencyDashboards,
+            isLoading: false,
+            error: null,
+            lastUpdated: new Date(),
+        });
+    }),
+    catchError((error) => {
+        const errorMessage = this.handleError(error);
+    
+        // Update error state
+        this.updateDashboardState({
+            currencyDashboards: null,
             isLoading: false,
             error: errorMessage,
             lastUpdated: this.dashboardStateSubject.value.lastUpdated,
@@ -236,6 +321,7 @@ export class FinancialService {
     this.dashboardCache = null;
     this.updateDashboardState({
       dashboard: null,
+      currencyDashboards: null,
       isLoading: false,
       error: null,
       lastUpdated: null

@@ -6,6 +6,7 @@ import { Subject, takeUntil, debounceTime, distinctUntilChanged } from 'rxjs';
 import { Transaction, TransactionType, TransactionStatus, PaymentMethod, QueryOptions } from '../../../../core/models/financial.model';
 import { TransactionService } from '../../../../core/services/transaction.service';
 import { CategoryService } from '../../../../core/services/category.service';
+import { RealtimeBudgetProgressService } from '../../../../core/services/realtime-budget-progress.service';
 import { AdvancedFilterService, FilterGroup } from '../../../../core/services/advanced-filter.service';
 import { SkeletonContentLoaderComponent } from '../../../../shared';
 import { AdvancedFilterComponent, FilterField } from '../../../../shared/components/advanced-filter/advanced-filter.component';
@@ -29,6 +30,7 @@ export class TransactionListComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
   private transactionService = inject(TransactionService);
   private categoryService = inject(CategoryService);
+  private realtimeBudgetService = inject(RealtimeBudgetProgressService);
   private advancedFilterService = inject(AdvancedFilterService);
   private cdr = inject(ChangeDetectorRef);
 
@@ -435,6 +437,8 @@ export class TransactionListComponent implements OnInit, OnDestroy {
             }
             
             this.isDeleting = false;
+            // Refresh budget progress to reflect the deleted transaction
+            this.realtimeBudgetService.refreshBudgetProgress();
           },
           error: (error) => {
             this.error = 'Failed to delete transaction';
@@ -641,6 +645,8 @@ export class TransactionListComponent implements OnInit, OnDestroy {
             }
             
             this.isDeleting = false;
+            // Refresh budget progress to reflect the deleted transaction
+            this.realtimeBudgetService.refreshBudgetProgress();
           },
           error: (error) => {
             this.error = 'Failed to delete transaction';

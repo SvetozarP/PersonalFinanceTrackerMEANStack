@@ -167,6 +167,25 @@
                   </div>
                 </div>
               </div>
+
+              <div class="form-group">
+                <label for="timezone">Timezone *</label>
+                <select 
+                  id="timezone" 
+                  formControlName="timezone" 
+                  class="form-control"
+                  [class.invalid]="isFieldInvalid(basicInfoForm, 'timezone')"
+                >
+                  <option *ngFor="let timezone of timezones" [value]="timezone">
+                    {{ timezone }}
+                  </option>
+                </select>
+                <div class="error-messages" *ngIf="isFieldInvalid(basicInfoForm, 'timezone')">
+                  <div *ngFor="let error of getFormErrors(basicInfoForm, 'timezone')" class="error-message">
+                    {{ error }}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </form>
@@ -386,6 +405,10 @@
                   <span class="value">{{ basicInfoForm.get('totalAmount')?.value | currency:basicInfoForm.get('currency')?.value }}</span>
                 </div>
                 <div class="detail-row">
+                  <span class="label">Timezone:</span>
+                  <span class="value">{{ basicInfoForm.get('timezone')?.value }}</span>
+                </div>
+                <div class="detail-row">
                   <span class="label">Alert Threshold:</span>
                   <span class="value">{{ settingsForm.get('alertThreshold')?.value }}%</span>
                 </div>
@@ -447,6 +470,17 @@
             </div>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- Error Display -->
+    <div class="wizard-error" *ngIf="error">
+      <div class="error-message">
+        <i class="fas fa-exclamation-triangle"></i>
+        <span>{{ error }}</span>
+        <button type="button" class="error-close" (click)="error = null">
+          <i class="fas fa-times"></i>
+        </button>
       </div>
     </div>
 

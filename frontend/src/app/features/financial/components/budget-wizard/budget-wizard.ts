@@ -40,6 +40,7 @@ export class BudgetWizardComponent implements OnInit, OnDestroy {
   totalSteps = 4;
   isSubmitting = false;
   showWizard = false;
+  error: string | null = null;
 
   // Data
   categories: Category[] = [];
@@ -90,13 +91,22 @@ export class BudgetWizardComponent implements OnInit, OnDestroy {
     { value: 'custom', label: 'Custom', description: 'Set custom start and end dates' }
   ];
 
-  // Currency options
+  // Currency options (aligned with transaction form)
   currencies = [
     { value: 'USD', label: 'USD - US Dollar', symbol: '$' },
     { value: 'EUR', label: 'EUR - Euro', symbol: '€' },
     { value: 'GBP', label: 'GBP - British Pound', symbol: '£' },
+    { value: 'JPY', label: 'JPY - Japanese Yen', symbol: '¥' },
     { value: 'CAD', label: 'CAD - Canadian Dollar', symbol: 'C$' },
-    { value: 'AUD', label: 'AUD - Australian Dollar', symbol: 'A$' }
+    { value: 'AUD', label: 'AUD - Australian Dollar', symbol: 'A$' },
+    { value: 'CHF', label: 'CHF - Swiss Franc', symbol: 'CHF' },
+    { value: 'CNY', label: 'CNY - Chinese Yuan', symbol: '¥' }
+  ];
+
+  // Timezone options
+  timezones = [
+    'UTC', 'America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles',
+    'Europe/London', 'Europe/Paris', 'Europe/Berlin', 'Asia/Tokyo', 'Asia/Shanghai'
   ];
 
   ngOnInit(): void {
@@ -125,7 +135,8 @@ export class BudgetWizardComponent implements OnInit, OnDestroy {
       startDate: ['', Validators.required],
       endDate: ['', Validators.required],
       totalAmount: ['', [Validators.required, Validators.min(0.01)]],
-      currency: ['USD', Validators.required]
+      currency: ['USD', Validators.required],
+      timezone: ['UTC', Validators.required]
     });
 
     // Step 2: Category Allocation
@@ -423,32 +434,81 @@ export class BudgetWizardComponent implements OnInit, OnDestroy {
   createBudget(): void {
     if (this.validateAllSteps()) {
       this.isSubmitting = true;
+      this.error = null;
+
+      // Validate and prepare data
+      const startDate = new Date(this.basicInfoForm.get('startDate')?.value);
+      const endDate = new Date(this.basicInfoForm.get('endDate')?.value);
+      const totalAmount = parseFloat(this.basicInfoForm.get('totalAmount')?.value);
+      const currency = this.basicInfoForm.get('currency')?.value;
+
+      // Validate dates
+      if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+        console.error('Invalid dates provided');
+        this.isSubmitting = false;
+        return;
+      }
+
+      // Validate total amount
+      if (isNaN(totalAmount) || totalAmount <= 0) {
+        console.error('Invalid total amount:', totalAmount);
+        this.isSubmitting = false;
+        return;
+      }
 
       const budgetData: CreateBudgetDto = {
-        name: this.basicInfoForm.get('name')?.value,
-        description: this.basicInfoForm.get('description')?.value,
+        name: this.basicInfoForm.get('name')?.value?.trim(),
+        description: this.basicInfoForm.get('description')?.value?.trim() || '',
         period: this.basicInfoForm.get('period')?.value,
-        startDate: new Date(this.basicInfoForm.get('startDate')?.value),
-        endDate: new Date(this.basicInfoForm.get('endDate')?.value),
-        totalAmount: this.basicInfoForm.get('totalAmount')?.value,
-        currency: this.basicInfoForm.get('currency')?.value,
-        categoryAllocations: this.getAllocationsArray().value,
-        alertThreshold: this.settingsForm.get('alertThreshold')?.value,
-        autoAdjust: this.settingsForm.get('autoAdjust')?.value,
-        allowRollover: this.settingsForm.get('allowRollover')?.value
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
+        totalAmount: totalAmount,
+        currency: currency || 'USD',
+        timezone: this.basicInfoForm.get('timezone')?.value || 'UTC',
+        categoryAllocations: this.getAllocationsArray().value
+          .filter((allocation: any) => allocation.allocatedAmount > 0) // Only include allocations with positive amounts
+          .map((allocation: any) => ({
+            ...allocation,
+            allocatedAmount: parseFloat(allocation.allocatedAmount),
+            priority: parseInt(allocation.priority) || 1 // Ensure priority is an integer
+          })),
+        alertThreshold: this.settingsForm.get('alertThreshold')?.value || 80,
+        autoAdjust: this.settingsForm.get('autoAdjust')?.value || false,
+        allowRollover: this.settingsForm.get('allowRollover')?.value || false
       };
+
+      // Validate that we have at least one category allocation
+      if (budgetData.categoryAllocations.length === 0) {
+        console.error('No category allocations found. Please allocate amounts to at least one category.');
+        this.isSubmitting = false;
+        return;
+      }
+
 
       this.budgetService.createBudget(budgetData).pipe(
         takeUntil(this.destroy$)
       ).subscribe({
         next: (budget) => {
-          console.log('Budget created successfully:', budget);
           this.isSubmitting = false;
           this.hideBudgetWizard();
           this.budgetCreated.emit(budget);
         },
         error: (error) => {
           console.error('Error creating budget:', error);
+          console.error('Error details:', error.error);
+          console.error('Error status:', error.status);
+          console.error('Error message:', error.message);
+          console.error('Full error response:', JSON.stringify(error, null, 2));
+          
+          // Show more specific error message to user
+          if (error.error && error.error.message) {
+            this.error = `Budget creation failed: ${error.error.message}`;
+          } else if (error.error && typeof error.error === 'string') {
+            this.error = `Budget creation failed: ${error.error}`;
+          } else {
+            this.error = 'Budget creation failed. Please check your input and try again.';
+          }
+          
           this.isSubmitting = false;
         }
       });

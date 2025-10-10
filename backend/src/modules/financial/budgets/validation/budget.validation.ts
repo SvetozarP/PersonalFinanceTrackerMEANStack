@@ -1,4 +1,4 @@
-import Joi from 'joi';
+import * as Joi from 'joi';
 import { Types } from 'mongoose';
 
 // Validation schemas for budget operations
@@ -57,10 +57,19 @@ export const budgetValidation = {
       .uppercase()
       .pattern(/^[A-Z]{3}$/)
       .default('USD')
-      .optional()
+      .required()
       .messages({
         'string.length': 'Currency code must be exactly 3 characters',
         'string.pattern.base': 'Currency code must be 3 uppercase letters',
+        'any.required': 'Currency is required',
+      }),
+
+    timezone: Joi.string()
+      .trim()
+      .default('UTC')
+      .optional()
+      .messages({
+        'string.base': 'Timezone must be a valid string',
       }),
 
     categoryAllocations: Joi.array()
@@ -165,6 +174,7 @@ export const budgetValidation = {
 
   // Schema for updating a budget
   updateBudget: Joi.object({
+    // DEBUG: This should appear in logs if the updated schema is loaded
     name: Joi.string().trim().min(1).max(200).optional().messages({
       'string.empty': 'Budget name cannot be empty',
       'string.min': 'Budget name cannot be empty',
@@ -194,6 +204,41 @@ export const budgetValidation = {
           'Total budget amount can have up to 2 decimal places',
         'number.max': 'Total budget amount cannot exceed 999,999,999.99',
       }),
+
+    currency: Joi.string()
+      .trim()
+      .length(3)
+      .uppercase()
+      .pattern(/^[A-Z]{3}$/)
+      .optional()
+      .messages({
+        'string.length': 'Currency code must be exactly 3 characters',
+        'string.pattern.base': 'Currency code must be 3 uppercase letters',
+      }),
+
+    timezone: Joi.string()
+      .trim()
+      .optional()
+      .messages({
+        'string.base': 'Timezone must be a valid string',
+      }),
+
+    period: Joi.string()
+      .valid('monthly', 'yearly', 'custom')
+      .optional()
+      .messages({
+        'any.only': 'Budget period must be monthly, yearly, or custom',
+      }),
+
+    startDate: Joi.date().iso().optional().messages({
+      'date.base': 'Start date must be a valid date',
+      'date.format': 'Start date must be in ISO format (YYYY-MM-DD)',
+    }),
+
+    endDate: Joi.date().iso().optional().messages({
+      'date.base': 'End date must be a valid date',
+      'date.format': 'End date must be in ISO format (YYYY-MM-DD)',
+    }),
 
     categoryAllocations: Joi.array()
       .items(

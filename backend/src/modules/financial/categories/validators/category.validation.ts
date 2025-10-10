@@ -10,7 +10,7 @@ export const categoryValidation = {
       'string.max': 'Category name cannot exceed 100 characters',
       'any.required': 'Category name is required',
     }),
-    description: Joi.string().trim().max(500).optional().messages({
+    description: Joi.string().trim().max(500).optional().allow('').messages({
       'string.max': 'Description cannot exceed 500 characters',
     }),
     color: Joi.string()
@@ -33,6 +33,7 @@ export const categoryValidation = {
       .messages({
         'any.invalid': 'Parent ID must be a valid MongoDB ObjectId',
       }),
+    isActive: Joi.boolean().optional(),
   }),
 
   // Validation for updating a category
@@ -42,7 +43,7 @@ export const categoryValidation = {
       'string.min': 'Category name must be at least 1 character long',
       'string.max': 'Category name cannot exceed 100 characters',
     }),
-    description: Joi.string().trim().max(500).optional().messages({
+    description: Joi.string().trim().max(500).optional().allow('').messages({
       'string.max': 'Description cannot exceed 500 characters',
     }),
     color: Joi.string()

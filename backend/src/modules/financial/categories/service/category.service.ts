@@ -333,7 +333,7 @@ export class CategoryService {
   }
 
   /**
-   * Delete category (soft delete)
+   * Delete category (hard delete)
    */
   async deleteCategory(categoryId: string, userId: string): Promise<void> {
     try {
@@ -365,11 +365,12 @@ export class CategoryService {
       //   throw new Error(`Cannot delete category: used in ${transactionCount} transactions`);
       // }
 
-      // Soft delete
-      await this.categoryRepository.updateById(categoryId, {
-        isActive: false,
-        deletedAt: new Date(),
-      });
+      // Hard delete - actually remove the category from the database
+      const deletedCategory = await this.categoryRepository.deleteById(categoryId);
+
+      if (!deletedCategory) {
+        throw new Error('Category not found or could not be deleted');
+      }
 
       logger.info('Category deleted successfully', { categoryId, userId });
     } catch (error) {

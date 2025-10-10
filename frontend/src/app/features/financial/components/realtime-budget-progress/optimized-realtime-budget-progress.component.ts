@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, Input, Output, EventEmitter, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, Input, Output, EventEmitter, inject, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Subject, takeUntil } from 'rxjs';
 import { RealtimeBudgetProgressService } from '../../../../core/services/realtime-budget-progress.service';
@@ -12,6 +12,7 @@ interface SimpleBudgetProgress {
   progressPercentage: number;
   status: 'under' | 'at' | 'over' | 'critical';
   daysRemaining: number;
+  currency: string; // Add currency field
 }
 
 interface SimpleBudgetStats {
@@ -25,6 +26,7 @@ interface SimpleBudgetStats {
   selector: 'app-optimized-realtime-budget-progress',
   standalone: true,
   imports: [CommonModule],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="optimized-realtime-progress" [class.compact]="compact">
       <!-- Connection Status -->
@@ -51,7 +53,7 @@ interface SimpleBudgetStats {
               <i class="fas fa-wallet"></i>
             </div>
             <div class="stat-content">
-              <div class="stat-value">{{ formatCurrency(budgetStats.totalBudget) }}</div>
+              <div class="stat-value">{{ formatCurrency(budgetStats.totalBudget, 'USD') }}</div>
               <div class="stat-label">Total Budget</div>
             </div>
           </div>
@@ -61,7 +63,7 @@ interface SimpleBudgetStats {
               <i class="fas fa-shopping-cart"></i>
             </div>
             <div class="stat-content">
-              <div class="stat-value">{{ formatCurrency(budgetStats.totalSpent) }}</div>
+              <div class="stat-value">{{ formatCurrency(budgetStats.totalSpent, 'USD') }}</div>
               <div class="stat-label">Total Spent</div>
             </div>
           </div>
@@ -81,7 +83,7 @@ interface SimpleBudgetStats {
       <!-- Budget Progress List -->
       <div class="budget-progress-list" *ngIf="budgetProgress.length > 0">
         <div 
-          *ngFor="let budget of budgetProgress" 
+          *ngFor="let budget of budgetProgress; trackBy: trackByBudgetId" 
           class="budget-progress-item"
           [ngClass]="getStatusClass(budget.status)"
           (click)="onBudgetClick(budget)">
@@ -99,8 +101,8 @@ interface SimpleBudgetStats {
             
             <div class="budget-summary">
               <div class="budget-amounts">
-                <span class="spent-amount">{{ formatCurrency(budget.spentAmount) }}</span>
-                <span class="total-amount">of {{ formatCurrency(budget.totalAmount) }}</span>
+                <span class="spent-amount">{{ formatCurrency(budget.spentAmount, budget.currency) }}</span>
+                <span class="total-amount">of {{ formatCurrency(budget.totalAmount, budget.currency) }}</span>
               </div>
               <div class="budget-percentage">{{ formatPercentage(budget.progressPercentage) }}</div>
             </div>
@@ -434,6 +436,7 @@ export class OptimizedRealtimeBudgetProgressComponent implements OnInit, OnDestr
 
   private destroy$ = new Subject<void>();
   private realtimeService = inject(RealtimeBudgetProgressService);
+  private cdr = inject(ChangeDetectorRef);
 
   // Data
   budgetProgress: SimpleBudgetProgress[] = [];
@@ -452,6 +455,7 @@ export class OptimizedRealtimeBudgetProgressComponent implements OnInit, OnDestr
 
   private loadData(): void {
     this.isLoading = true;
+    this.cdr.markForCheck();
     
     this.realtimeService.getRealtimeProgress()
       .pipe(takeUntil(this.destroy$))
@@ -463,9 +467,11 @@ export class OptimizedRealtimeBudgetProgressComponent implements OnInit, OnDestr
           spentAmount: p.spentAmount,
           progressPercentage: p.progressPercentage,
           status: p.status,
-          daysRemaining: p.daysRemaining
+          daysRemaining: p.daysRemaining,
+          currency: p.currency // Add currency field
         }));
         this.isLoading = false;
+        this.cdr.markForCheck();
       });
 
     this.realtimeService.getBudgetStats()
@@ -478,6 +484,7 @@ export class OptimizedRealtimeBudgetProgressComponent implements OnInit, OnDestr
             totalBudget: stats.totalBudget,
             overallProgress: stats.overallProgress
           };
+          this.cdr.markForCheck();
         }
       });
 
@@ -485,12 +492,18 @@ export class OptimizedRealtimeBudgetProgressComponent implements OnInit, OnDestr
       .pipe(takeUntil(this.destroy$))
       .subscribe(connected => {
         this.isConnected = connected;
+        this.cdr.markForCheck();
       });
   }
 
   // Event handlers
   onBudgetClick(budget: SimpleBudgetProgress): void {
     this.budgetClick.emit(budget);
+  }
+
+  // TrackBy function for performance
+  trackByBudgetId(index: number, budget: SimpleBudgetProgress): string {
+    return budget.budgetId;
   }
 
   // Helper methods
@@ -505,13 +518,22 @@ export class OptimizedRealtimeBudgetProgressComponent implements OnInit, OnDestr
   }
 
   formatCurrency(amount: number, currency: string = 'USD'): string {
+    // Use a more stable formatting approach
+    if (amount === null || amount === undefined || isNaN(amount)) {
+      return '$0.00';
+    }
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: currency
+      currency: currency,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
     }).format(amount);
   }
 
   formatPercentage(percentage: number): string {
-    return `${percentage.toFixed(1)}%`;
+    if (percentage === null || percentage === undefined || isNaN(percentage)) {
+      return '0.0%';
+    }
+    return `${Math.round(percentage * 10) / 10}%`;
   }
 }

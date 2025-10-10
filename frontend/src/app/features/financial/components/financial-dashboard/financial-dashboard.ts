@@ -34,6 +34,7 @@ export class FinancialDashboardComponent implements OnInit, OnDestroy {
   private categoryService = inject(CategoryService);
 
   dashboard: FinancialDashboard | null = null;
+  currencyDashboards: Map<string, FinancialDashboard> | null = null;
   recentTransactions: Transaction[] = [];
   categories: Category[] = [];
   
@@ -82,11 +83,12 @@ export class FinancialDashboardComponent implements OnInit, OnDestroy {
       accountId: undefined // Will use default account
     };
 
-    this.financialService.getFinancialDashboard(options)
+    // Load currency-separated dashboard data
+    this.financialService.getCurrencySeparatedDashboard(options)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (dashboard) => {
-          this.dashboard = dashboard;
+        next: (currencyDashboards) => {
+          this.currencyDashboards = currencyDashboards;
           this.isDashboardLoading = false;
         },
         error: (error) => {
@@ -159,11 +161,11 @@ export class FinancialDashboardComponent implements OnInit, OnDestroy {
         accountId: undefined
       };
 
-      this.financialService.getFinancialDashboard(options)
+      this.financialService.getCurrencySeparatedDashboard(options)
         .pipe(takeUntil(this.destroy$))
         .subscribe({
-          next: (dashboard) => {
-            this.dashboard = dashboard;
+          next: (currencyDashboards) => {
+            this.currencyDashboards = currencyDashboards;
             resolve();
           },
           error: (error) => {
@@ -330,6 +332,35 @@ export class FinancialDashboardComponent implements OnInit, OnDestroy {
     return this.dashboard?.overview?.upcomingRecurring || 0;
   }
 
+  // Currency-separated dashboard helpers
+  getCurrencyDashboards(): Map<string, FinancialDashboard> | null {
+    return this.currencyDashboards;
+  }
+
+  getTotalBalanceForCurrency(currency: string): number {
+    return this.currencyDashboards?.get(currency)?.overview?.totalBalance || 0;
+  }
+
+  getMonthlyIncomeForCurrency(currency: string): number {
+    return this.currencyDashboards?.get(currency)?.overview?.monthlyIncome || 0;
+  }
+
+  getMonthlyExpensesForCurrency(currency: string): number {
+    return this.currencyDashboards?.get(currency)?.overview?.monthlyExpenses || 0;
+  }
+
+  getMonthlyNetForCurrency(currency: string): number {
+    return this.currencyDashboards?.get(currency)?.overview?.monthlyNet || 0;
+  }
+
+  getPendingTransactionsCountForCurrency(currency: string): number {
+    return this.currencyDashboards?.get(currency)?.overview?.pendingTransactions || 0;
+  }
+
+  getUpcomingRecurringCountForCurrency(currency: string): number {
+    return this.currencyDashboards?.get(currency)?.overview?.upcomingRecurring || 0;
+  }
+
   // Chart data helpers - using safe navigation
   getTopCategories(): any[] {
     return this.dashboard?.topCategories || [];
@@ -341,6 +372,19 @@ export class FinancialDashboardComponent implements OnInit, OnDestroy {
 
   getBudgetStatus(): any[] {
     return this.dashboard?.budgetStatus || [];
+  }
+
+  // Currency-separated chart data helpers
+  getTopCategoriesForCurrency(currency: string): any[] {
+    return this.currencyDashboards?.get(currency)?.topCategories || [];
+  }
+
+  getSpendingTrendsForCurrency(currency: string): any[] {
+    return this.currencyDashboards?.get(currency)?.spendingTrends || [];
+  }
+
+  getBudgetStatusForCurrency(currency: string): any[] {
+    return this.currencyDashboards?.get(currency)?.budgetStatus || [];
   }
 
   // Navigation helpers

@@ -24,6 +24,7 @@ export interface Category {
     currency: string;
     type: TransactionType;
     status: TransactionStatus;
+    accountId: string; // Required field for backend validation
     categoryId: string;
     subcategoryId?: string;
     tags: string[];
@@ -66,7 +67,6 @@ export interface Category {
     externalId?: string;
     lastSyncedAt?: Date;
     userId: string;
-    accountId: string;
     createdAt: Date;
     updatedAt: Date;
     deletedAt?: Date;
@@ -247,10 +247,11 @@ export interface Category {
     name: string;
     description?: string;
     period: 'monthly' | 'yearly' | 'custom';
-    startDate: Date;
-    endDate: Date;
+    startDate: Date | string; // Can be Date object or ISO string
+    endDate: Date | string; // Can be Date object or ISO string
     totalAmount: number;
     currency: string;
+    timezone?: string; // Timezone for budget dates
     categoryAllocations: CategoryAllocation[];
     status: 'active' | 'paused' | 'completed' | 'archived';
     alertThreshold: number;
@@ -259,8 +260,8 @@ export interface Category {
     autoAdjust: boolean;
     allowRollover: boolean;
     rolloverAmount: number;
-    createdAt: Date;
-    updatedAt: Date;
+    createdAt: Date | string; // Can be Date object or ISO string
+    updatedAt: Date | string; // Can be Date object or ISO string
   }
 
   export interface CategoryAllocation {
@@ -328,10 +329,11 @@ export interface Category {
     name: string;
     description?: string;
     period: 'monthly' | 'yearly' | 'custom';
-    startDate: Date;
-    endDate: Date;
+    startDate: string; // ISO date string
+    endDate: string; // ISO date string
     totalAmount: number;
     currency?: string;
+    timezone?: string; // Timezone for budget dates
     categoryAllocations: CategoryAllocation[];
     alertThreshold?: number;
     autoAdjust?: boolean;
@@ -342,10 +344,11 @@ export interface Category {
     name?: string;
     description?: string;
     period?: 'monthly' | 'yearly' | 'custom';
-    startDate?: Date;
-    endDate?: Date;
+    startDate?: string; // ISO date string
+    endDate?: string; // ISO date string
     totalAmount?: number;
     currency?: string;
+    timezone?: string; // Timezone for budget dates
     categoryAllocations?: CategoryAllocation[];
     status?: 'active' | 'paused' | 'completed' | 'archived';
     alertThreshold?: number;

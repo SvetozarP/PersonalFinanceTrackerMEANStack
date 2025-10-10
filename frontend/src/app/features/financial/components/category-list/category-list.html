@@ -250,7 +250,7 @@
             </button>
             <button 
               class="btn btn-sm btn-action btn-delete" 
-              (click)="deleteCategory(category._id)"
+              (click)="onCategoryDelete(category._id)"
               [disabled]="isDeleting || category.isSystem"
               title="Delete Category">
               <i class="fas fa-trash"></i>
@@ -373,7 +373,7 @@
             </button>
             <button 
               class="btn btn-sm btn-action btn-delete" 
-              (click)="deleteCategory(category._id)"
+              (click)="onCategoryDelete(category._id)"
               [disabled]="isDeleting || category.isSystem"
               title="Delete Category">
               <i class="fas fa-trash"></i>

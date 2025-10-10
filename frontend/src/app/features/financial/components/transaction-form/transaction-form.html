@@ -126,6 +126,17 @@
               </option>
             </select>
           </div>
+          
+          <div class="form-group">
+            <label for="accountId">Account *</label>
+            <select id="accountId" formControlName="accountId" class="form-control" [class.is-invalid]="isFieldInvalid('accountId')">
+              <option value="">Select an account</option>
+              <option value="507f1f77bcf86cd799439011">Default Account</option>
+            </select>
+            <div *ngIf="isFieldInvalid('accountId')" class="error-message">
+              Account is required
+            </div>
+          </div>
         </div>
       </div>
 
@@ -365,12 +376,13 @@
             <input
               type="text"
               id="tagInput"
+              #tagInput
               class="form-control"
               placeholder="Enter tag and press Enter"
-              (keyup.enter)="onTagAdd($any($event.target).value); $any($event.target).value = ''"
+              (keyup.enter)="onTagAdd(tagInput.value); tagInput.value = ''"
             />
             <button type="button" class="btn btn-outline-primary" 
-                    (click)="onTagAdd($any($event.target).value); $any($event.target).value = ''"
+                    (click)="onTagAdd(tagInput.value); tagInput.value = ''"
                     title="Add Tag">
               <i class="fas fa-plus"></i>
               <span class="btn-text">Add</span>

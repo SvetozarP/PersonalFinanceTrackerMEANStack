@@ -63,6 +63,13 @@ const budgetSchema = new Schema<IBudget>(
       default: 'USD',
     },
 
+    // Timezone
+    timezone: {
+      type: String,
+      trim: true,
+      default: 'UTC',
+    },
+
     // Category Allocations
     categoryAllocations: [
       {

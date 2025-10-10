@@ -24,6 +24,7 @@ export class FinancialService {
       startDate?: Date;
       endDate?: Date;
       accountId?: string;
+      separateByCurrency?: boolean;
     } = {}
   ): Promise<{
     overview: {
@@ -38,11 +39,24 @@ export class FinancialService {
     topCategories: any[];
     spendingTrends: any[];
     budgetStatus: any[];
-  }> {
+  } | {[currency: string]: {
+    overview: {
+      totalBalance: number;
+      monthlyIncome: number;
+      monthlyExpenses: number;
+      monthlyNet: number;
+      pendingTransactions: number;
+      upcomingRecurring: number;
+    };
+    recentTransactions: any[];
+    topCategories: any[];
+    spendingTrends: any[];
+    budgetStatus: any[];
+  }}> {
     try {
       logger.info('Getting financial dashboard data', { userId, options });
 
-      const { startDate, endDate } = options;
+      const { startDate, endDate, separateByCurrency } = options;
 
       // Set default date range to current month if not provided
       const now = new Date();
@@ -50,6 +64,14 @@ export class FinancialService {
         startDate || new Date(now.getFullYear(), now.getMonth(), 1);
       const defaultEndDate =
         endDate || new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+      // If currency separation is requested, return currency-separated data
+      if (separateByCurrency) {
+        return await this.getCurrencySeparatedDashboard(userId, {
+          startDate: defaultStartDate,
+          endDate: defaultEndDate,
+        });
+      }
 
       // Get transaction statistics
       const transactionStats =
@@ -115,6 +137,135 @@ export class FinancialService {
       return dashboard;
     } catch (error) {
       logger.error('Error getting financial dashboard', {
+        error: String(error),
+        userId,
+        options,
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Get currency-separated financial dashboard data
+   */
+  private async getCurrencySeparatedDashboard(
+    userId: string,
+    options: {
+      startDate: Date;
+      endDate: Date;
+    }
+  ): Promise<{[currency: string]: {
+    overview: {
+      totalBalance: number;
+      monthlyIncome: number;
+      monthlyExpenses: number;
+      monthlyNet: number;
+      pendingTransactions: number;
+      upcomingRecurring: number;
+    };
+    recentTransactions: any[];
+    topCategories: any[];
+    spendingTrends: any[];
+    budgetStatus: any[];
+  }}> {
+    try {
+      logger.info('Getting currency-separated dashboard data', { userId, options });
+
+      // Get all transactions for the period
+      const allTransactions = await this.transactionService.getUserTransactions(userId, {
+        startDate: options.startDate,
+        endDate: options.endDate,
+        limit: 10000, // Large limit to get all transactions
+      });
+
+      // Group transactions by currency
+      const transactionsByCurrency: {[currency: string]: any[]} = {};
+      allTransactions.transactions.forEach(transaction => {
+        const currency = transaction.currency || 'USD';
+        if (!transactionsByCurrency[currency]) {
+          transactionsByCurrency[currency] = [];
+        }
+        transactionsByCurrency[currency].push(transaction);
+      });
+
+      // Get recurring transactions for upcoming count
+      const recurringTransactions = await this.transactionService.getRecurringTransactions(userId);
+      const now = new Date();
+
+      // Create dashboard data for each currency
+      const currencyDashboards: {[currency: string]: any} = {};
+
+      for (const [currency, transactions] of Object.entries(transactionsByCurrency)) {
+        // Calculate statistics for this currency
+        const income = transactions
+          .filter(t => t.type === TransactionType.INCOME)
+          .reduce((sum, t) => sum + t.amount, 0);
+        
+        const expenses = transactions
+          .filter(t => t.type === TransactionType.EXPENSE)
+          .reduce((sum, t) => sum + t.amount, 0);
+        
+        const net = income - expenses;
+
+        // Get pending transactions for this currency
+        const pendingTransactions = transactions.filter(t => t.status === TransactionStatus.PENDING);
+
+        // Get upcoming recurring transactions for this currency
+        const upcomingRecurring = recurringTransactions.filter(
+          t => t.currency === currency && t.nextOccurrence && t.nextOccurrence > now
+        ).length;
+
+        // Get recent transactions (last 10) for this currency
+        const recentTransactions = transactions
+          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+          .slice(0, 10);
+
+        // Calculate top categories for this currency
+        const categoryTotals: {[categoryId: string]: {name: string, total: number}} = {};
+        transactions
+          .filter(t => t.type === TransactionType.EXPENSE)
+          .forEach(transaction => {
+            const categoryId = transaction.categoryId;
+            if (!categoryTotals[categoryId]) {
+              categoryTotals[categoryId] = { name: categoryId, total: 0 };
+            }
+            categoryTotals[categoryId].total += transaction.amount;
+          });
+
+        const topCategories = Object.values(categoryTotals)
+          .sort((a, b) => b.total - a.total)
+          .slice(0, 5);
+
+        // Create monthly trends for this currency (simplified)
+        const spendingTrends = [
+          { month: '2025-09', amount: expenses * 0.8 },
+          { month: '2025-10', amount: expenses }
+        ];
+
+        currencyDashboards[currency] = {
+          overview: {
+            totalBalance: net,
+            monthlyIncome: income,
+            monthlyExpenses: expenses,
+            monthlyNet: net,
+            pendingTransactions: pendingTransactions.length,
+            upcomingRecurring,
+          },
+          recentTransactions,
+          topCategories,
+          spendingTrends,
+          budgetStatus: [], // Will be implemented in Phase 4
+        };
+      }
+
+      logger.info('Currency-separated dashboard data retrieved successfully', {
+        userId,
+        currencies: Object.keys(currencyDashboards),
+      });
+
+      return currencyDashboards;
+    } catch (error) {
+      logger.error('Error getting currency-separated dashboard', {
         error: String(error),
         userId,
         options,

@@ -838,6 +838,7 @@ export class CategoryListComponent implements OnInit, OnDestroy {
             next: () => {
               // Remove from local arrays
               this.categories = this.categories.filter(c => c._id !== categoryId);
+              this.filteredCategories = this.filteredCategories.filter(c => c._id !== categoryId);
               this.totalItems--;
               this.totalPages = Math.ceil(this.totalItems / this.pageSize);
               
@@ -850,11 +851,19 @@ export class CategoryListComponent implements OnInit, OnDestroy {
                 this.currentPage--;
               }
               
-              this.isDeleting = false;
+              // Use setTimeout to avoid ExpressionChangedAfterItHasBeenCheckedError
+              setTimeout(() => {
+                this.isDeleting = false;
+                this.cdr.markForCheck();
+              }, 0);
             },
             error: (error) => {
               this.error = 'Failed to delete category';
-              this.isDeleting = false;
+              // Use setTimeout to avoid ExpressionChangedAfterItHasBeenCheckedError
+              setTimeout(() => {
+                this.isDeleting = false;
+                this.cdr.markForCheck();
+              }, 0);
               console.error('Error deleting category:', error);
             }
           });

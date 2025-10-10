@@ -56,6 +56,6 @@ export abstract class BaseApiService<T> {
         }
         
         console.error('API Error:', error);
-        return throwError(() => new Error(errorMessage));
+        return throwError(() => error); // Preserve the original error object
       }
 }

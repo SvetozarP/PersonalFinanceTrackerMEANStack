@@ -1,6 +1,6 @@
 import { Injectable, OnDestroy } from '@angular/core';
 import { BehaviorSubject, Observable, Subject, interval, of, throwError } from 'rxjs';
-import { takeUntil, switchMap, catchError } from 'rxjs/operators';
+import { takeUntil, switchMap, catchError, map } from 'rxjs/operators';
 import { Budget, CategoryAllocation, Transaction, TransactionType } from '../models/financial.model';
 import { BudgetService } from './budget.service';
 import { TransactionService } from './transaction.service';
@@ -15,6 +15,7 @@ export interface RealtimeBudgetProgress {
   progressPercentage: number;
   status: 'under' | 'at' | 'over' | 'critical';
   daysRemaining: number;
+  currency: string; // Add currency field
   categoryProgress: CategoryProgress[];
   lastUpdated: Date;
   alerts: BudgetAlert[];
@@ -56,6 +57,14 @@ export interface RealtimeBudgetStats {
   overallProgress: number;
   averageProgress: number;
   lastUpdated: Date;
+  // Currency-separated statistics
+  currencyStats: Map<string, {
+    totalBudget: number;
+    totalSpent: number;
+    totalRemaining: number;
+    overallProgress: number;
+    budgetCount: number;
+  }>;
 }
 
 @Injectable({
@@ -86,12 +95,25 @@ export class RealtimeBudgetProgressService implements OnDestroy {
     if (!RealtimeBudgetProgressService.isTestEnvironment) {
       this.initializeRealtimeUpdates();
     }
+    
   }
 
   // Method to set test environment flag
   static setTestEnvironment(isTest: boolean): void {
     RealtimeBudgetProgressService.isTestEnvironment = isTest;
   }
+
+  // Method to manually refresh budget progress (useful after creating new transactions)
+  refreshBudgetProgress(): void {
+    this.loadRealtimeData().subscribe({
+      next: (progress) => {
+      },
+      error: (error) => {
+        console.error('Error refreshing budget progress:', error);
+      }
+    });
+  }
+
 
   ngOnDestroy(): void {
     this.destroy$.next();
@@ -115,14 +137,41 @@ export class RealtimeBudgetProgressService implements OnDestroy {
     return this.isConnected$.asObservable();
   }
 
+  // Get currency-separated statistics
+  getCurrencyStats(): Observable<Map<string, {
+    totalBudget: number;
+    totalSpent: number;
+    totalRemaining: number;
+    overallProgress: number;
+    budgetCount: number;
+  }> | null> {
+    return this.budgetStats$.pipe(
+      map(stats => stats?.currencyStats || null)
+    );
+  }
+
   // Initialize real-time updates
   private initializeRealtimeUpdates(): void {
+    // Subscribe to budget changes for immediate updates
+    this.budgetService.budgets$
+      .pipe(
+        takeUntil(this.destroy$),
+        switchMap((budgets) => this.loadRealtimeDataFromBudgets(budgets)),
+        catchError(error => {
+          console.error('Error in real-time budget updates:', error);
+          this.isConnected$.next(false);
+          return [];
+        })
+      )
+      .subscribe();
+
+    // Periodic updates every 60 seconds
     this.updateInterval$
       .pipe(
         takeUntil(this.destroy$),
         switchMap(() => this.loadRealtimeData()),
         catchError(error => {
-          console.error('Error in real-time budget updates:', error);
+          console.error('Error in periodic budget updates:', error);
           this.isConnected$.next(false);
           return [];
         })
@@ -133,32 +182,42 @@ export class RealtimeBudgetProgressService implements OnDestroy {
     this.loadRealtimeData().subscribe();
   }
 
+  // Load real-time data from existing budgets
+  private loadRealtimeDataFromBudgets(budgets: Budget[]): Observable<RealtimeBudgetProgress[]> {
+    if (budgets.length === 0) {
+      this.realtimeProgress$.next([]);
+      this.budgetStats$.next(null);
+      return of([]);
+    }
+
+    return this.transactionService.getUserTransactions({}).pipe(
+      switchMap(transactionResponse => 
+        this.categoryService.getUserCategories().pipe(
+          switchMap(categories => {
+            const transactions = transactionResponse.data || [];
+            const progressData = this.calculateRealtimeProgress(budgets, transactions, categories || []);
+            this.realtimeProgress$.next(progressData);
+            this.updateBudgetStats(progressData);
+            this.checkForAlerts(progressData);
+            this.isConnected$.next(true);
+            return of(progressData);
+          })
+        )
+      ),
+      catchError(error => {
+        console.error('Error loading real-time data from budgets:', error);
+        this.isConnected$.next(false);
+        return throwError(() => error);
+      })
+    );
+  }
+
   // Load real-time data
   private loadRealtimeData(): Observable<RealtimeBudgetProgress[]> {
     return this.budgetService.getBudgets({}, 1, 1000).pipe(
       switchMap(budgetResponse => {
         const budgets = budgetResponse.budgets;
-        if (budgets.length === 0) {
-          this.realtimeProgress$.next([]);
-          this.budgetStats$.next(null);
-          return of([]);
-        }
-
-        return this.transactionService.getUserTransactions({}).pipe(
-          switchMap(transactionResponse => 
-            this.categoryService.getUserCategories().pipe(
-              switchMap(categories => {
-                const transactions = transactionResponse.data || [];
-                const progressData = this.calculateRealtimeProgress(budgets, transactions, categories || []);
-                this.realtimeProgress$.next(progressData);
-                this.updateBudgetStats(progressData);
-                this.checkForAlerts(progressData);
-                this.isConnected$.next(true);
-                return of(progressData);
-              })
-            )
-          )
-        );
+        return this.loadRealtimeDataFromBudgets(budgets);
       }),
       catchError(error => {
         console.error('Error loading real-time data:', error);
@@ -205,7 +264,9 @@ export class RealtimeBudgetProgressService implements OnDestroy {
         const progressPercentage = totalAllocated > 0 ? (totalSpent / totalAllocated) * 100 : 0;
         
         const status = this.determineBudgetStatus(progressPercentage, budget.alertThreshold);
-        const daysRemaining = this.calculateDaysRemaining(budget.endDate);
+        const daysRemaining = this.calculateDaysRemaining(
+          typeof budget.endDate === 'string' ? new Date(budget.endDate) : budget.endDate
+        );
 
         return {
           budgetId: budget._id,
@@ -216,6 +277,7 @@ export class RealtimeBudgetProgressService implements OnDestroy {
           progressPercentage,
           status,
           daysRemaining,
+          currency: budget.currency, // Add currency from budget
           categoryProgress,
           lastUpdated: new Date(),
           alerts: []
@@ -241,12 +303,30 @@ export class RealtimeBudgetProgressService implements OnDestroy {
       return [];
     }
     
+    
     return budget.categoryAllocations.map(allocation => {
-      const categoryTransactions = transactions.filter(t => 
-        t.categoryId === allocation.categoryId && 
-        t.type === TransactionType.EXPENSE &&
-        this.isTransactionInBudgetPeriod(t, budget)
-      );
+      // Debug: Check all transactions for this category and currency
+      const allCategoryTransactions = transactions.filter(t => {
+        const transactionCategoryId = typeof t.categoryId === 'string' ? t.categoryId : (t.categoryId as any)?._id || t.categoryId;
+        const budgetCategoryId = typeof allocation.categoryId === 'string' ? allocation.categoryId : (allocation.categoryId as any)?._id || allocation.categoryId;
+        const matchesCategory = transactionCategoryId === budgetCategoryId;
+        const matchesCurrency = t.currency === budget.currency;
+        return matchesCategory && matchesCurrency;
+      });
+      
+      const categoryTransactions = transactions.filter(t => {
+        // Extract actual ID strings for comparison
+        const transactionCategoryId = typeof t.categoryId === 'string' ? t.categoryId : (t.categoryId as any)?._id || t.categoryId;
+        const budgetCategoryId = typeof allocation.categoryId === 'string' ? allocation.categoryId : (allocation.categoryId as any)?._id || allocation.categoryId;
+        
+        const matchesCategory = transactionCategoryId === budgetCategoryId;
+        const isExpense = t.type === TransactionType.EXPENSE;
+        const inPeriod = this.isTransactionInBudgetPeriod(t, budget);
+        const matchesCurrency = t.currency === budget.currency;
+        
+        
+        return matchesCategory && matchesCurrency && isExpense && inPeriod;
+      });
 
       const spentAmount = categoryTransactions.reduce((sum, t) => sum + t.amount, 0);
       const remainingAmount = allocation.allocatedAmount - spentAmount;
@@ -260,7 +340,7 @@ export class RealtimeBudgetProgressService implements OnDestroy {
         spentAmount, 
         dailyAverage, 
         allocation.allocatedAmount, 
-        budget.endDate
+        typeof budget.endDate === 'string' ? new Date(budget.endDate) : budget.endDate
       );
 
       const category = categories.find(c => c._id === allocation.categoryId);
@@ -333,7 +413,9 @@ export class RealtimeBudgetProgressService implements OnDestroy {
 
   // Calculate daily average spending
   private calculateDailyAverage(transactions: Transaction[], budget: Budget): number {
-    const budgetDuration = this.calculateBudgetDuration(budget.startDate, budget.endDate);
+    const startDate = typeof budget.startDate === 'string' ? new Date(budget.startDate) : budget.startDate;
+    const endDate = typeof budget.endDate === 'string' ? new Date(budget.endDate) : budget.endDate;
+    const budgetDuration = this.calculateBudgetDuration(startDate, endDate);
     const totalSpent = transactions.reduce((sum, t) => sum + t.amount, 0);
     return budgetDuration > 0 ? totalSpent / budgetDuration : 0;
   }
@@ -353,9 +435,20 @@ export class RealtimeBudgetProgressService implements OnDestroy {
   // Check if transaction is within budget period
   private isTransactionInBudgetPeriod(transaction: Transaction, budget: Budget): boolean {
     const transactionDate = new Date(transaction.date);
-    const startDate = new Date(budget.startDate);
-    const endDate = new Date(budget.endDate);
-    return transactionDate >= startDate && transactionDate <= endDate;
+    
+    // Handle both Date objects and ISO strings for budget dates
+    const startDate = typeof budget.startDate === 'string' ? new Date(budget.startDate) : budget.startDate;
+    const endDate = typeof budget.endDate === 'string' ? new Date(budget.endDate) : budget.endDate;
+    
+    // Set time to start of day for proper comparison
+    const transactionDateOnly = new Date(transactionDate.getFullYear(), transactionDate.getMonth(), transactionDate.getDate());
+    const startDateOnly = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+    const endDateOnly = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+    
+    const isInPeriod = transactionDateOnly >= startDateOnly && transactionDateOnly <= endDateOnly;
+    
+    
+    return isInPeriod;
   }
 
   // Calculate days remaining
@@ -394,6 +487,40 @@ export class RealtimeBudgetProgressService implements OnDestroy {
     const averageProgress = totalBudgets > 0 ? 
       progressData.reduce((sum, p) => sum + p.progressPercentage, 0) / totalBudgets : 0;
 
+    // Calculate currency-separated statistics
+    const currencyStats = new Map<string, {
+      totalBudget: number;
+      totalSpent: number;
+      totalRemaining: number;
+      overallProgress: number;
+      budgetCount: number;
+    }>();
+
+    // Group by currency
+    progressData.forEach(progress => {
+      const currency = progress.currency || 'USD';
+      if (!currencyStats.has(currency)) {
+        currencyStats.set(currency, {
+          totalBudget: 0,
+          totalSpent: 0,
+          totalRemaining: 0,
+          overallProgress: 0,
+          budgetCount: 0
+        });
+      }
+
+      const stats = currencyStats.get(currency)!;
+      stats.totalBudget += progress.totalAmount;
+      stats.totalSpent += progress.spentAmount;
+      stats.budgetCount += 1;
+    });
+
+    // Calculate remaining amounts and progress for each currency
+    currencyStats.forEach((stats, currency) => {
+      stats.totalRemaining = stats.totalBudget - stats.totalSpent;
+      stats.overallProgress = stats.totalBudget > 0 ? (stats.totalSpent / stats.totalBudget) * 100 : 0;
+    });
+
     const stats: RealtimeBudgetStats = {
       totalBudgets,
       activeBudgets,
@@ -404,7 +531,8 @@ export class RealtimeBudgetProgressService implements OnDestroy {
       totalBudget,
       overallProgress,
       averageProgress,
-      lastUpdated: new Date()
+      lastUpdated: new Date(),
+      currencyStats
     };
 
     this.budgetStats$.next(stats);

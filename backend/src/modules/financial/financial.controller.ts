@@ -35,16 +35,18 @@ export class FinancialController {
       }
 
       // Parse query parameters
-      const { startDate, endDate, accountId } = req.query;
+      const { startDate, endDate, accountId, separateByCurrency } = req.query;
 
       const options: {
         startDate?: Date;
         endDate?: Date;
         accountId?: string;
+        separateByCurrency?: boolean;
       } = {};
       if (startDate) options.startDate = new Date(startDate as string);
       if (endDate) options.endDate = new Date(endDate as string);
       if (accountId) options.accountId = accountId as string;
+      if (separateByCurrency) options.separateByCurrency = separateByCurrency === 'true';
 
       const dashboard = await this.financialService.getFinancialDashboard(
         userId,
@@ -392,25 +394,51 @@ export class FinancialController {
         {
           startDate,
           endDate,
+          separateByCurrency: false, // Ensure we get single dashboard format
         }
       );
 
-      const summary = {
-        period: periodValue,
-        overview: {
-          totalIncome: dashboardData.overview.monthlyIncome,
-          totalExpenses: dashboardData.overview.monthlyExpenses,
-          netAmount: dashboardData.overview.monthlyNet,
-          transactionCount: dashboardData.recentTransactions.length,
-        },
-        topInsights: insights.insights.slice(0, 3),
-        topCategories: dashboardData.topCategories,
-      };
+      // Type guard to ensure we have the single dashboard format
+      if ('overview' in dashboardData) {
+        const singleDashboard = dashboardData as {
+          overview: {
+            totalBalance: number;
+            monthlyIncome: number;
+            monthlyExpenses: number;
+            monthlyNet: number;
+            pendingTransactions: number;
+            upcomingRecurring: number;
+          };
+          recentTransactions: any[];
+          topCategories: any[];
+          spendingTrends: any[];
+          budgetStatus: any[];
+        };
 
-      res.status(200).json({
-        success: true,
-        data: summary,
-      });
+        const summary = {
+          period: periodValue,
+          overview: {
+            totalIncome: singleDashboard.overview.monthlyIncome,
+            totalExpenses: singleDashboard.overview.monthlyExpenses,
+            netAmount: singleDashboard.overview.monthlyNet,
+            transactionCount: singleDashboard.recentTransactions.length,
+          },
+          topInsights: insights.insights.slice(0, 3),
+          topCategories: singleDashboard.topCategories,
+        };
+
+        res.status(200).json({
+          success: true,
+          data: summary,
+        });
+      } else {
+        // Handle currency-separated format (should not happen with separateByCurrency: false)
+        res.status(500).json({
+          success: false,
+          message: 'Unexpected data format received',
+        });
+        return;
+      }
 
       logger.info('Financial summary accessed via API', {
         userId,

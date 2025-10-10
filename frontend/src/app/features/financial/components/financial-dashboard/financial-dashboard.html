@@ -38,10 +38,95 @@
   </div>
 
   <!-- Dashboard Content -->
-  <div *ngIf="!isLoading || dashboard" class="dashboard-content">
+  <div *ngIf="!isLoading || currencyDashboards" class="dashboard-content">
     
-    <!-- Overview Cards -->
-    <div class="overview-section">
+    <!-- Currency-Separated Overview Cards -->
+    <div class="currency-dashboard-overview" *ngIf="currencyDashboards && currencyDashboards.size > 0">
+      <div class="currency-section" *ngFor="let currencyEntry of currencyDashboards | keyvalue">
+        <div class="currency-header">
+          <h2>{{ currencyEntry.key }} Financial Overview</h2>
+        </div>
+        
+        <div class="overview-section">
+          <div class="overview-grid">
+            <!-- Total Balance Card -->
+            <div class="overview-card balance-card">
+              <div class="card-header">
+                <div class="card-icon">
+                  <i class="fas fa-wallet"></i>
+                </div>
+                <div class="card-title">Total Balance</div>
+              </div>
+              <div class="card-value" *ngIf="!isOverviewLoading; else balanceLoading">
+                {{ formatCurrency(getTotalBalanceForCurrency(currencyEntry.key), currencyEntry.key) }}
+              </div>
+              <ng-template #balanceLoading>
+                <app-loading-spinner size="small" message=""></app-loading-spinner>
+              </ng-template>
+              <div class="card-change" [class]="getChangeClass(getMonthlyNetForCurrency(currencyEntry.key))" *ngIf="!isOverviewLoading">
+                <span class="change-indicator">{{ getChangeIndicator(getMonthlyNetForCurrency(currencyEntry.key)) }}</span>
+                <span class="change-value">{{ formatCurrency(getMonthlyNetForCurrency(currencyEntry.key), currencyEntry.key) }}</span>
+                <span class="change-period">this month</span>
+              </div>
+            </div>
+
+            <!-- Monthly Income Card -->
+            <div class="overview-card income-card">
+              <div class="card-header">
+                <div class="card-icon">
+                  <i class="fas fa-arrow-down"></i>
+                </div>
+                <div class="card-title">Monthly Income</div>
+              </div>
+              <div class="card-value" *ngIf="!isOverviewLoading; else incomeLoading">
+                {{ formatCurrency(getMonthlyIncomeForCurrency(currencyEntry.key), currencyEntry.key) }}
+              </div>
+              <ng-template #incomeLoading>
+                <app-loading-spinner size="small" message=""></app-loading-spinner>
+              </ng-template>
+              <div class="card-subtitle" *ngIf="!isOverviewLoading">Total incoming funds</div>
+            </div>
+
+            <!-- Monthly Expenses Card -->
+            <div class="overview-card expense-card">
+              <div class="card-header">
+                <div class="card-icon">
+                  <i class="fas fa-arrow-up"></i>
+                </div>
+                <div class="card-title">Monthly Expenses</div>
+              </div>
+              <div class="card-value" *ngIf="!isOverviewLoading; else expenseLoading">
+                {{ formatCurrency(getMonthlyExpensesForCurrency(currencyEntry.key), currencyEntry.key) }}
+              </div>
+              <ng-template #expenseLoading>
+                <app-loading-spinner size="small" message=""></app-loading-spinner>
+              </ng-template>
+              <div class="card-subtitle" *ngIf="!isOverviewLoading">Total outgoing funds</div>
+            </div>
+
+            <!-- Monthly Net Card -->
+            <div class="overview-card net-card">
+              <div class="card-header">
+                <div class="card-icon">
+                  <i class="fas fa-chart-line"></i>
+                </div>
+                <div class="card-title">Monthly Net</div>
+              </div>
+              <div class="card-value" [class]="getChangeClass(getMonthlyNetForCurrency(currencyEntry.key))" *ngIf="!isOverviewLoading; else netLoading">
+                {{ formatCurrency(getMonthlyNetForCurrency(currencyEntry.key), currencyEntry.key) }}
+              </div>
+              <ng-template #netLoading>
+                <app-loading-spinner size="small" message=""></app-loading-spinner>
+              </ng-template>
+              <div class="card-subtitle" *ngIf="!isOverviewLoading">Income - Expenses</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Fallback: Single Overview (when no currency data available) -->
+    <div class="overview-section" *ngIf="!currencyDashboards || currencyDashboards.size === 0">
       <div class="overview-grid">
         <!-- Total Balance Card -->
         <div class="overview-card balance-card">

@@ -13,6 +13,7 @@ import {
 } from '../../../../core/models/financial.model';
 import { TransactionService } from '../../../../core/services/transaction.service';
 import { CategoryService } from '../../../../core/services/category.service';
+import { RealtimeBudgetProgressService } from '../../../../core/services/realtime-budget-progress.service';
 import { LoadingSpinnerComponent } from '../../../../shared/components/loading-spinner/loading-spinner';
 
 @Component({
@@ -31,6 +32,7 @@ export class TransactionFormComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
   private transactionService = inject(TransactionService);
   private categoryService = inject(CategoryService);
+  private realtimeBudgetService = inject(RealtimeBudgetProgressService);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private fb = inject(FormBuilder);
@@ -107,6 +109,7 @@ export class TransactionFormComponent implements OnInit, OnDestroy {
       currency: ['USD', Validators.required],
       type: [TransactionType.EXPENSE, Validators.required],
       status: [TransactionStatus.COMPLETED, Validators.required],
+      accountId: ['507f1f77bcf86cd799439011', Validators.required], // Default account ObjectId
       categoryId: ['', Validators.required],
       subcategoryId: [''],
       date: [new Date(), Validators.required],
@@ -333,6 +336,7 @@ export class TransactionFormComponent implements OnInit, OnDestroy {
         currency: formData.currency,
         type: formData.type,
         status: formData.status,
+        accountId: formData.accountId, // Required field for backend validation
         categoryId: formData.categoryId,
         subcategoryId: formData.subcategoryId || undefined,
         date: formData.date instanceof Date ? formData.date : new Date(formData.date),
@@ -359,6 +363,7 @@ export class TransactionFormComponent implements OnInit, OnDestroy {
         source: formData.source
       };
 
+
       if (this.isEditMode && this.transactionId) {
         // Update existing transaction
         this.transactionService.updateTransaction(this.transactionId, transactionData)
@@ -381,6 +386,8 @@ export class TransactionFormComponent implements OnInit, OnDestroy {
           .subscribe({
             next: (newTransaction) => {
               this.isSubmitting = false;
+              // Refresh budget progress to include the new transaction
+              this.realtimeBudgetService.refreshBudgetProgress();
               this.router.navigate(['/financial/transactions']);
             },
             error: (error) => {
@@ -406,6 +413,8 @@ export class TransactionFormComponent implements OnInit, OnDestroy {
           .subscribe({
             next: () => {
               this.isDeleting = false;
+              // Refresh budget progress to reflect the deleted transaction
+              this.realtimeBudgetService.refreshBudgetProgress();
               this.router.navigate(['/financial/transactions']);
             },
             error: (error) => {

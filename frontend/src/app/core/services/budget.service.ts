@@ -38,8 +38,8 @@ export interface CreateBudgetDto {
   name: string;
   description?: string;
   period: 'monthly' | 'yearly' | 'custom';
-  startDate: Date;
-  endDate: Date;
+  startDate: string; // ISO date string
+  endDate: string; // ISO date string
   totalAmount: number;
   currency?: string;
   categoryAllocations: CategoryAllocation[];
@@ -52,10 +52,11 @@ export interface UpdateBudgetDto {
   name?: string;
   description?: string;
   period?: 'monthly' | 'yearly' | 'custom';
-  startDate?: Date;
-  endDate?: Date;
+  startDate?: string; // ISO date string
+  endDate?: string; // ISO date string
   totalAmount?: number;
   currency?: string;
+  timezone?: string; // Timezone for budget dates
   categoryAllocations?: CategoryAllocation[];
   status?: 'active' | 'paused' | 'completed' | 'archived';
   alertThreshold?: number;

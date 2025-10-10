@@ -22,6 +22,7 @@ import { AdvancedFilterService, FilterGroup } from '../../../../core/services/ad
 import { BudgetWizardComponent } from '../budget-wizard/budget-wizard';
 import { OptimizedRealtimeBudgetProgressComponent } from '../realtime-budget-progress/optimized-realtime-budget-progress.component';
 import { AdvancedFilterComponent, FilterField } from '../../../../shared/components/advanced-filter/advanced-filter.component';
+import { RealtimeBudgetProgressService } from '../../../../core/services/realtime-budget-progress.service';
 
 interface BudgetProgress {
   categoryId: string;
@@ -51,6 +52,7 @@ export class BudgetManagementComponent implements OnInit, AfterViewInit, OnDestr
   private budgetService = inject(BudgetService);
   private analyticsService = inject(AnalyticsService);
   private advancedFilterService = inject(AdvancedFilterService);
+  private realtimeBudgetService = inject(RealtimeBudgetProgressService);
   private fb = inject(FormBuilder);
   private cdr = inject(ChangeDetectorRef);
 
@@ -92,11 +94,29 @@ export class BudgetManagementComponent implements OnInit, AfterViewInit, OnDestr
   totalRemaining: number = 0;
   overallProgress: number = 0;
   
+  // Currency-separated statistics
+  currencyStats: Map<string, {
+    totalBudget: number;
+    totalSpent: number;
+    totalRemaining: number;
+    overallProgress: number;
+    budgetCount: number;
+  }> = new Map();
+  
   // Available periods
   periods = [
     { value: 'monthly', label: 'Monthly' },
     { value: 'quarterly', label: 'Quarterly' },
     { value: 'yearly', label: 'Yearly' }
+  ];
+
+  // Currency options (aligned with transaction form)
+  currencies = ['USD', 'EUR', 'GBP', 'JPY', 'CAD', 'AUD', 'CHF', 'CNY'];
+  
+  // Timezone options (aligned with transaction form)
+  timezones = [
+    'UTC', 'America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles',
+    'Europe/London', 'Europe/Paris', 'Europe/Berlin', 'Asia/Tokyo', 'Asia/Shanghai'
   ];
 
   // Advanced filter configuration
@@ -204,7 +224,8 @@ export class BudgetManagementComponent implements OnInit, AfterViewInit, OnDestr
       period: ['monthly', Validators.required],
       startDate: ['', Validators.required],
       endDate: ['', Validators.required],
-      currency: ['USD', Validators.required]
+      currency: ['USD', Validators.required],
+      timezone: ['UTC', Validators.required]
     });
 
     this.editBudgetForm = this.fb.group({
@@ -214,7 +235,8 @@ export class BudgetManagementComponent implements OnInit, AfterViewInit, OnDestr
       startDate: ['', Validators.required],
       endDate: ['', Validators.required],
       totalAmount: ['', [Validators.required, Validators.min(0.01)]],
-      currency: ['USD', Validators.required]
+      currency: ['USD', Validators.required],
+      timezone: ['UTC', Validators.required]
     });
   }
 
@@ -253,6 +275,34 @@ export class BudgetManagementComponent implements OnInit, AfterViewInit, OnDestr
         this.budgets = this.createMockBudgets();
         this.filteredBudgets = [...this.budgets];
         this.loadTransactions();
+      }
+    });
+
+    // Subscribe to budget changes for real-time updates
+    this.budgetService.budgets$.pipe(
+      takeUntil(this.destroy$)
+    ).subscribe({
+      next: (budgets) => {
+        this.budgets = budgets;
+        this.filteredBudgets = [...this.budgets];
+        this.calculateBudgetProgress();
+        this.loadBudgetSummary();
+        this.cdr.detectChanges();
+      }
+    });
+
+    // Subscribe to currency-separated statistics
+    this.realtimeBudgetService.getCurrencyStats().pipe(
+      takeUntil(this.destroy$)
+    ).subscribe({
+      next: (currencyStats) => {
+        if (currencyStats) {
+          this.currencyStats = currencyStats;
+          this.cdr.detectChanges();
+        }
+      },
+      error: (error) => {
+        console.error('Error loading currency stats:', error);
       }
     });
   }
@@ -557,35 +607,43 @@ export class BudgetManagementComponent implements OnInit, AfterViewInit, OnDestr
       const formValue = this.budgetForm.value;
       const category = this.categories.find(c => c._id === formValue.categoryId);
       
-      const newBudget: Budget = {
-        _id: Date.now().toString(),
+      // Prepare budget data for backend
+      const budgetData = {
         name: formValue.name || 'New Budget',
-        description: formValue.description,
-        period: formValue.period,
-        startDate: new Date(formValue.startDate),
-        endDate: new Date(formValue.endDate),
-        totalAmount: formValue.amount,
-        currency: 'USD',
+        description: formValue.description || '',
+        period: formValue.period || 'monthly',
+        startDate: new Date(formValue.startDate).toISOString(),
+        endDate: new Date(formValue.endDate).toISOString(),
+        totalAmount: parseFloat(formValue.amount),
+        currency: formValue.currency || 'USD',
+        timezone: formValue.timezone || 'UTC',
         categoryAllocations: [{
           categoryId: formValue.categoryId,
-          allocatedAmount: formValue.amount,
+          allocatedAmount: parseFloat(formValue.amount),
           isFlexible: false,
           priority: 1
         }],
-        status: 'active',
         alertThreshold: 80,
-        userId: 'user1',
-        isActive: true,
         autoAdjust: false,
-        allowRollover: false,
-        rolloverAmount: 0,
-        createdAt: new Date(),
-        updatedAt: new Date()
+        allowRollover: false
       };
 
-      this.budgets.push(newBudget);
-      this.calculateBudgetProgress();
-      this.hideAddBudgetForm();
+
+      // Call backend service to create budget
+      this.budgetService.createBudget(budgetData).pipe(
+        takeUntil(this.destroy$)
+      ).subscribe({
+        next: (budget) => {
+          this.hideAddBudgetForm();
+          // Refresh budget data
+          this.loadBudgets();
+        },
+        error: (error) => {
+          console.error('Error creating budget:', error);
+          // Show error message to user
+          alert('Failed to create budget. Please try again.');
+        }
+      });
     }
   }
 
@@ -595,10 +653,11 @@ export class BudgetManagementComponent implements OnInit, AfterViewInit, OnDestr
       name: budget.name,
       description: budget.description,
       period: budget.period,
-      startDate: budget.startDate.toISOString().split('T')[0],
-      endDate: budget.endDate.toISOString().split('T')[0],
+      startDate: typeof budget.startDate === 'string' ? budget.startDate.split('T')[0] : budget.startDate.toISOString().split('T')[0],
+      endDate: typeof budget.endDate === 'string' ? budget.endDate.split('T')[0] : budget.endDate.toISOString().split('T')[0],
       totalAmount: budget.totalAmount,
-      currency: budget.currency
+      currency: budget.currency,
+      timezone: budget.timezone || 'UTC'
     });
   }
 
@@ -611,30 +670,69 @@ export class BudgetManagementComponent implements OnInit, AfterViewInit, OnDestr
     if (this.editBudgetForm.valid && this.editingBudgetId) {
       const formValue = this.editBudgetForm.value;
       
-      const budgetIndex = this.budgets.findIndex(b => b._id === this.editingBudgetId);
-      if (budgetIndex !== -1) {
-        this.budgets[budgetIndex] = {
-          ...this.budgets[budgetIndex],
-          name: formValue.name,
-          description: formValue.description,
-          period: formValue.period,
-          startDate: new Date(formValue.startDate),
-          endDate: new Date(formValue.endDate),
-          totalAmount: formValue.totalAmount,
-          currency: formValue.currency,
-          updatedAt: new Date()
-        };
+      // Prepare update data for backend
+      const updateData = {
+        name: formValue.name,
+        description: formValue.description,
+        period: formValue.period,
+        startDate: new Date(formValue.startDate).toISOString(),
+        endDate: new Date(formValue.endDate).toISOString(),
+        totalAmount: parseFloat(formValue.totalAmount),
+        currency: formValue.currency,
+        timezone: formValue.timezone || 'UTC'
+      };
 
-        this.calculateBudgetProgress();
-        this.cancelEdit();
-      }
+
+      // Call backend service to update budget
+      this.budgetService.updateBudget(this.editingBudgetId, updateData).pipe(
+        takeUntil(this.destroy$)
+      ).subscribe({
+        next: (updatedBudget) => {
+          
+          // Update local array with the response from backend
+          const budgetIndex = this.budgets.findIndex(b => b._id === this.editingBudgetId);
+          if (budgetIndex !== -1) {
+            this.budgets[budgetIndex] = updatedBudget;
+            this.filteredBudgets = [...this.budgets];
+            this.calculateBudgetProgress();
+            this.cdr.detectChanges();
+          }
+          
+          this.cancelEdit();
+        },
+        error: (error) => {
+          console.error('Error updating budget:', error);
+          console.error('Error details:', error.error);
+          console.error('Error status:', error.status);
+          console.error('Error message:', error.message);
+          console.error('Full error response:', JSON.stringify(error, null, 2));
+          
+          // Show more specific error message to user
+          if (error.error && error.error.details) {
+            alert(`Budget update failed: ${error.error.details.join(', ')}`);
+          } else if (error.error && error.error.message) {
+            alert(`Budget update failed: ${error.error.message}`);
+          } else {
+            alert('Failed to update budget. Please try again.');
+          }
+        }
+      });
     }
   }
 
   deleteBudget(budgetId: string): void {
     if (confirm('Are you sure you want to delete this budget?')) {
-      this.budgets = this.budgets.filter(b => b._id !== budgetId);
-      this.calculateBudgetProgress();
+      this.budgetService.deleteBudget(budgetId).subscribe({
+        next: (success) => {
+          if (success) {
+            // The reactive stream will automatically update the UI
+          }
+        },
+        error: (error) => {
+          console.error('Error deleting budget:', error);
+          // Optionally show user-friendly error message
+        }
+      });
     }
   }
 
@@ -721,7 +819,6 @@ export class BudgetManagementComponent implements OnInit, AfterViewInit, OnDestr
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {
-          console.log('Budget report exported successfully');
           this.showExportModal = false;
           this.isExporting = false;
         },
@@ -771,7 +868,6 @@ export class BudgetManagementComponent implements OnInit, AfterViewInit, OnDestr
     this.loadBudgets();
     
     // Show success message or navigate to budget details
-    console.log('New budget created:', budget);
   }
 
   getCategoryName(categoryId: string): string {
@@ -781,20 +877,17 @@ export class BudgetManagementComponent implements OnInit, AfterViewInit, OnDestr
 
   // Real-time progress event handlers
   onRealtimeBudgetClick(budget: any): void {
-    console.log('Real-time budget clicked:', budget);
     // Scroll to the budget in the list or highlight it
     this.scrollToBudget(budget.budgetId);
   }
 
   onRealtimeCategoryClick(event: { budget: any; category: any }): void {
-    console.log('Real-time category clicked:', event);
     // Show category details or filter by category
     this.selectedCategory = event.category.categoryId;
     this.onCategoryFilter(event.category.categoryId);
   }
 
   onRealtimeAlertClick(alert: any): void {
-    console.log('Real-time alert clicked:', alert);
     // Show alert details or navigate to relevant budget/category
     if (alert.categoryId) {
       this.selectedCategory = alert.categoryId;
@@ -822,12 +915,10 @@ export class BudgetManagementComponent implements OnInit, AfterViewInit, OnDestr
   }
 
   onPresetApplied(preset: any): void {
-    console.log('Filter preset applied:', preset);
     // The filters are already applied by the advanced filter service
   }
 
   onSavedFilterLoaded(savedFilter: any): void {
-    console.log('Saved filter loaded:', savedFilter);
     // The filters are already applied by the advanced filter service
   }
 

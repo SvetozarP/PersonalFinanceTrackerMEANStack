@@ -877,3 +877,182 @@
   .action-btn:hover {
     transform: translateY(-8px);
   }
+
+  // Currency-Separated Dashboard Styles
+  .currency-dashboard-overview {
+    margin-bottom: 32px;
+
+    .currency-section {
+      margin-bottom: 32px;
+      background: white;
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+
+      .currency-header {
+        margin-bottom: 24px;
+        padding-bottom: 16px;
+        border-bottom: 2px solid #f8f9fa;
+
+        h2 {
+          margin: 0;
+          font-size: 24px;
+          font-weight: 700;
+          color: #2c3e50;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+
+          &::before {
+            content: '';
+            width: 4px;
+            height: 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 2px;
+          }
+        }
+      }
+
+      .overview-section {
+        .overview-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+          gap: 20px;
+
+          @media (max-width: 768px) {
+            grid-template-columns: 1fr;
+            gap: 16px;
+          }
+
+          .overview-card {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            border-left: 4px solid;
+            transition: all 0.3s ease;
+
+            &:hover {
+              transform: translateY(-2px);
+              box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            }
+
+            &.balance-card {
+              border-left-color: #28a745;
+            }
+
+            &.income-card {
+              border-left-color: #17a2b8;
+            }
+
+            &.expense-card {
+              border-left-color: #dc3545;
+            }
+
+            &.net-card {
+              border-left-color: #6f42c1;
+            }
+
+            .card-header {
+              display: flex;
+              align-items: center;
+              gap: 12px;
+              margin-bottom: 16px;
+
+              .card-icon {
+                width: 40px;
+                height: 40px;
+                border-radius: 8px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 18px;
+                color: white;
+
+                .balance-card & {
+                  background: #28a745;
+                }
+
+                .income-card & {
+                  background: #17a2b8;
+                }
+
+                .expense-card & {
+                  background: #dc3545;
+                }
+
+                .net-card & {
+                  background: #6f42c1;
+                }
+              }
+
+              .card-title {
+                font-size: 14px;
+                font-weight: 600;
+                color: #6c757d;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+              }
+            }
+
+            .card-value {
+              font-size: 28px;
+              font-weight: 700;
+              color: #2c3e50;
+              margin-bottom: 8px;
+              line-height: 1.2;
+
+              &.change-positive {
+                color: #28a745;
+              }
+
+              &.change-negative {
+                color: #dc3545;
+              }
+
+              &.change-neutral {
+                color: #6c757d;
+              }
+            }
+
+            .card-subtitle {
+              font-size: 12px;
+              color: #6c757d;
+              margin-bottom: 12px;
+            }
+
+            .card-change {
+              display: flex;
+              align-items: center;
+              gap: 8px;
+              font-size: 14px;
+
+              .change-indicator {
+                font-size: 16px;
+              }
+
+              .change-value {
+                font-weight: 600;
+              }
+
+              .change-period {
+                color: #6c757d;
+                font-size: 12px;
+              }
+
+              &.change-positive {
+                color: #28a745;
+              }
+
+              &.change-negative {
+                color: #dc3545;
+              }
+
+              &.change-neutral {
+                color: #6c757d;
+              }
+            }
+          }
+        }
+      }
+    }
+  }

@@ -29,8 +29,66 @@
       </div>
     </div>
   
-    <!-- Budget Overview -->
-    <div class="budget-overview">
+    <!-- Currency-Separated Budget Overview -->
+    <div class="currency-budget-overview" *ngIf="currencyStats.size > 0">
+      <div class="currency-section" *ngFor="let currencyEntry of currencyStats | keyvalue">
+        <div class="currency-header">
+          <h2>{{ currencyEntry.key }} Budgets</h2>
+          <span class="budget-count">{{ currencyEntry.value.budgetCount }} budget{{ currencyEntry.value.budgetCount !== 1 ? 's' : '' }}</span>
+        </div>
+        
+        <div class="budget-overview">
+          <div class="overview-card total-budget">
+            <div class="card-icon">
+              <i class="fas fa-wallet"></i>
+            </div>
+            <div class="card-content">
+              <h3>Total Budget</h3>
+              <div class="card-value">{{ currencyEntry.value.totalBudget | currency:currencyEntry.key }}</div>
+              <div class="card-subtitle">This period</div>
+            </div>
+          </div>
+    
+          <div class="overview-card total-spent">
+            <div class="card-icon">
+              <i class="fas fa-shopping-cart"></i>
+            </div>
+            <div class="card-content">
+              <h3>Total Spent</h3>
+              <div class="card-value">{{ currencyEntry.value.totalSpent | currency:currencyEntry.key }}</div>
+              <div class="card-subtitle">This period</div>
+            </div>
+          </div>
+    
+          <div class="overview-card remaining">
+            <div class="card-icon">
+              <i class="fas fa-piggy-bank"></i>
+            </div>
+            <div class="card-content">
+              <h3>Remaining</h3>
+              <div class="card-value" [class.positive]="currencyEntry.value.totalRemaining >= 0" [class.negative]="currencyEntry.value.totalRemaining < 0">
+                {{ currencyEntry.value.totalRemaining | currency:currencyEntry.key }}
+              </div>
+              <div class="card-subtitle">Available to spend</div>
+            </div>
+          </div>
+    
+          <div class="overview-card progress">
+            <div class="card-icon">
+              <i class="fas fa-chart-pie"></i>
+            </div>
+            <div class="card-content">
+              <h3>Progress</h3>
+              <div class="card-value">{{ currencyEntry.value.overallProgress | number:'1.1-1' }}%</div>
+              <div class="card-subtitle">Budget used</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Fallback: Single Budget Overview (when no currency stats available) -->
+    <div class="budget-overview" *ngIf="currencyStats.size === 0">
       <div class="overview-card total-budget">
         <div class="card-icon">
           <i class="fas fa-wallet"></i>
@@ -164,7 +222,18 @@
               </option>
             </select>
           </div>
-  
+
+          <div class="form-group">
+            <label for="currency">Currency</label>
+            <select id="currency" formControlName="currency" class="form-control">
+              <option *ngFor="let currency of currencies" [value]="currency">
+                {{ currency }}
+              </option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
           <div class="form-group">
             <label for="startDate">Start Date</label>
             <input type="date" id="startDate" formControlName="startDate" class="form-control">
@@ -173,6 +242,15 @@
           <div class="form-group">
             <label for="endDate">End Date</label>
             <input type="date" id="endDate" formControlName="endDate" class="form-control">
+          </div>
+
+          <div class="form-group">
+            <label for="timezone">Timezone</label>
+            <select id="timezone" formControlName="timezone" class="form-control">
+              <option *ngFor="let timezone of timezones" [value]="timezone">
+                {{ timezone }}
+              </option>
+            </select>
           </div>
         </div>
   
@@ -343,9 +421,9 @@
                 <div class="form-group">
                   <label for="editCurrency">Currency</label>
                   <select id="editCurrency" formControlName="currency" class="form-control">
-                    <option value="USD">USD</option>
-                    <option value="EUR">EUR</option>
-                    <option value="GBP">GBP</option>
+                    <option *ngFor="let currency of currencies" [value]="currency">
+                      {{ currency }}
+                    </option>
                   </select>
                 </div>
               </div>
@@ -368,6 +446,17 @@
                 <div class="form-group">
                     <label for="editEndDate">End Date</label>
                   <input type="date" id="editEndDate" formControlName="endDate" class="form-control">
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="editTimezone">Timezone</label>
+                  <select id="editTimezone" formControlName="timezone" class="form-control">
+                    <option *ngFor="let timezone of timezones" [value]="timezone">
+                      {{ timezone }}
+                    </option>
+                  </select>
                 </div>
               </div>
   

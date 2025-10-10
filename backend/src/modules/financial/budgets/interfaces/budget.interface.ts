@@ -33,6 +33,9 @@ export interface IBudget extends Document {
   // Currency
   currency: string;
 
+  // Timezone
+  timezone?: string;
+
   // Category Allocations
   categoryAllocations: ICategoryAllocation[];
 
@@ -87,6 +90,7 @@ export interface ICreateBudgetDto {
   endDate: Date;
   totalAmount: number;
   currency?: string;
+  timezone?: string;
   categoryAllocations: ICreateCategoryAllocationDto[];
   alertThreshold?: number;
   autoAdjust?: boolean;

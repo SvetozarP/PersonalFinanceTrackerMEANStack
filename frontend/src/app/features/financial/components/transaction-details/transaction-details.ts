@@ -5,6 +5,7 @@ import { Subject, takeUntil, switchMap, of } from 'rxjs';
 import { Transaction, TransactionType, TransactionStatus, PaymentMethod, RecurrencePattern } from '../../../../core/models/financial.model';
 import { TransactionService } from '../../../../core/services/transaction.service';
 import { CategoryService } from '../../../../core/services/category.service';
+import { RealtimeBudgetProgressService } from '../../../../core/services/realtime-budget-progress.service';
 
 @Component({
   selector: 'app-transaction-details',
@@ -20,6 +21,7 @@ export class TransactionDetailsComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
   private transactionService = inject(TransactionService);
   private categoryService = inject(CategoryService);
+  private realtimeBudgetService = inject(RealtimeBudgetProgressService);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private cdr = inject(ChangeDetectorRef);
@@ -127,6 +129,8 @@ export class TransactionDetailsComponent implements OnInit, OnDestroy {
         .pipe(takeUntil(this.destroy$))
         .subscribe({
           next: () => {
+            // Refresh budget progress to reflect the deleted transaction
+            this.realtimeBudgetService.refreshBudgetProgress();
             this.router.navigate(['/financial/transactions']);
           },
           error: (error) => {

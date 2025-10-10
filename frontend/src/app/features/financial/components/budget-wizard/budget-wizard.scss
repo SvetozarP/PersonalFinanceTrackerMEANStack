@@ -411,6 +411,8 @@
     margin-bottom: 16px;
     background: white;
     transition: all 0.2s ease;
+    min-width: 0; // Prevent overflow
+    overflow: hidden; // Prevent content from overflowing
 
     &:hover {
       border-color: #667eea;
@@ -423,6 +425,7 @@
       gap: 16px;
       flex: 1;
       min-width: 0;
+      max-width: 200px; // Prevent category info from taking too much space
 
       .category-icon {
         width: 48px;
@@ -439,41 +442,57 @@
       .category-details {
         flex: 1;
         min-width: 0;
+        overflow: hidden; // Prevent text overflow
 
         .category-name {
           font-weight: 600;
           font-size: 16px;
           color: #2c3e50;
           margin-bottom: 4px;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis; // Show ellipsis for long names
         }
 
         .historical-info {
           font-size: 12px;
           color: #6c757d;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
         }
       }
     }
 
     .allocation-controls {
       display: flex;
-      align-items: end;
-      gap: 16px;
+      align-items: flex-start; // Changed from 'end' to 'flex-start' for better alignment
+      gap: 20px; // Increased gap for better spacing
       flex-shrink: 0;
+      min-width: 0; // Allow controls to shrink if needed
 
       .form-group {
         margin-bottom: 0;
+        display: flex;
+        flex-direction: column;
+        min-width: 0; // Allow form groups to shrink
 
         label {
           font-size: 12px;
-          margin-bottom: 4px;
+          margin-bottom: 6px; // Increased margin for better separation
+          font-weight: 600;
+          color: #495057;
+          white-space: nowrap; // Prevent label wrapping
         }
 
         .amount-input-group {
-          min-width: 120px;
+          min-width: 140px; // Increased minimum width
+          width: 140px; // Fixed width for consistency
         }
 
         .priority-select {
-          min-width: 80px;
+          min-width: 90px; // Increased minimum width
+          width: 90px; // Fixed width for consistency
         }
       }
 
@@ -484,10 +503,13 @@
         cursor: pointer;
         font-size: 12px;
         margin-bottom: 0;
+        margin-top: 18px; // Align with other form controls
+        white-space: nowrap; // Prevent text wrapping
 
         input[type="checkbox"] {
           width: 16px;
           height: 16px;
+          flex-shrink: 0;
         }
       }
     }
@@ -497,9 +519,36 @@
       align-items: stretch;
       gap: 16px;
 
+      .category-info {
+        max-width: none; // Remove max-width constraint on mobile
+        margin-bottom: 8px;
+      }
+
       .allocation-controls {
         justify-content: space-between;
         flex-wrap: wrap;
+        gap: 16px;
+
+        .form-group {
+          flex: 1;
+          min-width: 120px;
+
+          .amount-input-group {
+            width: 100%;
+            min-width: 120px;
+          }
+
+          .priority-select {
+            width: 100%;
+            min-width: 80px;
+          }
+        }
+
+        .checkbox-label {
+          margin-top: 0;
+          flex: 1;
+          justify-content: center;
+        }
       }
     }
   }
