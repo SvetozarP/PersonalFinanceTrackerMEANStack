@@ -123,19 +123,19 @@ export class ResponsiveChartComponent implements OnInit, OnDestroy, AfterViewIni
   }
 
   private calculateChartHeight(): void {
-    let height = 300; // Default height
+    let height = 200; // Default height
 
     if (this.isMobile()) {
-      height = 250;
+      height = 150;
     } else if (this.isTablet()) {
-      height = 300;
+      height = 200;
     } else if (this.isDesktop()) {
-      height = 400;
+      height = 250;
     }
 
     // Adjust height based on chart type
     if (this.config.type === 'pie' || this.config.type === 'doughnut') {
-      height = Math.min(height, 350);
+      height = Math.min(height, 220);
     }
 
     this.chartHeight.set(height);
@@ -174,20 +174,39 @@ export class ResponsiveChartComponent implements OnInit, OnDestroy, AfterViewIni
   }
 
   private createChartConfig(): ChartConfiguration {
-    const chartData: ChartJSData = {
-      labels: this.data.map(item => item.label),
-      datasets: [{
-        label: this.title || 'Data',
-        data: this.data.map(item => item.value),
-        backgroundColor: this.data.map((item, index) => 
-          item.color || this.config.colors[index % this.config.colors.length]
-        ),
-        borderColor: this.data.map((item, index) => 
-          item.color || this.config.colors[index % this.config.colors.length]
-        ),
-        borderWidth: 1
-      }]
-    };
+    let chartData: ChartJSData;
+    
+    // For pie/doughnut charts, use single dataset with individual labels
+    if (this.config.type === 'pie' || this.config.type === 'doughnut') {
+      chartData = {
+        labels: this.data.map(item => item.label),
+        datasets: [{
+          label: this.title || 'Data',
+          data: this.data.map(item => item.value),
+          backgroundColor: this.data.map((item, index) => 
+            item.color || this.config.colors[index % this.config.colors.length]
+          ),
+          borderColor: this.data.map((item, index) => 
+            item.color || this.config.colors[index % this.config.colors.length]
+          ),
+          borderWidth: 1
+        }]
+      };
+    } else {
+      // For line/bar charts, create separate datasets for each currency
+      const currencyGroups = this.groupDataByCurrency();
+      chartData = {
+        labels: this.getUniqueLabels(),
+        datasets: currencyGroups.map((group, index) => ({
+          label: group.currency,
+          data: group.data,
+          backgroundColor: group.color,
+          borderColor: group.color,
+          borderWidth: 2,
+          fill: this.config.type === 'area'
+        }))
+      };
+    }
 
     const chartType: ChartType = this.config.type === 'area' ? 'line' : this.config.type as ChartType;
 
@@ -197,19 +216,43 @@ export class ResponsiveChartComponent implements OnInit, OnDestroy, AfterViewIni
       options: {
         responsive: this.config.responsive,
         maintainAspectRatio: this.config.maintainAspectRatio,
-        plugins: {
-          legend: {
-            display: this.config.showLegend,
-            position: this.getLegendPosition()
+    plugins: {
+      legend: {
+        display: this.config.showLegend,
+        position: this.getLegendPosition(),
+        align: 'center',
+        labels: {
+          boxWidth: 5,
+          padding: 2,
+          usePointStyle: true,
+          font: {
+            size: 8
           },
-          tooltip: {
-            enabled: this.config.showTooltips
+          generateLabels: (chart) => {
+            const original = Chart.defaults.plugins.legend.labels.generateLabels;
+            const labels = original.call(this, chart);
+            // Limit legend items to prevent overflow
+            return labels.slice(0, 3);
           }
         },
+        maxHeight: 60,
+        fullSize: false
+      },
+      tooltip: {
+        enabled: this.config.showTooltips
+      }
+    },
         animation: this.config.animation ? {} : false,
         scales: chartType !== 'pie' && chartType !== 'doughnut' ? {
           y: {
             beginAtZero: true
+          },
+          x: {
+            ticks: {
+              maxRotation: 45,
+              minRotation: 0,
+              maxTicksLimit: 8
+            }
           }
         } : undefined
       }
@@ -301,9 +344,8 @@ export class ResponsiveChartComponent implements OnInit, OnDestroy, AfterViewIni
 
   // Responsive helpers
   getLegendPosition(): 'top' | 'bottom' | 'left' | 'right' {
-    if (this.isMobile()) return 'bottom';
-    if (this.isTablet()) return 'right';
-    return 'right';
+    // Use bottom position to prevent overflow issues
+    return 'bottom';
   }
 
   getTooltipPosition(): 'top' | 'bottom' | 'left' | 'right' {
@@ -335,5 +377,44 @@ export class ResponsiveChartComponent implements OnInit, OnDestroy, AfterViewIni
 
   get errorMessage(): string {
     return this.error || this.chartError() || 'An error occurred';
+  }
+
+  // Helper methods for multi-currency data
+  private groupDataByCurrency(): any[] {
+    const currencyMap = new Map<string, any[]>();
+    
+    this.data.forEach((item, index) => {
+      // Extract currency from label (e.g., "2025-09 (GBP)" -> "GBP")
+      const currencyMatch = item.label.match(/\(([^)]+)\)$/);
+      const currency = currencyMatch ? currencyMatch[1] : 'Unknown';
+      
+      if (!currencyMap.has(currency)) {
+        currencyMap.set(currency, []);
+      }
+      currencyMap.get(currency)!.push({
+        label: item.label,
+        value: item.value,
+        color: item.color || this.config.colors[index % this.config.colors.length]
+      });
+    });
+
+    return Array.from(currencyMap.entries()).map(([currency, items]) => ({
+      currency,
+      data: items.map(item => item.value),
+      color: items[0]?.color || this.config.colors[0]
+    }));
+  }
+
+  private getUniqueLabels(): string[] {
+    // For line/bar charts, extract unique time periods
+    const labels = new Set<string>();
+    this.data.forEach(item => {
+      // Extract time period from label (e.g., "2025-09 (GBP)" -> "2025-09")
+      const timeMatch = item.label.match(/^([^(]+)/);
+      if (timeMatch) {
+        labels.add(timeMatch[1].trim());
+      }
+    });
+    return Array.from(labels).sort();
   }
 }

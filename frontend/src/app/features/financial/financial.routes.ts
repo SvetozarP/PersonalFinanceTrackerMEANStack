@@ -13,8 +13,8 @@ export const FINANCIAL_ROUTES: Routes = [
       },
       {
         path: 'dashboard',
-        loadComponent: () => import('./components/financial-dashboard/financial-dashboard')
-          .then(m => m.FinancialDashboardComponent),
+        loadComponent: () => import('../../features/dashboard/dashboard')
+          .then(m => m.DashboardComponent),
         title: 'Financial Dashboard'
       },
       {

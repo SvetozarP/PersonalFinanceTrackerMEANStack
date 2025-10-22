@@ -3,7 +3,6 @@ export * from './components/transaction-list/transaction-list';
 export * from './components/transaction-form/transaction-form';
 export * from './components/category-list/category-list';
 export * from './components/category-form/category-form';
-export * from './components/financial-dashboard/financial-dashboard';
 export * from './components/transaction-details/transaction-details';
 export * from './components/category-tree/category-tree';
 export * from './components/financial-charts/financial-charts';

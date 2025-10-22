@@ -117,6 +117,27 @@ export class CategoryService {
   }
 
   /**
+   * Get categories by IDs
+   */
+  async getCategoriesByIds(categoryIds: string[]): Promise<ICategory[]> {
+    try {
+      logger.info('Getting categories by IDs', { categoryIds });
+      
+      const categories = await this.categoryRepository.find({
+        _id: { $in: categoryIds }
+      });
+      
+      return categories;
+    } catch (error) {
+      logger.error('Error getting categories by IDs', {
+        error: String(error),
+        categoryIds,
+      });
+      throw error;
+    }
+  }
+
+  /**
    * Get all categories for a user
    */
   async getUserCategories(

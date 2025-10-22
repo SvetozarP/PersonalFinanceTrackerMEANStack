@@ -180,13 +180,19 @@ export class FinancialService {
 
       // Group transactions by currency
       const transactionsByCurrency: {[currency: string]: any[]} = {};
+      console.log('Total transactions received:', allTransactions.transactions.length);
       allTransactions.transactions.forEach(transaction => {
         const currency = transaction.currency || 'USD';
+        console.log(`Transaction ${transaction._id}: currency=${currency}, amount=${transaction.amount}, type=${transaction.type}`);
         if (!transactionsByCurrency[currency]) {
           transactionsByCurrency[currency] = [];
         }
         transactionsByCurrency[currency].push(transaction);
       });
+      console.log('Transactions grouped by currency:', Object.keys(transactionsByCurrency).map(currency => ({
+        currency,
+        count: transactionsByCurrency[currency].length
+      })));
 
       // Get recurring transactions for upcoming count
       const recurringTransactions = await this.transactionService.getRecurringTransactions(userId);
@@ -221,26 +227,90 @@ export class FinancialService {
           .slice(0, 10);
 
         // Calculate top categories for this currency
-        const categoryTotals: {[categoryId: string]: {name: string, total: number}} = {};
+        const categoryTotals: {[categoryId: string]: number} = {};
+        
         transactions
           .filter(t => t.type === TransactionType.EXPENSE)
           .forEach(transaction => {
-            const categoryId = transaction.categoryId;
-            if (!categoryTotals[categoryId]) {
-              categoryTotals[categoryId] = { name: categoryId, total: 0 };
+            
+            // Ensure we're getting just the string ID, not the entire object
+            let categoryId = '';
+            if (typeof transaction.categoryId === 'string') {
+              categoryId = transaction.categoryId;
+            } else if (transaction.categoryId && typeof transaction.categoryId === 'object') {
+              // If it's an object, extract the _id or id field
+              categoryId = transaction.categoryId._id?.toString() || transaction.categoryId.id?.toString() || '';
+            } else {
+              categoryId = transaction.categoryId?.toString() || '';
             }
-            categoryTotals[categoryId].total += transaction.amount;
+            
+            if (categoryId && !categoryTotals[categoryId]) {
+              categoryTotals[categoryId] = 0;
+            }
+            if (categoryId) {
+              categoryTotals[categoryId] += transaction.amount;
+            }
           });
 
-        const topCategories = Object.values(categoryTotals)
-          .sort((a, b) => b.total - a.total)
-          .slice(0, 5);
+        // Fetch actual category names from database
+        const categoryIds = Object.keys(categoryTotals);
+        let finalTopCategories: any[] = [];
+        
+        if (categoryIds.length > 0) {
+          try {
+            const categories = await this.categoryService.getCategoriesByIds(categoryIds);
+            const categoryMap = new Map(categories.map(cat => [(cat._id as any).toString(), cat]));
+            
+            finalTopCategories = Object.entries(categoryTotals)
+              .map(([categoryId, amount]) => {
+                const category = categoryMap.get(categoryId);
+                return {
+                  name: category ? category.name : `Category ${categoryId.substring(0, 8)}`,
+                  amount: Number(amount) || 0,
+                  color: category ? (category.color || '#3B82F6') : '#3B82F6'
+                };
+              })
+              .sort((a, b) => b.amount - a.amount)
+              .slice(0, 5);
+          } catch (error) {
+            logger.error('Error fetching categories for dashboard', { error: String(error), categoryIds });
+            // Fallback to simplified names if database lookup fails
+            finalTopCategories = Object.entries(categoryTotals)
+              .map(([categoryId, amount]) => ({
+                name: `Category ${categoryId.substring(0, 8)}`,
+                amount: Number(amount) || 0,
+                color: '#3B82F6'
+              }))
+              .sort((a, b) => b.amount - a.amount)
+              .slice(0, 5);
+          }
+        }
 
-        // Create monthly trends for this currency (simplified)
-        const spendingTrends = [
-          { month: '2025-09', amount: expenses * 0.8 },
-          { month: '2025-10', amount: expenses }
-        ];
+        // Create monthly trends for this currency based on actual transaction data
+        const monthlyTrends: {[month: string]: number} = {};
+        const now = new Date();
+        
+        // Get trends for the last 6 months
+        for (let i = 5; i >= 0; i--) {
+          const trendDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
+          const monthKey = trendDate.toISOString().substring(0, 7); // YYYY-MM format
+          
+          // Calculate spending for this month
+          const monthStart = new Date(trendDate.getFullYear(), trendDate.getMonth(), 1);
+          const monthEnd = new Date(trendDate.getFullYear(), trendDate.getMonth() + 1, 0);
+          
+          const monthTransactions = transactions.filter(t => {
+            const transactionDate = new Date(t.date);
+            return transactionDate >= monthStart && transactionDate <= monthEnd && t.type === TransactionType.EXPENSE;
+          });
+          
+          const monthSpending = monthTransactions.reduce((sum, t) => sum + t.amount, 0);
+          monthlyTrends[monthKey] = monthSpending;
+        }
+        
+        const spendingTrends = Object.entries(monthlyTrends)
+          .map(([month, amount]) => ({ month, amount }))
+          .sort((a, b) => a.month.localeCompare(b.month));
 
         currencyDashboards[currency] = {
           overview: {
@@ -252,11 +322,14 @@ export class FinancialService {
             upcomingRecurring,
           },
           recentTransactions,
-          topCategories,
+          topCategories: finalTopCategories,
           spendingTrends,
           budgetStatus: [], // Will be implemented in Phase 4
         };
       }
+
+      console.log('Final currency dashboards:', Object.keys(currencyDashboards));
+      console.log('Currency dashboards data:', currencyDashboards);
 
       logger.info('Currency-separated dashboard data retrieved successfully', {
         userId,

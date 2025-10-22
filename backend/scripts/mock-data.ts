@@ -201,6 +201,10 @@ class MockDataGenerator {
         const date = new Date();
         date.setDate(date.getDate() - Math.floor(Math.random() * 90)); // Last 90 days
 
+        // Randomly assign currency (70% USD, 30% GBP)
+        const currencies = ['USD', 'GBP'];
+        const currency = Math.random() < 0.7 ? 'USD' : 'GBP';
+        
         const transactionData = {
           title: isIncome 
             ? `${selectedCategory.name} Payment`
@@ -209,7 +213,7 @@ class MockDataGenerator {
             ? `Monthly ${selectedCategory.name.toLowerCase()} payment`
             : `Purchase at ${merchants[Math.floor(Math.random() * merchants.length)]}`,
           amount: Math.round(amount * 100) / 100,
-          currency: 'USD',
+          currency: currency,
           type: isIncome ? TransactionType.INCOME : TransactionType.EXPENSE,
           status: transactionStatuses[Math.floor(Math.random() * transactionStatuses.length)],
           categoryId: selectedCategory._id,
@@ -274,6 +278,9 @@ class MockDataGenerator {
           priority: index + 1,
         }));
 
+        // Randomly assign currency for budget
+        const budgetCurrency = Math.random() < 0.7 ? 'USD' : 'GBP';
+        
         const budgetData = {
           name: budgetNames[i],
           description: `Budget for ${budgetNames[i].toLowerCase()}`,
@@ -281,7 +288,7 @@ class MockDataGenerator {
           startDate: startDate,
           endDate: endDate,
           totalAmount: totalAmount,
-          currency: 'USD',
+          currency: budgetCurrency,
           categoryAllocations: categoryAllocations,
           status: 'active' as const,
           alertThreshold: 80,

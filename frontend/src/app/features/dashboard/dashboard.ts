@@ -8,7 +8,7 @@ import { FinancialService } from '../../core/services/financial.service';
 import { CategoryService } from '../../core/services/category.service';
 import { TransactionService } from '../../core/services/transaction.service';
 import { LoadingSpinnerComponent } from '../../shared/components/loading-spinner/loading-spinner';
-import { ResponsiveChartComponent } from '../../shared/components/responsive-chart/responsive-chart';
+import { ModernChartComponent } from '../../shared/components/modern-chart/modern-chart';
 import { AuthService } from '../../features/auth/services/auth.service';
 import { Router } from '@angular/router';
 
@@ -19,9 +19,8 @@ import { Router } from '@angular/router';
     CommonModule,
     RouterModule,
     LoadingSpinnerComponent,
-    ResponsiveChartComponent,
+    ModernChartComponent,
     RouterLink,
-    RouterModule,
   ],
   templateUrl: './dashboard.html',
   styleUrls: ['./dashboard.css']
@@ -47,9 +46,16 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   // Data properties
   dashboardData = signal<FinancialDashboard | null>(null);
+  currencyDashboards = signal<Map<string, FinancialDashboard> | null>(null);
   recentTransactions = signal<Transaction[]>([]);
   categoryStats = signal<CategoryStats | null>(null);
   error = signal<string | null>(null);
+  
+  // Date range controls
+  dateRange = signal<{start: Date, end: Date}>({
+    start: new Date(new Date().getFullYear(), new Date().getMonth() - 5, 1),
+    end: new Date()
+  });
 
   // Chart data
   spendingChartData = signal<any[]>([]);
@@ -88,7 +94,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.error.set(null);
 
     // Load all dashboard data in parallel
-    const dashboardData$ = this.financialService.getFinancialDashboard();
+    const dashboardData$ = this.financialService.getCurrencySeparatedDashboard();
     const recentTransactions$ = this.transactionService.getUserTransactions({ limit: 5 });
     const categoryStats$ = this.categoryService.getCategoryStats();
     const categories$ = this.categoryService.getUserCategories();
@@ -98,7 +104,25 @@ export class DashboardComponent implements OnInit, OnDestroy {
       .subscribe({
         next: ([dashboardData, transactionsResponse, stats, categories]) => {
           
-          this.dashboardData.set(dashboardData);
+          // Handle currency-separated dashboard data
+          if (dashboardData instanceof Map) {
+            console.log('Processing currency-separated data, currencies:', Array.from(dashboardData.keys()));
+            // Store the currency-separated data
+            this.currencyDashboards.set(dashboardData);
+            
+            // For charts, use the first currency's data
+            const firstCurrency = dashboardData.keys().next().value;
+            if (firstCurrency) {
+              const currencyData = dashboardData.get(firstCurrency)!;
+              console.log('Setting dashboard data for charts (first currency):', firstCurrency, currencyData);
+              this.dashboardData.set(currencyData);
+            }
+          } else {
+            console.log('Setting regular dashboard data:', dashboardData);
+            this.dashboardData.set(dashboardData);
+            this.currencyDashboards.set(null);
+          }
+          
           this.recentTransactions.set(transactionsResponse.data);
           this.categoryStats.set(stats);
           this.categories.set(categories);
@@ -127,14 +151,67 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   private prepareChartData(): void {
+    const currencyDashboards = this.currencyDashboards();
     const dashboardData = this.dashboardData();
     
-    if (dashboardData) {
+    console.log('Preparing chart data with dashboard data:', dashboardData);
+    console.log('Currency dashboards:', currencyDashboards);
+    
+    // If we have currency-separated data, combine it for charts
+    if (currencyDashboards && currencyDashboards.size > 0) {
+      // Prepare spending trends data - combine all currencies
+      const allSpendingData: any[] = [];
+      for (const [currency, dashboard] of currencyDashboards.entries()) {
+        if (dashboard.spendingTrends) {
+          dashboard.spendingTrends.forEach((trend: any) => {
+            allSpendingData.push({
+              label: `${trend.month} (${currency})`,
+              value: trend.amount || 0
+            });
+          });
+        }
+      }
+      allSpendingData.sort((a, b) => a.label.localeCompare(b.label));
+      this.spendingChartData.set(allSpendingData);
+
+      // Prepare income data - separate bar for each currency
+      const allIncomeData: any[] = [];
+      for (const [currency, dashboard] of currencyDashboards.entries()) {
+        if (dashboard.overview?.monthlyIncome) {
+          allIncomeData.push({
+            label: `${currency} Income`,
+            value: dashboard.overview.monthlyIncome
+          });
+        }
+      }
+      console.log('Income chart data (multi-currency):', allIncomeData);
+      this.incomeChartData.set(allIncomeData);
+
+      // Prepare category data - combine all currencies
+      const allCategoryData: any[] = [];
+      for (const [currency, dashboard] of currencyDashboards.entries()) {
+        if (dashboard.topCategories) {
+          dashboard.topCategories.forEach((category: any) => {
+            allCategoryData.push({
+              label: `${category.name} (${currency})`,
+              value: category.amount || 0
+            });
+          });
+        }
+      }
+      // Sort by value and take top 5
+      allCategoryData.sort((a, b) => b.value - a.value);
+      const topCategoryData = allCategoryData.slice(0, 5);
+      console.log('Category chart data (multi-currency):', topCategoryData);
+      this.categoryChartData.set(topCategoryData);
+    } else if (dashboardData) {
+      // Fallback to single currency data
       // Prepare spending trends data - using spendingTrends from FinancialDashboard
       const spendingData = dashboardData.spendingTrends?.map(item => ({
         label: item.month,
-        value: item.expenses || 0
+        value: item.amount || 0
       })) || [];
+      console.log('Spending chart data (single currency):', spendingData);
       this.spendingChartData.set(spendingData);
 
       // Prepare income data - using monthly income from overview
@@ -142,15 +219,18 @@ export class DashboardComponent implements OnInit, OnDestroy {
         label: 'Current Month',
         value: dashboardData.overview?.monthlyIncome || 0
       }];
+      console.log('Income chart data (single currency):', incomeData);
       this.incomeChartData.set(incomeData);
 
       // Prepare category data from top categories
-      // Note: dashboardData.topCategories comes from transaction stats with categoryName and total
       const categoryData = dashboardData.topCategories?.map((item: any) => ({
-        label: item.categoryName || item.name || 'Unknown Category',
-        value: item.total || item.totalAmount || 0
+        label: item.name || 'Unknown Category',
+        value: item.amount || 0
       })) || [];
+      console.log('Category chart data (single currency):', categoryData);
       this.categoryChartData.set(categoryData);
+    } else {
+      console.log('No dashboard data available for chart preparation');
     }
   }
 
@@ -163,6 +243,40 @@ export class DashboardComponent implements OnInit, OnDestroy {
         percentage: item.percentage || 0
       })));
     }
+  }
+
+  // Date range methods
+  updateDateRange(start: Date, end: Date): void {
+    this.dateRange.set({ start, end });
+    this.loadDashboardData();
+  }
+  
+  setLastMonth(): void {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const end = new Date(now.getFullYear(), now.getMonth(), 0);
+    this.updateDateRange(start, end);
+  }
+  
+  setLast3Months(): void {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth() - 3, 1);
+    const end = new Date();
+    this.updateDateRange(start, end);
+  }
+  
+  setLast6Months(): void {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth() - 6, 1);
+    const end = new Date();
+    this.updateDateRange(start, end);
+  }
+  
+  setLastYear(): void {
+    const now = new Date();
+    const start = new Date(now.getFullYear() - 1, now.getMonth(), 1);
+    const end = new Date();
+    this.updateDateRange(start, end);
   }
 
   // Refresh methods
@@ -290,5 +404,36 @@ export class DashboardComponent implements OnInit, OnDestroy {
   logout(): void {
     this.authService.logout();
     this.router.navigate(['/auth/login']);
+  }
+
+  // Currency formatting helper methods
+  formatCurrency(amount: number, currency: string): string {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: currency,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(amount);
+  }
+
+  getChangeClass(value: number): string {
+    if (value > 0) return 'change-positive';
+    if (value < 0) return 'change-negative';
+    return 'change-neutral';
+  }
+
+  getChangeIndicator(value: number): string {
+    if (value > 0) return '↑';
+    if (value < 0) return '↓';
+    return '→';
+  }
+
+  // Helper method for category percentage calculation
+  getCategoryPercentage(value: number): number {
+    const categoryData = this.categoryChartData();
+    if (categoryData.length === 0) return 0;
+    
+    const maxValue = Math.max(...categoryData.map(item => item.value));
+    return maxValue > 0 ? (value / maxValue) * 100 : 0;
   }
 }

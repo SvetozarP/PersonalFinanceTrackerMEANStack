@@ -25,6 +25,17 @@
           <p class="subtitle">Overview of your financial health</p>
         </div>
         <div class="actions-section">
+          <!-- Date Range Controls -->
+          <div class="date-range-controls">
+            <label>Time Period:</label>
+            <div class="date-buttons">
+              <button class="btn btn-sm btn-outline-primary" (click)="setLastMonth()">Last Month</button>
+              <button class="btn btn-sm btn-outline-primary" (click)="setLast3Months()">Last 3 Months</button>
+              <button class="btn btn-sm btn-outline-primary" (click)="setLast6Months()">Last 6 Months</button>
+              <button class="btn btn-sm btn-outline-primary" (click)="setLastYear()">Last Year</button>
+            </div>
+          </div>
+          
           <button class="btn btn-secondary" (click)="refreshDashboard()" [disabled]="isLoading()">
             <i class="fas fa-redo"></i>
             Refresh
@@ -40,8 +51,81 @@
         </div>
       </div>
   
-      <!-- Key Metrics -->
-      <div class="metrics-grid">
+      <!-- Currency-Separated Overview Cards -->
+      <div class="currency-dashboard-overview" *ngIf="currencyDashboards() && currencyDashboards()!.size > 0">
+        <div class="currency-section" *ngFor="let currencyEntry of currencyDashboards() | keyvalue">
+          <div class="currency-header">
+            <h2>{{ currencyEntry.key }} Financial Overview</h2>
+          </div>
+          
+          <div class="overview-section">
+            <div class="overview-grid">
+              <!-- Total Balance Card -->
+              <div class="overview-card balance-card">
+                <div class="card-header">
+                  <div class="card-icon">
+                    <i class="fas fa-wallet"></i>
+                  </div>
+                  <div class="card-title">Total Balance</div>
+                </div>
+                <div class="card-value">
+                  {{ formatCurrency(currencyEntry.value.overview.totalBalance, currencyEntry.key) }}
+                </div>
+                <div class="card-change" [class]="getChangeClass(currencyEntry.value.overview.monthlyNet)">
+                  <span class="change-indicator">{{ getChangeIndicator(currencyEntry.value.overview.monthlyNet) }}</span>
+                  <span class="change-value">{{ formatCurrency(currencyEntry.value.overview.monthlyNet, currencyEntry.key) }}</span>
+                  <span class="change-period">this month</span>
+                </div>
+              </div>
+
+              <!-- Monthly Income Card -->
+              <div class="overview-card income-card">
+                <div class="card-header">
+                  <div class="card-icon">
+                    <i class="fas fa-arrow-down"></i>
+                  </div>
+                  <div class="card-title">Monthly Income</div>
+                </div>
+                <div class="card-value">
+                  {{ formatCurrency(currencyEntry.value.overview.monthlyIncome, currencyEntry.key) }}
+                </div>
+                <div class="card-subtitle">Total incoming funds</div>
+              </div>
+
+              <!-- Monthly Expenses Card -->
+              <div class="overview-card expense-card">
+                <div class="card-header">
+                  <div class="card-icon">
+                    <i class="fas fa-arrow-up"></i>
+                  </div>
+                  <div class="card-title">Monthly Expenses</div>
+                </div>
+                <div class="card-value">
+                  {{ formatCurrency(currencyEntry.value.overview.monthlyExpenses, currencyEntry.key) }}
+                </div>
+                <div class="card-subtitle">Total outgoing funds</div>
+              </div>
+
+              <!-- Monthly Net Card -->
+              <div class="overview-card net-card">
+                <div class="card-header">
+                  <div class="card-icon">
+                    <i class="fas fa-chart-line"></i>
+                  </div>
+                  <div class="card-title">Monthly Net</div>
+                </div>
+                <div class="card-value" [class]="getChangeClass(currencyEntry.value.overview.monthlyNet)">
+                  {{ formatCurrency(currencyEntry.value.overview.monthlyNet, currencyEntry.key) }}
+                </div>
+                <div class="card-subtitle">Income - Expenses</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Fallback: Single Currency Overview (when no currency data available) -->
+      <div class="metrics-grid" *ngIf="!currencyDashboards() || currencyDashboards()!.size === 0">
         <!-- Total Balance -->
         <div class="metric-card balance">
           <div class="metric-icon">
@@ -94,100 +178,44 @@
         </div>
       </div>
   
-      <!-- Charts Section -->
-      <div class="charts-section">
-        <div class="chart-row">
-          <!-- Spending Trend -->
-          <div class="chart-card">
-            <div class="chart-header">
-              <h3>Spending Trend</h3>
-              <div class="chart-actions">
-                <button class="btn btn-sm btn-secondary" (click)="refreshDashboard()" [disabled]="isLoading()">
-                  <i class="fas fa-redo"></i>
-                  Refresh
-                </button>
-              </div>
-            </div>
-            <div class="chart-content">
-              <app-responsive-chart
-                [data]="spendingChartData()"
-                [config]="{
-                  type: 'line',
-                  responsive: true,
-                  maintainAspectRatio: false,
-                  showLegend: true,
-                  showTooltips: true,
-                  showLabels: true,
-                  animation: true,
-                  colors: ['#e53e3e', '#38a169', '#3182ce']
-                }"
-                [loading]="isLoading()"
-                [emptyMessage]="'No spending data available'">
-              </app-responsive-chart>
-            </div>
-          </div>
-  
-          <!-- Income Trend -->
-          <div class="chart-card">
-            <div class="chart-header">
-              <h3>Income Trend</h3>
-              <div class="chart-actions">
-                <button class="btn btn-sm btn-secondary" (click)="refreshDashboard()" [disabled]="isLoading()">
-                  <i class="fas fa-redo"></i>
-                  Refresh
-                </button>
-              </div>
-            </div>
-            <div class="chart-content">
-              <app-responsive-chart
-                [data]="incomeChartData()"
-                [config]="{
-                  type: 'bar',
-                  responsive: true,
-                  maintainAspectRatio: false,
-                  showLegend: true,
-                  showTooltips: true,
-                  showLabels: true,
-                  animation: true,
-                  colors: ['#38a169', '#3182ce', '#e53e3e']
-                }"
-                [loading]="isLoading()"
-                [emptyMessage]="'No income data available'">
-              </app-responsive-chart>
-            </div>
-          </div>
-        </div>
-  
-        <!-- Category Spending -->
-        <div class="chart-card full-width">
-          <div class="chart-header">
-            <h3>Spending by Category</h3>
-            <div class="chart-actions">
-              <button class="btn btn-sm btn-secondary" (click)="refreshCategoryStats()" [disabled]="isLoading()">
-                <i class="fas fa-redo"></i>
-                Refresh
-              </button>
-            </div>
-          </div>
-          <div class="chart-content">
-            <app-responsive-chart
-              [data]="categoryChartData()"
-              [config]="{
-                type: 'pie',
-                responsive: true,
-                maintainAspectRatio: false,
-                showLegend: true,
-                showTooltips: true,
-                showLabels: true,
-                animation: true,
-                colors: ['#3182ce', '#38a169', '#e53e3e', '#805ad5', '#d69e2e']
-              }"
+        <!-- Charts Section -->
+        <div class="charts-section">
+          <!-- Spending Trend - Modern Line Chart -->
+          <div class="chart-card full-width">
+            <app-modern-chart
+              [data]="spendingChartData()"
+              [type]="'line'"
+              [title]="'Spending Trend'"
               [loading]="isLoading()"
-              [emptyMessage]="'No category data available'">
-            </app-responsive-chart>
+              [emptyMessage]="'No spending data available'"
+              [allowFullscreen]="true">
+            </app-modern-chart>
+          </div>
+
+          <!-- Income Trend - Modern Bar Chart -->
+          <div class="chart-card full-width">
+            <app-modern-chart
+              [data]="incomeChartData()"
+              [type]="'bar'"
+              [title]="'Income Trend'"
+              [loading]="isLoading()"
+              [emptyMessage]="'No income data available'"
+              [allowFullscreen]="true">
+            </app-modern-chart>
+          </div>
+
+          <!-- Category Spending - Modern Pie Chart -->
+          <div class="chart-card full-width">
+            <app-modern-chart
+              [data]="categoryChartData()"
+              [type]="'pie'"
+              [title]="'Spending by Category'"
+              [loading]="isLoading()"
+              [emptyMessage]="'No category data available'"
+              [allowFullscreen]="true">
+            </app-modern-chart>
           </div>
         </div>
-      </div>
   
       <!-- Recent Transactions -->
       <div class="recent-transactions-section">

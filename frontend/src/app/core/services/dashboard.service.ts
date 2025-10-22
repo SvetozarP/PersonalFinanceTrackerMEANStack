@@ -130,16 +130,40 @@ export class DashboardService {
 
     // Combine multiple API calls
     return combineLatest([
-      this.financialService.getFinancialDashboard(options),
+      this.financialService.getCurrencySeparatedDashboard(options),
       this.categoryService.getUserCategories(),
       this.transactionService.getTransactionStats(options),
       this.categoryService.getCategoryStats()
     ]).pipe(
       map(([dashboard, categories, stats, categoryStats]) => {
+        // Handle currency-separated dashboard data
+        let processedDashboard;
+        let allRecentTransactions: any[] = [];
+        
+        if (dashboard instanceof Map) {
+          // Combine recent transactions from all currencies
+          for (const [currency, currencyData] of dashboard.entries()) {
+            if (currencyData.recentTransactions) {
+              allRecentTransactions = allRecentTransactions.concat(currencyData.recentTransactions);
+            }
+          }
+          // Sort combined transactions by date (most recent first)
+          allRecentTransactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+          // Take only the most recent 10 transactions
+          allRecentTransactions = allRecentTransactions.slice(0, 10);
+          
+          // For backward compatibility, use the first currency's data as the main dashboard
+          const firstCurrency = dashboard.keys().next().value;
+          processedDashboard = firstCurrency ? dashboard.get(firstCurrency)! : null;
+        } else {
+          processedDashboard = dashboard;
+          allRecentTransactions = [];
+        }
+
         const dashboardState: DashboardState = {
-          dashboard,
+          dashboard: processedDashboard,
           categories,
-          recentTransactions: dashboard.recentTransactions,
+          recentTransactions: allRecentTransactions,
           stats,
           categoryStats,
           isLoading: false,

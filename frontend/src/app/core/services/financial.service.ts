@@ -168,15 +168,22 @@ export class FinancialService {
       params = params.set('accountId', options.accountId);
     }
     params = params.set('separateByCurrency', 'true');
+    
+    console.log('Currency-separated dashboard request parameters:', params.toString());
+    console.log('Full URL:', `${this.baseUrl}/dashboard?${params.toString()}`);
 
     return this.http.get<ApiResponse<{[currency: string]: FinancialDashboard}>>(`${this.baseUrl}/dashboard`, {params})
     .pipe(
       map(response => {
+        console.log('API Response for currency-separated dashboard:', response);
+        console.log('Response data:', response.data);
         // Convert object to Map
         const currencyMap = new Map<string, FinancialDashboard>();
         Object.entries(response.data).forEach(([currency, dashboard]) => {
+          console.log(`Adding currency ${currency}:`, dashboard);
           currencyMap.set(currency, dashboard);
         });
+        console.log('Final currency map:', currencyMap);
         return currencyMap;
       }),
       tap((currencyDashboards) => {
