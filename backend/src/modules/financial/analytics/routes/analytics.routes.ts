@@ -9,6 +9,8 @@ import {
   dateRangeSchema, 
   cashFlowQuerySchema 
 } from '../validation/analytics.validation';
+import financialPlanningRoutes from './financial-planning.routes';
+import dataExportRoutes from './data-export.routes';
 import Joi from 'joi';
 
 const router = Router();
@@ -172,8 +174,28 @@ router.get(
 );
 
 /**
+ * @route   POST /api/analytics/reports/generate
+ * @desc    Generate comprehensive financial reports in multiple formats
+ * @access  Private
+ * @body    format, reportType, startDate, endDate, includeCharts, includeInsights, includeRecommendations
+ */
+router.post(
+  '/reports/generate',
+  validateRequest(Joi.object({
+    format: Joi.string().valid('pdf', 'excel', 'csv', 'json').default('pdf'),
+    reportType: Joi.string().valid('spending', 'budgets', 'cashflow', 'comprehensive').default('comprehensive'),
+    startDate: Joi.date().iso().required(),
+    endDate: Joi.date().iso().min(Joi.ref('startDate')).required(),
+    includeCharts: Joi.boolean().default(false),
+    includeInsights: Joi.boolean().default(true),
+    includeRecommendations: Joi.boolean().default(true),
+  }), 'body'),
+  analyticsController.generateFinancialReport
+);
+
+/**
  * @route   GET /api/analytics/export
- * @desc    Export analytics data in various formats
+ * @desc    Export analytics data in various formats (legacy endpoint)
  * @access  Private
  * @query   startDate, endDate, format, type
  */
@@ -190,18 +212,28 @@ router.get(
       const userId = req.user?.userId;
       const { startDate, endDate, format, type } = req.query;
 
-      // This would be implemented in a future phase
-      // For now, return a placeholder response
-      res.status(200).json({
-        success: true,
-        message: 'Export functionality will be implemented in Phase 5',
-        data: {
-          exportType: type,
-          format,
-          dateRange: { startDate, endDate },
-          status: 'not_implemented',
-        },
-      });
+      // Convert legacy format to new format
+      const reportType = type === 'all' ? 'comprehensive' : type;
+      const newFormat = format === 'json' ? 'json' : format;
+
+      const options = {
+        format: newFormat,
+        reportType,
+        startDate: new Date(startDate),
+        endDate: new Date(endDate),
+        includeCharts: false,
+        includeInsights: true,
+        includeRecommendations: true
+      };
+
+      const reportResult = await analyticsService.generateFinancialReport(userId, options);
+
+      // Set appropriate headers for file download
+      res.setHeader('Content-Type', reportResult.mimeType);
+      res.setHeader('Content-Disposition', `attachment; filename="${reportResult.filename}"`);
+      res.setHeader('Content-Length', reportResult.size);
+
+      res.status(200).send(reportResult.data);
     } catch (error) {
       res.status(500).json({
         success: false,
@@ -432,6 +464,22 @@ router.post(
   }), 'body'),
   analyticsController.trainModel
 );
+
+// ==================== FINANCIAL PLANNING ROUTES ====================
+
+/**
+ * @route   /api/analytics/planning/*
+ * @desc    Financial planning tools and interactive features
+ * @access  Private
+ */
+router.use('/planning', financialPlanningRoutes);
+
+/**
+ * @route   /api/analytics/export/*
+ * @desc    Data export functionality
+ * @access  Private
+ */
+router.use('/export', dataExportRoutes);
 
 /**
  * @route   GET /api/analytics/health

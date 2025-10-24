@@ -897,6 +897,72 @@ export class AnalyticsController {
     }
   };
 
+  /**
+   * Generate comprehensive financial report
+   */
+  generateFinancialReport = async (req: any, res: any) => {
+    try {
+      const userId = req.user?.userId;
+      const {
+        format = 'pdf',
+        reportType = 'comprehensive',
+        startDate,
+        endDate,
+        includeCharts = false,
+        includeInsights = true,
+        includeRecommendations = true
+      } = req.body;
+
+      // Validate required fields
+      if (!startDate || !endDate) {
+        return res.status(400).json({
+          success: false,
+          message: 'Start date and end date are required'
+        });
+      }
+
+      const options = {
+        format,
+        reportType,
+        startDate: new Date(startDate),
+        endDate: new Date(endDate),
+        includeCharts,
+        includeInsights,
+        includeRecommendations
+      };
+
+      const reportResult = await this.analyticsService.generateFinancialReport(
+        userId,
+        options
+      );
+
+      // Set appropriate headers for file download
+      res.setHeader('Content-Type', reportResult.mimeType);
+      res.setHeader('Content-Disposition', `attachment; filename="${reportResult.filename}"`);
+      res.setHeader('Content-Length', reportResult.size);
+
+      res.status(200).send(reportResult.data);
+
+      logger.info('Financial report generated via API', { 
+        userId, 
+        format: options.format, 
+        reportType: options.reportType,
+        filename: reportResult.filename,
+        size: reportResult.size
+      });
+    } catch (error) {
+      logger.error('Error in generateFinancialReport controller', {
+        error: String(error),
+        userId: req.user?.userId,
+      });
+
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+      });
+    }
+  };
+
   // ==================== PREDICTIVE ANALYTICS ENDPOINTS ====================
 
   /**

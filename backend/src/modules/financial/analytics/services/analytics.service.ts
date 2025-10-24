@@ -1393,4 +1393,35 @@ export class AnalyticsService {
     // Simple CSV conversion - would be more sophisticated in production
     return JSON.stringify(data);
   }
+
+  /**
+   * Generate comprehensive financial report
+   */
+  async generateFinancialReport(userId: string, options: {
+    format: 'pdf' | 'excel' | 'csv' | 'json';
+    reportType: 'spending' | 'budgets' | 'cashflow' | 'comprehensive';
+    startDate: Date;
+    endDate: Date;
+    includeCharts?: boolean;
+    includeInsights?: boolean;
+    includeRecommendations?: boolean;
+  }): Promise<{
+    data: Buffer | string;
+    filename: string;
+    mimeType: string;
+    size: number;
+  }> {
+    try {
+      logger.info('Generating financial report', { userId, options });
+
+      // Import the report generator service
+      const { ReportGeneratorService } = await import('./report-generator.service');
+      const reportGenerator = new ReportGeneratorService();
+
+      return await reportGenerator.generateReport(userId, options);
+    } catch (error) {
+      logger.error('Error generating financial report', { error: (error as Error).message, userId, options });
+      throw error;
+    }
+  }
 }
