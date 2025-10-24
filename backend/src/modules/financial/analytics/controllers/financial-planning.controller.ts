@@ -57,6 +57,7 @@ export class FinancialPlanningController {
         targetDate: new Date(targetDate),
         priority,
         category,
+        status: 'not_started',
         monthlyContribution: parseFloat(monthlyContribution)
       });
 

@@ -359,6 +359,7 @@ export class FinancialService {
       includeCategories?: boolean;
       includeTrends?: boolean;
       includeProjections?: boolean;
+      separateByCurrency?: boolean;
     }
   ): Promise<{
     reportType: string;
@@ -374,7 +375,21 @@ export class FinancialService {
     trends: any[];
     projections: any[];
     insights: string[];
-  }> {
+  } | {[currency: string]: {
+    reportType: string;
+    period: { start: Date; end: Date };
+    summary: {
+      totalIncome: number;
+      totalExpenses: number;
+      totalTransfers: number;
+      netAmount: number;
+      transactionCount: number;
+    };
+    categories: any[];
+    trends: any[];
+    projections: any[];
+    insights: string[];
+  }}> {
     try {
       logger.info('Generating financial report', { userId, options });
 
@@ -385,11 +400,25 @@ export class FinancialService {
         includeCategories = true,
         includeTrends = true,
         includeProjections = false,
+        separateByCurrency = false,
       } = options;
 
       // Calculate date range based on report type
       const { calculatedStartDate, calculatedEndDate } =
         this.calculateReportDateRange(reportType, startDate, endDate);
+
+      // If currency separation is requested, return currency-separated data
+      if (separateByCurrency) {
+        return await this.generateCurrencySeparatedReport(
+          userId,
+          reportType,
+          calculatedStartDate,
+          calculatedEndDate,
+          includeCategories,
+          includeTrends,
+          includeProjections
+        );
+      }
 
       // Get transaction statistics for the period
       const transactionStats =
@@ -940,6 +969,153 @@ export class FinancialService {
     }
 
     return csv;
+  }
+
+  /**
+   * Generate currency-separated financial report
+   */
+  private async generateCurrencySeparatedReport(
+    userId: string,
+    reportType: string,
+    startDate: Date,
+    endDate: Date,
+    includeCategories: boolean,
+    includeTrends: boolean,
+    includeProjections: boolean
+  ): Promise<{[currency: string]: any}> {
+    try {
+      logger.info('Generating currency-separated financial report', { userId, reportType, startDate, endDate });
+
+      // Get all transactions for the period to identify currencies
+      const transactions = await this.transactionService.getUserTransactions(userId, {
+        startDate,
+        endDate,
+        limit: 10000
+      });
+
+      // Group transactions by currency
+      const transactionsByCurrency: {[currency: string]: any[]} = {};
+      transactions.transactions.forEach(transaction => {
+        const currency = transaction.currency || 'USD';
+        if (!transactionsByCurrency[currency]) {
+          transactionsByCurrency[currency] = [];
+        }
+        transactionsByCurrency[currency].push(transaction);
+      });
+
+      const currencyReports: {[currency: string]: any} = {};
+
+      // Generate report for each currency
+      for (const [currency, currencyTransactions] of Object.entries(transactionsByCurrency)) {
+        // Calculate stats for this currency
+        const totalIncome = currencyTransactions
+          .filter(t => t.type === 'income')
+          .reduce((sum, t) => sum + t.amount, 0);
+        
+        const totalExpenses = currencyTransactions
+          .filter(t => t.type === 'expense')
+          .reduce((sum, t) => sum + t.amount, 0);
+        
+        const totalTransfers = currencyTransactions
+          .filter(t => t.type === 'transfer')
+          .reduce((sum, t) => sum + t.amount, 0);
+
+        // Get category breakdown for this currency
+        let categories: any[] = [];
+        if (includeCategories) {
+          const categoryMap: {[key: string]: {count: number, total: number, name: string}} = {};
+          currencyTransactions.forEach(transaction => {
+            if (transaction.categoryId && transaction.categoryName) {
+              if (!categoryMap[transaction.categoryId]) {
+                categoryMap[transaction.categoryId] = {
+                  count: 0,
+                  total: 0,
+                  name: transaction.categoryName
+                };
+              }
+              categoryMap[transaction.categoryId].count++;
+              categoryMap[transaction.categoryId].total += transaction.amount;
+            }
+          });
+          categories = Object.entries(categoryMap).map(([categoryId, data]) => ({
+            categoryId,
+            categoryName: data.name,
+            count: data.count,
+            total: data.total,
+            percentage: totalExpenses > 0 ? (data.total / totalExpenses) * 100 : 0
+          }));
+        }
+
+        // Generate trends for this currency
+        let trends: any[] = [];
+        if (includeTrends) {
+          // Group by month for trends
+          const monthlyData: {[key: string]: {income: number, expenses: number}} = {};
+          currencyTransactions.forEach(transaction => {
+            const month = transaction.date.toISOString().substring(0, 7); // YYYY-MM
+            if (!monthlyData[month]) {
+              monthlyData[month] = { income: 0, expenses: 0 };
+            }
+            if (transaction.type === 'income') {
+              monthlyData[month].income += transaction.amount;
+            } else if (transaction.type === 'expense') {
+              monthlyData[month].expenses += transaction.amount;
+            }
+          });
+          trends = Object.entries(monthlyData).map(([month, data]) => ({
+            month,
+            income: data.income,
+            expenses: data.expenses,
+            net: data.income - data.expenses
+          }));
+        }
+
+        // Generate insights for this currency
+        const insights = this.generateFinancialInsights({
+          totalIncome,
+          totalExpenses,
+          totalTransfers,
+          totalTransactions: currencyTransactions.length
+        }, trends);
+
+        currencyReports[currency] = {
+          reportType,
+          period: { start: startDate, end: endDate },
+          summary: {
+            totalIncome,
+            totalExpenses,
+            totalTransfers,
+            netAmount: totalIncome - totalExpenses,
+            transactionCount: currencyTransactions.length,
+          },
+          categories,
+          trends,
+          projections: includeProjections ? this.generateFinancialPredictions({
+            totalIncome,
+            totalExpenses,
+            totalTransfers,
+            totalTransactions: currencyTransactions.length
+          }, trends) : [],
+          insights,
+          currency
+        };
+      }
+
+      logger.info('Currency-separated financial report generated', { 
+        userId, 
+        currencies: Object.keys(currencyReports),
+        reportCount: Object.keys(currencyReports).length 
+      });
+
+      return currencyReports;
+    } catch (error) {
+      logger.error('Error generating currency-separated financial report', { 
+        error: String(error), 
+        userId, 
+        reportType 
+      });
+      throw error;
+    }
   }
 }
 

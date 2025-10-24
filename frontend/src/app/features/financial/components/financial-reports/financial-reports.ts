@@ -1,7 +1,8 @@
-import { Component, OnInit, OnDestroy, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { HttpClient } from '@angular/common/http';
 import { Subject, takeUntil } from 'rxjs';
 import { 
   Transaction, 
@@ -15,6 +16,8 @@ import {
 import { FinancialService } from '../../../../core/services/financial.service';
 import { TransactionService } from '../../../../core/services/transaction.service';
 import { CategoryService } from '../../../../core/services/category.service';
+import { TokenService } from '../../../auth/services/token.service';
+import { environment } from '../../../../../environments/environment';
 
 @Component({
   selector: 'app-financial-reports',
@@ -28,6 +31,9 @@ export class FinancialReportsComponent implements OnInit, OnDestroy {
   private financialService = inject(FinancialService);
   private transactionService = inject(TransactionService);
   private categoryService = inject(CategoryService);
+  private tokenService = inject(TokenService);
+  private http = inject(HttpClient);
+  private cdr = inject(ChangeDetectorRef);
 
   // Report configuration
   selectedPeriod: string = 'month';
@@ -40,8 +46,20 @@ export class FinancialReportsComponent implements OnInit, OnDestroy {
   transactions: Transaction[] = [];
   categories: Category[] = [];
   reportData: FinancialReport | null = null;
+  currencyReports: {[currency: string]: FinancialReport} = {};
+  selectedCurrency: string = '';
   transactionStats: TransactionStats | null = null;
   categoryStats: CategoryStats | null = null;
+
+  // Cached computed values to prevent ExpressionChangedAfterItHasBeenCheckedError
+  private _cachedIncomePercentage: number | null = null;
+  private _cachedExpensePercentage: number | null = null;
+  private _cachedTotalIncome: number | null = null;
+  private _cachedTotalExpenses: number | null = null;
+  private _cachedNetTrend: number | null = null;
+  private _cachedBudgetAmount: number | null = null;
+  private _cachedBudgetUtilization: number | null = null;
+  private _cachedBudgetVariance: number | null = null;
 
   // UI State
   isLoading: boolean = false;
@@ -86,8 +104,98 @@ export class FinancialReportsComponent implements OnInit, OnDestroy {
 
   private loadData(): void {
     this.isLoading = true;
+    this.reportData = null; // Reset report data
 
-    // Load transactions for the selected period
+    // Generate report using backend API
+    const reportOptions = {
+      reportType: this.mapPeriodToReportType(this.selectedPeriod),
+      startDate: new Date(this.startDate),
+      endDate: new Date(this.endDate),
+      includeCategories: true,
+      includeTrends: true,
+      includeProjections: false,
+      separateByCurrency: true // Enable currency separation
+    };
+
+    this.financialService.generateFinancialReport(reportOptions).pipe(
+      takeUntil(this.destroy$)
+    ).subscribe({
+      next: (report) => {
+        // Clear cached values when new data arrives
+        this.clearCachedValues();
+        
+        // Check if the response is currency-separated
+        // Currency-separated reports are objects with currency keys (USD, EUR, etc.)
+        // Single currency reports have a reportType property
+        if (report && typeof report === 'object' && !(report as any).reportType && Object.keys(report).length > 0) {
+          // Check if keys look like currency codes (3 letters)
+          const keys = Object.keys(report);
+          const hasCurrencyKeys = keys.some(key => key.length === 3 && key === key.toUpperCase());
+          
+          if (hasCurrencyKeys) {
+            // This is a currency-separated response
+            this.currencyReports = report as unknown as {[currency: string]: FinancialReport};
+            this.reportData = null; // Clear single currency report
+            // Set the first currency as selected
+            const currencies = Object.keys(this.currencyReports);
+            if (currencies.length > 0) {
+              this.selectedCurrency = currencies[0];
+            }
+          } else {
+            // This is a single currency response
+            this.reportData = report as FinancialReport;
+            this.currencyReports = {}; // Clear currency reports
+            this.selectedCurrency = '';
+          }
+        } else {
+          // This is a single currency response
+          this.reportData = report as FinancialReport;
+          this.currencyReports = {}; // Clear currency reports
+          this.selectedCurrency = '';
+        }
+        this.isLoading = false;
+        this.cdr.detectChanges();
+      },
+      error: (error) => {
+        console.error('Error generating report:', error);
+        
+        // Check if it's an authentication error
+        if (error.status === 401) {
+          this.isLoading = false;
+          alert('Authentication failed. Please log in again.');
+          this.cdr.detectChanges();
+          return;
+        }
+        
+        // Check if it's a server error
+        if (error.status >= 500) {
+          this.isLoading = false;
+          alert('Server error. Please try again later.');
+          this.cdr.detectChanges();
+          return;
+        }
+        
+        // Fallback to local generation if API fails
+        console.log('Falling back to local report generation...');
+        this.loadTransactionsForFallback();
+      }
+    });
+
+    // Load categories for local fallback
+    this.categoryService.getUserCategories().pipe(
+      takeUntil(this.destroy$)
+    ).subscribe({
+      next: (categories) => {
+        this.categories = categories || [];
+      },
+      error: (error) => {
+        console.error('Error loading categories:', error);
+      }
+    });
+  }
+
+  private loadTransactionsForFallback(): void {
+    // Fallback to local report generation
     this.transactionService.getUserTransactions({
       startDate: new Date(this.startDate),
       endDate: new Date(this.endDate)
@@ -98,22 +206,12 @@ export class FinancialReportsComponent implements OnInit, OnDestroy {
         this.transactions = response.data || [];
         this.generateReport();
         this.isLoading = false;
+        this.cdr.detectChanges();
       },
       error: (error) => {
         console.error('Error loading transactions:', error);
         this.isLoading = false;
-      }
-    });
-
-    // Load categories
-    this.categoryService.getUserCategories().pipe(
-      takeUntil(this.destroy$)
-    ).subscribe({
-      next: (categories) => {
-        this.categories = categories || [];
-      },
-      error: (error) => {
-        console.error('Error loading categories:', error);
+        this.cdr.detectChanges();
       }
     });
   }
@@ -131,7 +229,8 @@ export class FinancialReportsComponent implements OnInit, OnDestroy {
 
   onReportTypeChange(reportType: string): void {
     this.selectedReportType = reportType;
-    this.generateReport();
+    this.clearCachedValues();
+    this.loadData(); // Reload data from API instead of local generation
   }
 
   onDateRangeChange(): void {
@@ -197,6 +296,7 @@ export class FinancialReportsComponent implements OnInit, OnDestroy {
       projections: [],
       insights
     };
+    this.cdr.detectChanges();
   }
 
   private generateSummary(): any {
@@ -303,9 +403,20 @@ export class FinancialReportsComponent implements OnInit, OnDestroy {
     return 0;
   }
 
-  private getCategoryName(categoryId: string): string {
+  getCategoryName(categoryId: string): string {
     const category = this.categories.find(c => c._id === categoryId);
     return category ? category.name : 'Unknown Category';
+  }
+
+  private clearCachedValues(): void {
+    this._cachedIncomePercentage = null;
+    this._cachedExpensePercentage = null;
+    this._cachedTotalIncome = null;
+    this._cachedTotalExpenses = null;
+    this._cachedNetTrend = null;
+    this._cachedBudgetAmount = null;
+    this._cachedBudgetUtilization = null;
+    this._cachedBudgetVariance = null;
   }
 
   private getTotalExpenses(): number {
@@ -320,8 +431,49 @@ export class FinancialReportsComponent implements OnInit, OnDestroy {
   }
 
   exportReport(format: 'pdf' | 'csv' | 'excel'): void {
-    console.log(`Exporting report in ${format} format...`);
-    // Implementation for export functionality
+    if (!this.reportData) {
+      console.error('No report data available for export');
+      return;
+    }
+
+    this.isLoading = true;
+
+    // Use the new analytics API for report generation
+    const reportOptions = {
+      format: format,
+      reportType: 'comprehensive',
+      startDate: new Date(this.startDate),
+      endDate: new Date(this.endDate),
+      includeCharts: false,
+      includeInsights: true,
+      includeRecommendations: true
+    };
+
+    // Call the analytics API for report generation
+    this.http.post(`${environment.apiUrl}/analytics/reports/generate`, reportOptions, {
+      responseType: 'blob',
+      headers: {
+        'Authorization': `Bearer ${this.tokenService.getAccessToken()}`
+      }
+    }).pipe(
+      takeUntil(this.destroy$)
+    ).subscribe({
+      next: (blob) => {
+        // Create download link
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `financial-report-${this.selectedReportType}-${new Date().toISOString().split('T')[0]}.${format}`;
+        link.click();
+        window.URL.revokeObjectURL(url);
+        this.isLoading = false;
+      },
+      error: (error) => {
+        console.error('Error exporting report:', error);
+        this.isLoading = false;
+        alert('Failed to export report. Please try again.');
+      }
+    });
   }
 
   printReport(): void {
@@ -335,4 +487,152 @@ export class FinancialReportsComponent implements OnInit, OnDestroy {
   getCurrentDate(): Date {
     return new Date();
   }
+
+  private mapPeriodToReportType(period: string): 'monthly' | 'quarterly' | 'yearly' | 'custom' {
+    switch (period) {
+      case 'week':
+      case 'month':
+        return 'monthly';
+      case 'quarter':
+        return 'quarterly';
+      case 'year':
+        return 'yearly';
+      case 'custom':
+        return 'custom';
+      default:
+        return 'monthly';
+    }
+  }
+
+  getAvailableCurrencies(): string[] {
+    return Object.keys(this.currencyReports);
+  }
+
+  hasMultipleCurrencies(): boolean {
+    return Object.keys(this.currencyReports).length > 1;
+  }
+
+  getReportForCurrency(currency: string): FinancialReport | null {
+    return this.currencyReports[currency] || null;
+  }
+
+  // Helper methods for detailed report
+  getIncomePercentage(): number {
+    if (this._cachedIncomePercentage !== null) {
+      return this._cachedIncomePercentage;
+    }
+    const total = (this.reportData?.summary?.totalIncome ?? 0) + (this.reportData?.summary?.totalExpenses ?? 0);
+    this._cachedIncomePercentage = total > 0 ? ((this.reportData?.summary?.totalIncome ?? 0) / total) * 100 : 0;
+    return this._cachedIncomePercentage;
+  }
+
+  getExpensePercentage(): number {
+    if (this._cachedExpensePercentage !== null) {
+      return this._cachedExpensePercentage;
+    }
+    const total = (this.reportData?.summary?.totalIncome ?? 0) + (this.reportData?.summary?.totalExpenses ?? 0);
+    this._cachedExpensePercentage = total > 0 ? ((this.reportData?.summary?.totalExpenses ?? 0) / total) * 100 : 0;
+    return this._cachedExpensePercentage;
+  }
+
+  // Helper methods for trend analysis
+  getTotalIncome(): number {
+    if (this._cachedTotalIncome !== null) {
+      return this._cachedTotalIncome;
+    }
+    if (!this.reportData?.trends) {
+      this._cachedTotalIncome = 0;
+      return 0;
+    }
+    this._cachedTotalIncome = this.reportData.trends.reduce((sum, trend) => sum + (trend.income || 0), 0);
+    return this._cachedTotalIncome!;
+  }
+
+  getTotalExpensesForTrends(): number {
+    if (this._cachedTotalExpenses !== null) {
+      return this._cachedTotalExpenses;
+    }
+    if (!this.reportData?.trends) {
+      this._cachedTotalExpenses = 0;
+      return 0;
+    }
+    this._cachedTotalExpenses = this.reportData.trends.reduce((sum, trend) => sum + (trend.expenses || 0), 0);
+    return this._cachedTotalExpenses!;
+  }
+
+  getNetTrend(): number {
+    if (this._cachedNetTrend !== null) {
+      return this._cachedNetTrend;
+    }
+    this._cachedNetTrend = this.getTotalIncome() - this.getTotalExpensesForTrends();
+    return this._cachedNetTrend;
+  }
+
+  getBarHeight(value: number, type: string): number {
+    const maxValue = Math.max(
+      this.getTotalIncome(),
+      this.getTotalExpensesForTrends(),
+      Math.abs(this.getNetTrend())
+    );
+    return maxValue > 0 ? (Math.abs(value) / maxValue) * 100 : 0;
+  }
+
+  getTrendChange(trend: any, index: number): number {
+    if (!this.reportData?.trends || index === 0) return 0;
+    const previousTrend = this.reportData.trends[index - 1];
+    if (!previousTrend) return 0;
+    
+    const currentNet = trend.net || 0;
+    const previousNet = previousTrend.net || 0;
+    
+    if (previousNet === 0) return 0;
+    return ((currentNet - previousNet) / Math.abs(previousNet)) * 100;
+  }
+
+  // Helper methods for budget analysis
+  getBudgetAmount(): number {
+    if (this._cachedBudgetAmount !== null) {
+      return this._cachedBudgetAmount;
+    }
+    // For now, use total expenses as budget amount
+    // In a real implementation, this would come from budget data
+    this._cachedBudgetAmount = (this.reportData?.summary?.totalExpenses ?? 0) * 1.2; // 20% buffer
+    return this._cachedBudgetAmount;
+  }
+
+  getBudgetUtilization(): number {
+    if (this._cachedBudgetUtilization !== null) {
+      return this._cachedBudgetUtilization;
+    }
+    const budget = this.getBudgetAmount();
+    const actual = this.reportData?.summary?.totalExpenses ?? 0;
+    this._cachedBudgetUtilization = budget > 0 ? (actual / budget) * 100 : 0;
+    return this._cachedBudgetUtilization;
+  }
+
+  getBudgetVariance(): number {
+    if (this._cachedBudgetVariance !== null) {
+      return this._cachedBudgetVariance;
+    }
+    this._cachedBudgetVariance = (this.reportData?.summary?.totalExpenses ?? 0) - this.getBudgetAmount();
+    return this._cachedBudgetVariance;
+  }
+
+  getBudgetPercentage(): number {
+    return 100; // Budget is always 100% of itself
+  }
+
+  getActualPercentage(): number {
+    return this.getBudgetUtilization();
+  }
+
+  getCategoryBudgetPercentage(category: any): number {
+    const categoryAmount = category.total || category.amount || 0;
+    const totalExpenses = this.reportData?.summary?.totalExpenses ?? 0;
+    return totalExpenses > 0 ? (categoryAmount / totalExpenses) * 100 : 0;
+  }
+
+  // Math utility for template
+  Math = Math;
+
 }

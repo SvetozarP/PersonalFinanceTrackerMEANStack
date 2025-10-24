@@ -111,13 +111,13 @@
     </div>
   
     <!-- Report Content -->
-    <div class="report-content" *ngIf="!isLoading && reportData">
+    <div class="report-content" *ngIf="!isLoading && (reportData || hasMultipleCurrencies())">
       <!-- Report Header -->
       <div class="report-header">
         <div class="report-title">
           <h2>{{ selectedReportType | titlecase }} Report</h2>
           <p class="report-period">
-            {{ reportData.period.start | date:'mediumDate' }} - {{ reportData.period.end | date:'mediumDate' }}
+            {{ reportData?.period?.start | date:'mediumDate' }} - {{ reportData?.period?.end | date:'mediumDate' }}
           </p>
         </div>
         
@@ -128,13 +128,13 @@
           </span>
           <span class="meta-item">
             <i class="fas fa-chart-bar"></i>
-            {{ reportData.summary.transactionCount }} transactions
+            {{ reportData?.summary?.transactionCount }} transactions
           </span>
         </div>
       </div>
   
-      <!-- Summary Section -->
-      <div class="report-section summary-section">
+      <!-- Summary Report -->
+      <div class="report-section summary-section" *ngIf="selectedReportType === 'summary'">
         <h3>Executive Summary</h3>
         <div class="summary-grid">
           <div class="summary-card income">
@@ -142,7 +142,7 @@
               <i class="fas fa-arrow-up"></i>
               <span>Total Income</span>
             </div>
-            <div class="card-value">{{ reportData.summary.totalIncome | currency }}</div>
+            <div class="card-value">{{ reportData?.summary?.totalIncome | currency }}</div>
             <div class="card-change positive">+12.5% vs last period</div>
           </div>
   
@@ -151,7 +151,7 @@
               <i class="fas fa-arrow-down"></i>
               <span>Total Expenses</span>
             </div>
-            <div class="card-value">{{ reportData.summary.totalExpenses | currency }}</div>
+            <div class="card-value">{{ reportData?.summary?.totalExpenses | currency }}</div>
             <div class="card-change negative">+8.2% vs last period</div>
           </div>
   
@@ -160,11 +160,11 @@
               <i class="fas fa-balance-scale"></i>
               <span>Net Income</span>
             </div>
-            <div class="card-value" [class.positive]="reportData.summary.netAmount >= 0" [class.negative]="reportData.summary.netAmount < 0">
-              {{ reportData.summary.netAmount | currency }}
+            <div class="card-value" [class.positive]="(reportData?.summary?.netAmount ?? 0) >= 0" [class.negative]="(reportData?.summary?.netAmount ?? 0) < 0">
+              {{ reportData?.summary?.netAmount | currency }}
             </div>
-            <div class="card-change" [class.positive]="reportData.summary.netAmount >= 0" [class.negative]="reportData.summary.netAmount < 0">
-              {{ reportData.summary.netAmount >= 0 ? '+' : '' }}{{ reportData.summary.netAmount >= 0 ? '12.5' : '8.2' }}% vs last period
+            <div class="card-change" [class.positive]="(reportData?.summary?.netAmount ?? 0) >= 0" [class.negative]="(reportData?.summary?.netAmount ?? 0) < 0">
+              {{ (reportData?.summary?.netAmount ?? 0) >= 0 ? '+' : '' }}{{ (reportData?.summary?.netAmount ?? 0) >= 0 ? '12.5' : '8.2' }}% vs last period
             </div>
           </div>
   
@@ -173,16 +173,139 @@
               <i class="fas fa-exchange-alt"></i>
               <span>Total Transfers</span>
             </div>
-            <div class="card-value">{{ reportData.summary.totalTransfers | currency }}</div>
+            <div class="card-value">{{ reportData?.summary?.totalTransfers | currency }}</div>
             <div class="card-change neutral">No change</div>
           </div>
         </div>
       </div>
+
+      <!-- Detailed Report -->
+      <div class="report-section detailed-section" *ngIf="selectedReportType === 'detailed'">
+        <h3>Detailed Transaction Analysis</h3>
+        
+        <!-- Transaction Statistics -->
+        <div class="detailed-stats">
+          <div class="stat-card">
+            <div class="stat-icon">
+              <i class="fas fa-receipt"></i>
+            </div>
+            <div class="stat-content">
+              <div class="stat-value">{{ reportData?.summary?.transactionCount || 0 }}</div>
+              <div class="stat-label">Total Transactions</div>
+            </div>
+          </div>
+          
+          <div class="stat-card">
+            <div class="stat-icon">
+              <i class="fas fa-calculator"></i>
+            </div>
+            <div class="stat-content">
+              <div class="stat-value">{{ ((reportData?.summary?.totalIncome ?? 0) + (reportData?.summary?.totalExpenses ?? 0)) / (reportData?.summary?.transactionCount ?? 1) | currency }}</div>
+              <div class="stat-label">Average Transaction</div>
+            </div>
+          </div>
+          
+          <div class="stat-card">
+            <div class="stat-icon">
+              <i class="fas fa-arrow-up"></i>
+            </div>
+            <div class="stat-content">
+              <div class="stat-value">{{ reportData?.summary?.totalIncome | currency }}</div>
+              <div class="stat-label">Total Income</div>
+            </div>
+          </div>
+          
+          <div class="stat-card">
+            <div class="stat-icon">
+              <i class="fas fa-arrow-down"></i>
+            </div>
+            <div class="stat-content">
+              <div class="stat-value">{{ reportData?.summary?.totalExpenses | currency }}</div>
+              <div class="stat-label">Total Expenses</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Transaction Breakdown Chart -->
+        <div class="chart-section">
+          <h4>Transaction Breakdown</h4>
+          <div class="chart-container">
+            <div class="breakdown-chart">
+              <div class="chart-header">
+                <div class="chart-title">Income vs Expenses</div>
+                <div class="chart-total">Total: {{ ((reportData?.summary?.totalIncome ?? 0) + (reportData?.summary?.totalExpenses ?? 0)) | currency }}</div>
+              </div>
+              
+              <div class="chart-bars">
+                <div class="chart-bar income-bar" [style.width.%]="getIncomePercentage()">
+                  <div class="bar-content">
+                    <div class="bar-label">Income</div>
+                    <div class="bar-amount">{{ reportData?.summary?.totalIncome | currency }}</div>
+                    <div class="bar-percentage">{{ getIncomePercentage() | number:'1.1-1' }}%</div>
+                  </div>
+                </div>
+                <div class="chart-bar expense-bar" [style.width.%]="getExpensePercentage()">
+                  <div class="bar-content">
+                    <div class="bar-label">Expenses</div>
+                    <div class="bar-amount">{{ reportData?.summary?.totalExpenses | currency }}</div>
+                    <div class="bar-percentage">{{ getExpensePercentage() | number:'1.1-1' }}%</div>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="chart-legend">
+                <div class="legend-item">
+                  <div class="legend-color income"></div>
+                  <span>Income ({{ getIncomePercentage() | number:'1.1-1' }}%)</span>
+                </div>
+                <div class="legend-item">
+                  <div class="legend-color expense"></div>
+                  <span>Expenses ({{ getExpensePercentage() | number:'1.1-1' }}%)</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Key Insights -->
+        <div class="insights-section" *ngIf="reportData?.insights && (reportData?.insights?.length ?? 0) > 0">
+          <h4>Key Insights</h4>
+          <div class="insights-grid">
+            <div class="insight-card" *ngFor="let insight of reportData?.insights">
+              <div class="insight-icon">
+                <i class="fas fa-lightbulb"></i>
+              </div>
+              <div class="insight-content">
+                <p>{{ insight }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recent Transactions List -->
+        <div class="transactions-section" *ngIf="transactions.length > 0">
+          <h4>Recent Transactions</h4>
+          <div class="transactions-list">
+            <div class="transaction-item" *ngFor="let transaction of transactions.slice(0, 10)">
+              <div class="transaction-info">
+                <div class="transaction-description">{{ transaction.description }}</div>
+                <div class="transaction-meta">
+                  <span class="transaction-category">{{ getCategoryName(transaction.categoryId) || 'Uncategorized' }}</span>
+                  <span class="transaction-date">{{ transaction.date | date:'short' }}</span>
+                </div>
+              </div>
+              <div class="transaction-amount" [class.income]="transaction.type === 'income'" [class.expense]="transaction.type === 'expense'">
+                {{ transaction.amount | currency:transaction.currency }}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
   
-      <!-- Category Analysis Section -->
-      <div class="report-section category-section" *ngIf="reportData.categories.length > 0">
+      <!-- Category Analysis Report -->
+      <div class="report-section category-section" *ngIf="selectedReportType === 'category'">
         <h3>Category Analysis</h3>
-        <div class="category-table">
+        <div class="category-table" *ngIf="reportData?.categories && (reportData?.categories?.length ?? 0) > 0">
           <div class="table-header">
             <div class="header-cell">Category</div>
             <div class="header-cell">Amount</div>
@@ -191,12 +314,12 @@
             <div class="header-cell">Trend</div>
           </div>
           
-          <div class="table-row" *ngFor="let category of reportData.categories.slice(0, 10)">
+          <div class="table-row" *ngFor="let category of reportData?.categories?.slice(0, 10)">
             <div class="table-cell category-name">
               <i class="fas fa-tag"></i>
-              {{ category.name }}
+              {{ category.categoryName || category.name || 'Uncategorized' }}
             </div>
-            <div class="table-cell amount">{{ category.amount | currency }}</div>
+            <div class="table-cell amount">{{ category.total || category.amount | currency }}</div>
             <div class="table-cell count">{{ category.count }}</div>
             <div class="table-cell percentage">
               <div class="percentage-bar">
@@ -210,30 +333,357 @@
             </div>
           </div>
         </div>
-      </div>
-  
-      <!-- Trends Section -->
-      <div class="report-section trends-section" *ngIf="reportData.trends.length > 0">
-        <h3>Trend Analysis</h3>
-        <div class="trends-chart">
-          <div class="chart-placeholder">
-            <i class="fas fa-chart-line"></i>
-            <p>Trend visualization would be displayed here</p>
-            <small>Monthly income vs expenses over time</small>
-          </div>
+        <div *ngIf="!reportData?.categories || reportData?.categories?.length === 0" class="no-data">
+          <i class="fas fa-info-circle"></i>
+          <p>No category data available for this period</p>
         </div>
       </div>
   
-      <!-- Insights Section -->
-      <div class="report-section insights-section" *ngIf="reportData.insights.length > 0">
-        <h3>Key Insights</h3>
-        <div class="insights-grid">
-          <div class="insight-card" *ngFor="let insight of reportData.insights">
-            <div class="insight-icon">
-              <i class="fas fa-lightbulb"></i>
+      <!-- Trend Analysis Report -->
+      <div class="report-section trends-section" *ngIf="selectedReportType === 'trends'">
+        <h3>Trend Analysis</h3>
+        
+        <!-- Trend Overview -->
+        <div class="trend-overview" *ngIf="reportData?.trends && (reportData?.trends?.length ?? 0) > 0">
+          <div class="trend-summary">
+            <div class="trend-card">
+              <div class="trend-icon">
+                <i class="fas fa-chart-line"></i>
+              </div>
+              <div class="trend-content">
+                <div class="trend-value">{{ getTotalIncome() | currency }}</div>
+                <div class="trend-label">Total Income</div>
+              </div>
             </div>
-            <div class="insight-content">
-              <p>{{ insight }}</p>
+            
+            <div class="trend-card">
+              <div class="trend-icon">
+                <i class="fas fa-chart-line-down"></i>
+              </div>
+              <div class="trend-content">
+                <div class="trend-value">{{ getTotalExpensesForTrends() | currency }}</div>
+                <div class="trend-label">Total Expenses</div>
+              </div>
+            </div>
+            
+            <div class="trend-card">
+              <div class="trend-icon">
+                <i class="fas fa-balance-scale"></i>
+              </div>
+              <div class="trend-content">
+                <div class="trend-value" [class.positive]="getNetTrend() >= 0" [class.negative]="getNetTrend() < 0">
+                  {{ getNetTrend() | currency }}
+                </div>
+                <div class="trend-label">Net Trend</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Monthly Trend Chart -->
+        <div class="trends-chart" *ngIf="reportData?.trends && (reportData?.trends?.length ?? 0) > 0">
+          <h4>Monthly Trends</h4>
+          <div class="chart-container">
+            <div class="trend-chart">
+              <div class="chart-header">
+                <div class="chart-title">Monthly Income vs Expenses</div>
+                <div class="chart-legend">
+                  <div class="legend-item">
+                    <div class="legend-color income"></div>
+                    <span>Income</span>
+                  </div>
+                  <div class="legend-item">
+                    <div class="legend-color expense"></div>
+                    <span>Expenses</span>
+                  </div>
+                  <div class="legend-item">
+                    <div class="legend-color net"></div>
+                    <span>Net</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="chart-bars">
+                <div class="trend-bar" *ngFor="let trend of reportData?.trends">
+                  <div class="bar-container">
+                    <div class="bar-section income-bar" [style.height.%]="getBarHeight(trend.income, 'income')">
+                      <div class="bar-value">{{ trend.income | currency }}</div>
+                    </div>
+                    <div class="bar-section expense-bar" [style.height.%]="getBarHeight(trend.expenses, 'expense')">
+                      <div class="bar-value">{{ trend.expenses | currency }}</div>
+                    </div>
+                    <div class="bar-section net-bar" [style.height.%]="getBarHeight(Math.abs(trend.net), 'net')" [class.positive]="trend.net >= 0" [class.negative]="trend.net < 0">
+                      <div class="bar-value">{{ trend.net | currency }}</div>
+                    </div>
+                  </div>
+                  <div class="bar-label">{{ trend.month | date:'MMM yyyy' }}</div>
+                </div>
+              </div>
+              
+              <div class="chart-summary">
+                <div class="summary-item">
+                  <span class="summary-label">Total Income:</span>
+                  <span class="summary-value income">{{ getTotalIncome() | currency }}</span>
+                </div>
+                <div class="summary-item">
+                  <span class="summary-label">Total Expenses:</span>
+                  <span class="summary-value expense">{{ getTotalExpensesForTrends() | currency }}</span>
+                </div>
+                <div class="summary-item">
+                  <span class="summary-label">Net Trend:</span>
+                  <span class="summary-value" [class.positive]="getNetTrend() >= 0" [class.negative]="getNetTrend() < 0">
+                    {{ getNetTrend() | currency }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Trend Data Table -->
+        <div class="trend-table" *ngIf="reportData?.trends && (reportData?.trends?.length ?? 0) > 0">
+          <h4>Detailed Trend Data</h4>
+          <div class="table-container">
+            <table class="trends-table">
+              <thead>
+                <tr>
+                  <th>Month</th>
+                  <th>Income</th>
+                  <th>Expenses</th>
+                  <th>Net</th>
+                  <th>Change</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let trend of reportData?.trends; let i = index">
+                  <td>{{ trend.month | date:'MMM yyyy' }}</td>
+                  <td class="income">{{ trend.income | currency }}</td>
+                  <td class="expense">{{ trend.expenses | currency }}</td>
+                  <td [class.positive]="trend.net >= 0" [class.negative]="trend.net < 0">
+                    {{ trend.net | currency }}
+                  </td>
+                  <td [class.positive]="getTrendChange(trend, i) >= 0" [class.negative]="getTrendChange(trend, i) < 0">
+                    {{ getTrendChange(trend, i) >= 0 ? '+' : '' }}{{ getTrendChange(trend, i) | number:'1.1-1' }}%
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        
+        <div *ngIf="!reportData?.trends || (reportData?.trends?.length ?? 0) === 0" class="no-data">
+          <i class="fas fa-chart-line"></i>
+          <p>No trend data available for this period</p>
+        </div>
+      </div>
+
+      <!-- Budget Analysis Report -->
+      <div class="report-section budget-section" *ngIf="selectedReportType === 'budget'">
+        <h3>Budget Analysis</h3>
+        
+        <!-- Budget Performance Overview -->
+        <div class="budget-overview">
+          <div class="budget-cards">
+            <div class="budget-card">
+              <div class="budget-icon">
+                <i class="fas fa-wallet"></i>
+              </div>
+              <div class="budget-content">
+                <div class="budget-value">{{ reportData?.summary?.totalExpenses | currency }}</div>
+                <div class="budget-label">Total Spending</div>
+              </div>
+            </div>
+            
+            <div class="budget-card">
+              <div class="budget-icon">
+                <i class="fas fa-chart-pie"></i>
+              </div>
+              <div class="budget-content">
+                <div class="budget-value">{{ getBudgetUtilization() | number:'1.1-1' }}%</div>
+                <div class="budget-label">Budget Utilization</div>
+              </div>
+            </div>
+            
+            <div class="budget-card">
+              <div class="budget-icon">
+                <i class="fas fa-balance-scale"></i>
+              </div>
+              <div class="budget-content">
+                <div class="budget-value" [class.positive]="getBudgetVariance() >= 0" [class.negative]="getBudgetVariance() < 0">
+                  {{ getBudgetVariance() | currency }}
+                </div>
+                <div class="budget-label">Budget Variance</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Budget vs Actual Chart -->
+        <div class="budget-chart-section">
+          <h4>Budget vs Actual Spending</h4>
+          <div class="chart-container">
+            <div class="budget-chart">
+              <div class="chart-header">
+                <div class="chart-title">Budget Performance</div>
+                <div class="chart-legend">
+                  <div class="legend-item">
+                    <div class="legend-color budget"></div>
+                    <span>Budget ({{ getBudgetAmount() | currency }})</span>
+                  </div>
+                  <div class="legend-item">
+                    <div class="legend-color actual"></div>
+                    <span>Actual ({{ reportData?.summary?.totalExpenses | currency }})</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="chart-bars">
+                <div class="budget-bar">
+                  <div class="bar-label">Budget</div>
+                  <div class="bar-container">
+                    <div class="bar-fill budget-fill" [style.width.%]="getBudgetPercentage()">
+                      <div class="bar-value">{{ getBudgetAmount() | currency }}</div>
+                    </div>
+                  </div>
+                </div>
+                <div class="budget-bar">
+                  <div class="bar-label">Actual</div>
+                  <div class="bar-container">
+                    <div class="bar-fill actual-fill" [style.width.%]="getActualPercentage()">
+                      <div class="bar-value">{{ reportData?.summary?.totalExpenses | currency }}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="chart-summary">
+                <div class="summary-item">
+                  <span class="summary-label">Budget Utilization:</span>
+                  <span class="summary-value" [class.warning]="getBudgetUtilization() > 80" [class.danger]="getBudgetUtilization() > 100">
+                    {{ getBudgetUtilization() | number:'1.1-1' }}%
+                  </span>
+                </div>
+                <div class="summary-item">
+                  <span class="summary-label">Variance:</span>
+                  <span class="summary-value" [class.positive]="getBudgetVariance() >= 0" [class.negative]="getBudgetVariance() < 0">
+                    {{ getBudgetVariance() | currency }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Category Budget Analysis -->
+        <div class="category-budget-section" *ngIf="reportData?.categories && (reportData?.categories?.length ?? 0) > 0">
+          <h4>Category Budget Analysis</h4>
+          <div class="category-budget-grid">
+            <div class="category-budget-item" *ngFor="let category of (reportData?.categories || []).slice(0, 8)">
+              <div class="category-header">
+                <div class="category-name">{{ category.categoryName || 'Uncategorized' }}</div>
+                <div class="category-amount">{{ category.total || category.amount | currency }}</div>
+              </div>
+              <div class="category-progress">
+                <div class="progress-bar">
+                  <div class="progress-fill" [style.width.%]="getCategoryBudgetPercentage(category)">
+                    <span class="progress-text">{{ getCategoryBudgetPercentage(category) | number:'1.1-1' }}%</span>
+                  </div>
+                </div>
+              </div>
+              <div class="category-stats">
+                <div class="stat-item">
+                  <span class="stat-label">Count:</span>
+                  <span class="stat-value">{{ category.count }}</span>
+                </div>
+                <div class="stat-item">
+                  <span class="stat-label">Avg:</span>
+                  <span class="stat-value">{{ ((category.total || category.amount) / category.count) | currency }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Budget Recommendations -->
+        <div class="budget-recommendations" *ngIf="reportData?.insights && (reportData?.insights?.length ?? 0) > 0">
+          <h4>Budget Recommendations</h4>
+          <div class="recommendations-grid">
+            <div class="recommendation-card" *ngFor="let insight of reportData?.insights">
+              <div class="recommendation-icon">
+                <i class="fas fa-lightbulb"></i>
+              </div>
+              <div class="recommendation-content">
+                <p>{{ insight }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Budget Alerts -->
+        <div class="budget-alerts">
+          <h4>Budget Alerts</h4>
+          <div class="alerts-list">
+            <div class="alert-item" *ngIf="getBudgetVariance() < 0" [class.warning]="getBudgetVariance() < -100" [class.danger]="getBudgetVariance() < -500">
+              <i class="fas fa-exclamation-triangle"></i>
+              <span>Over budget by {{ Math.abs(getBudgetVariance()) | currency }}</span>
+            </div>
+            <div class="alert-item" *ngIf="getBudgetUtilization() > 80" [class.warning]="getBudgetUtilization() > 90" [class.danger]="getBudgetUtilization() > 100">
+              <i class="fas fa-chart-line"></i>
+              <span>High budget utilization: {{ getBudgetUtilization() | number:'1.1-1' }}%</span>
+            </div>
+            <div class="alert-item" *ngIf="getBudgetVariance() >= 0 && getBudgetUtilization() < 50">
+              <i class="fas fa-check-circle"></i>
+              <span>Good budget management - under budget by {{ getBudgetVariance() | currency }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Multi-Currency Reports -->
+      <div *ngIf="hasMultipleCurrencies()" class="multi-currency-reports">
+        <h3>Multi-Currency Reports</h3>
+        <div class="currency-tabs">
+          <button 
+            *ngFor="let currency of getAvailableCurrencies()" 
+            class="currency-tab"
+            [class.active]="selectedCurrency === currency"
+            (click)="selectedCurrency = currency">
+            {{ currency }}
+          </button>
+        </div>
+        
+        <div *ngFor="let currency of getAvailableCurrencies()" class="currency-report" [style.display]="selectedCurrency === currency ? 'block' : 'none'">
+          <div class="currency-header">
+            <h4>{{ currency }} Report</h4>
+            <span class="currency-period">{{ getReportForCurrency(currency)?.period?.start | date:'mediumDate' }} - {{ getReportForCurrency(currency)?.period?.end | date:'mediumDate' }}</span>
+          </div>
+          
+          <!-- Currency-specific Summary -->
+          <div class="currency-summary" *ngIf="getReportForCurrency(currency)">
+            <div class="summary-grid">
+              <div class="summary-card income">
+                <div class="card-header">
+                  <i class="fas fa-arrow-up"></i>
+                  <span>Total Income</span>
+                </div>
+                <div class="card-value">{{ getReportForCurrency(currency)?.summary?.totalIncome | currency:currency }}</div>
+              </div>
+              <div class="summary-card expenses">
+                <div class="card-header">
+                  <i class="fas fa-arrow-down"></i>
+                  <span>Total Expenses</span>
+                </div>
+                <div class="card-value">{{ getReportForCurrency(currency)?.summary?.totalExpenses | currency:currency }}</div>
+              </div>
+              <div class="summary-card net">
+                <div class="card-header">
+                  <i class="fas fa-balance-scale"></i>
+                  <span>Net Amount</span>
+                </div>
+                <div class="card-value" [class.positive]="(getReportForCurrency(currency)?.summary?.netAmount ?? 0) >= 0" [class.negative]="(getReportForCurrency(currency)?.summary?.netAmount ?? 0) < 0">
+                  {{ getReportForCurrency(currency)?.summary?.netAmount | currency:currency }}
+                </div>
+              </div>
             </div>
           </div>
         </div>
