@@ -90,6 +90,9 @@ export class FinancialController {
         return;
       }
 
+      console.log('Request body received:', req.body);
+      console.log('Granularity received:', req.body.granularity);
+      
       const {
         reportType,
         startDate,
@@ -97,6 +100,8 @@ export class FinancialController {
         includeCategories,
         includeTrends,
         includeProjections,
+        separateByCurrency,
+        granularity,
       } = req.body;
 
       if (!reportType) {
@@ -114,7 +119,11 @@ export class FinancialController {
         includeCategories: includeCategories !== false,
         includeTrends: includeTrends !== false,
         includeProjections: includeProjections === true,
+        separateByCurrency: separateByCurrency === true,
+        granularity: granularity || 'auto',
       };
+
+      console.log('Options being passed to service:', options);
 
       const report = await this.financialService.generateFinancialReport(
         userId,
@@ -131,6 +140,7 @@ export class FinancialController {
         userId,
         reportType,
         period: { start: options.startDate, end: options.endDate },
+        separateByCurrency: options.separateByCurrency,
       });
     } catch (error) {
       logger.error('Error in generateFinancialReport controller', {

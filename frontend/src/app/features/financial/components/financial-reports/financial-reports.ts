@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
-import { Subject, takeUntil } from 'rxjs';
+import { Subject, takeUntil, timeout } from 'rxjs';
 import { 
   Transaction, 
   TransactionType, 
@@ -38,6 +38,7 @@ export class FinancialReportsComponent implements OnInit, OnDestroy {
   // Report configuration
   selectedPeriod: string = 'month';
   selectedReportType: string = 'summary';
+  selectedGranularity: string = 'auto'; // auto, days, weeks, months, quarters
   startDate: string = '';
   endDate: string = '';
   customDateRange: boolean = false;
@@ -60,6 +61,7 @@ export class FinancialReportsComponent implements OnInit, OnDestroy {
   private _cachedBudgetAmount: number | null = null;
   private _cachedBudgetUtilization: number | null = null;
   private _cachedBudgetVariance: number | null = null;
+  private _cachedOverallTrendAnalysis: string | null = null;
 
   // UI State
   isLoading: boolean = false;
@@ -83,8 +85,26 @@ export class FinancialReportsComponent implements OnInit, OnDestroy {
     { value: 'budget', label: 'Budget Analysis', icon: 'fas fa-balance-scale' }
   ];
 
+  // Available granularity options (simplified)
+  granularityOptions = [
+    { value: 'days', label: 'Daily', description: 'Show data by days' },
+    { value: 'months', label: 'Monthly', description: 'Show data by months' }
+  ];
+
   ngOnInit(): void {
     this.initializeDates();
+    
+    // Set default granularity based on initial period
+    if (this.selectedPeriod === 'month') {
+      this.selectedGranularity = 'days';
+    } else if (this.selectedPeriod === 'quarter') {
+      this.selectedGranularity = 'days';
+    } else if (this.selectedPeriod === 'year') {
+      this.selectedGranularity = 'months';
+    } else {
+      this.selectedGranularity = 'days';
+    }
+    
     this.loadData();
   }
 
@@ -114,15 +134,23 @@ export class FinancialReportsComponent implements OnInit, OnDestroy {
       includeCategories: true,
       includeTrends: true,
       includeProjections: false,
-      separateByCurrency: true // Enable currency separation
+        separateByCurrency: true, // Enable currency separation
+        granularity: this.selectedGranularity // Add granularity option
     };
 
+      console.log('Generating report with options:', reportOptions);
+
     this.financialService.generateFinancialReport(reportOptions).pipe(
-      takeUntil(this.destroy$)
+      takeUntil(this.destroy$),
+      timeout(30000) // 30 second timeout
     ).subscribe({
       next: (report) => {
         // Clear cached values when new data arrives
         this.clearCachedValues();
+          
+          console.log('Report response received:', report);
+        console.log('Report type:', typeof report);
+        console.log('Report keys:', report ? Object.keys(report) : 'null');
         
         // Check if the response is currency-separated
         // Currency-separated reports are objects with currency keys (USD, EUR, etc.)
@@ -132,29 +160,42 @@ export class FinancialReportsComponent implements OnInit, OnDestroy {
           const keys = Object.keys(report);
           const hasCurrencyKeys = keys.some(key => key.length === 3 && key === key.toUpperCase());
           
+          console.log('Keys found:', keys);
+          console.log('Has currency keys:', hasCurrencyKeys);
+          
           if (hasCurrencyKeys) {
             // This is a currency-separated response
+            console.log('Currency-separated response detected');
             this.currencyReports = report as unknown as {[currency: string]: FinancialReport};
             this.reportData = null; // Clear single currency report
-            // Set the first currency as selected
+            // Set the currency with the most transactions as selected
             const currencies = Object.keys(this.currencyReports);
             if (currencies.length > 0) {
-              this.selectedCurrency = currencies[0];
+              this.selectedCurrency = this.getPrimaryCurrency(currencies);
             }
+            console.log('Available currencies:', currencies);
           } else {
             // This is a single currency response
+            console.log('Single currency response detected');
             this.reportData = report as FinancialReport;
             this.currencyReports = {}; // Clear currency reports
             this.selectedCurrency = '';
           }
         } else {
           // This is a single currency response
+          console.log('Single currency response (fallback)');
           this.reportData = report as FinancialReport;
           this.currencyReports = {}; // Clear currency reports
           this.selectedCurrency = '';
         }
+        // Clear all caches before triggering change detection
+        this.clearCachedValues();
         this.isLoading = false;
+        
+        // Use setTimeout to avoid change detection issues
+        setTimeout(() => {
         this.cdr.detectChanges();
+        }, 0);
       },
       error: (error) => {
         console.error('Error generating report:', error);
@@ -224,6 +265,18 @@ export class FinancialReportsComponent implements OnInit, OnDestroy {
       this.updateDateRange(period);
     }
     
+    // Set appropriate default granularity based on period
+    if (period === 'month') {
+      this.selectedGranularity = 'days'; // Daily for monthly view
+    } else if (period === 'quarter') {
+      this.selectedGranularity = 'days'; // Daily for quarterly view  
+    } else if (period === 'year') {
+      this.selectedGranularity = 'months'; // Monthly for yearly view
+    } else {
+      this.selectedGranularity = 'days'; // Default to daily
+    }
+    
+    this.clearCachedValues();
     this.loadData();
   }
 
@@ -231,6 +284,21 @@ export class FinancialReportsComponent implements OnInit, OnDestroy {
     this.selectedReportType = reportType;
     this.clearCachedValues();
     this.loadData(); // Reload data from API instead of local generation
+  }
+
+  onGranularityChange(granularity: string): void {
+    console.log('Granularity changed to:', granularity);
+    this.selectedGranularity = granularity;
+    this.clearCachedValues();
+    
+    // Force reload with new granularity
+    this.isLoading = true;
+    this.loadData();
+  }
+
+  getGranularityDescription(granularity: string): string {
+    const option = this.granularityOptions.find(opt => opt.value === granularity);
+    return option ? option.description : '';
   }
 
   onDateRangeChange(): void {
@@ -252,8 +320,8 @@ export class FinancialReportsComponent implements OnInit, OnDestroy {
         startDate = new Date(now.getFullYear(), now.getMonth(), 1);
         break;
       case 'quarter':
-        const quarter = Math.floor(now.getMonth() / 3);
-        startDate = new Date(now.getFullYear(), quarter * 3, 1);
+        // Last 3 months from today
+        startDate = new Date(now.getFullYear(), now.getMonth() - 3, now.getDate());
         break;
       case 'year':
         startDate = new Date(now.getFullYear(), 0, 1);
@@ -417,6 +485,18 @@ export class FinancialReportsComponent implements OnInit, OnDestroy {
     this._cachedBudgetAmount = null;
     this._cachedBudgetUtilization = null;
     this._cachedBudgetVariance = null;
+    this._cachedOverallTrendAnalysis = null;
+  }
+
+  // Clear cached values when currency changes
+  onCurrencyChange(currency: string): void {
+    this.selectedCurrency = currency;
+    this.clearCachedValues();
+    
+    // Use setTimeout to avoid change detection issues
+    setTimeout(() => {
+      this.cdr.detectChanges();
+    }, 0);
   }
 
   private getTotalExpenses(): number {
@@ -508,12 +588,84 @@ export class FinancialReportsComponent implements OnInit, OnDestroy {
     return Object.keys(this.currencyReports);
   }
 
+
   hasMultipleCurrencies(): boolean {
-    return Object.keys(this.currencyReports).length > 1;
+    // Use a more stable approach to avoid change detection issues
+    try {
+      return this.currencyReports && Object.keys(this.currencyReports).length > 1;
+    } catch (error) {
+      return false;
+    }
   }
 
   getReportForCurrency(currency: string): FinancialReport | null {
     return this.currencyReports[currency] || null;
+  }
+
+  // Get the current report data (either single currency or selected currency)
+  getCurrentReportData(): any {
+    try {
+      if (this.hasMultipleCurrencies() && this.selectedCurrency) {
+        return this.getReportForCurrency(this.selectedCurrency);
+      }
+      return this.reportData;
+    } catch (error) {
+      console.error('Error in getCurrentReportData:', error);
+      return null;
+    }
+  }
+
+  // Get the current summary data (either single currency or selected currency)
+  getCurrentSummary(): any {
+    try {
+      const currentReport = this.getCurrentReportData();
+      return currentReport?.summary;
+    } catch (error) {
+      console.error('Error in getCurrentSummary:', error);
+      return null;
+    }
+  }
+
+  // Get the current currency (either from selected currency or default)
+  getCurrentCurrency(): string {
+    try {
+      if (this.hasMultipleCurrencies() && this.selectedCurrency) {
+        return this.selectedCurrency;
+      }
+      // Default to USD if no currency is selected
+      return 'USD';
+    } catch (error) {
+      console.error('Error in getCurrentCurrency:', error);
+      return 'USD';
+    }
+  }
+
+  // Get the primary currency (the one with the most transactions or highest total)
+  getPrimaryCurrency(currencies: string[]): string {
+    if (currencies.length === 0) return 'USD';
+    if (currencies.length === 1) return currencies[0];
+
+    let primaryCurrency = currencies[0];
+    let maxTransactions = 0;
+    let maxTotal = 0;
+
+    for (const currency of currencies) {
+      const report = this.currencyReports[currency];
+      if (report?.summary) {
+        const transactionCount = report.summary.transactionCount || 0;
+        const totalAmount = (report.summary.totalIncome || 0) + (report.summary.totalExpenses || 0);
+        
+        // Prioritize currency with most transactions, then highest total
+        if (transactionCount > maxTransactions || 
+            (transactionCount === maxTransactions && totalAmount > maxTotal)) {
+          primaryCurrency = currency;
+          maxTransactions = transactionCount;
+          maxTotal = totalAmount;
+        }
+      }
+    }
+
+    return primaryCurrency;
   }
 
   // Helper methods for detailed report
@@ -521,8 +673,9 @@ export class FinancialReportsComponent implements OnInit, OnDestroy {
     if (this._cachedIncomePercentage !== null) {
       return this._cachedIncomePercentage;
     }
-    const total = (this.reportData?.summary?.totalIncome ?? 0) + (this.reportData?.summary?.totalExpenses ?? 0);
-    this._cachedIncomePercentage = total > 0 ? ((this.reportData?.summary?.totalIncome ?? 0) / total) * 100 : 0;
+    const summary = this.getCurrentSummary();
+    const total = (summary?.totalIncome ?? 0) + (summary?.totalExpenses ?? 0);
+    this._cachedIncomePercentage = total > 0 ? ((summary?.totalIncome ?? 0) / total) * 100 : 0;
     return this._cachedIncomePercentage;
   }
 
@@ -530,8 +683,9 @@ export class FinancialReportsComponent implements OnInit, OnDestroy {
     if (this._cachedExpensePercentage !== null) {
       return this._cachedExpensePercentage;
     }
-    const total = (this.reportData?.summary?.totalIncome ?? 0) + (this.reportData?.summary?.totalExpenses ?? 0);
-    this._cachedExpensePercentage = total > 0 ? ((this.reportData?.summary?.totalExpenses ?? 0) / total) * 100 : 0;
+    const summary = this.getCurrentSummary();
+    const total = (summary?.totalIncome ?? 0) + (summary?.totalExpenses ?? 0);
+    this._cachedExpensePercentage = total > 0 ? ((summary?.totalExpenses ?? 0) / total) * 100 : 0;
     return this._cachedExpensePercentage;
   }
 
@@ -540,11 +694,12 @@ export class FinancialReportsComponent implements OnInit, OnDestroy {
     if (this._cachedTotalIncome !== null) {
       return this._cachedTotalIncome;
     }
-    if (!this.reportData?.trends) {
+    const currentReport = this.getCurrentReportData();
+    if (!currentReport?.trends) {
       this._cachedTotalIncome = 0;
       return 0;
     }
-    this._cachedTotalIncome = this.reportData.trends.reduce((sum, trend) => sum + (trend.income || 0), 0);
+    this._cachedTotalIncome = currentReport.trends.reduce((sum: number, trend: any) => sum + (trend.income || 0), 0);
     return this._cachedTotalIncome!;
   }
 
@@ -552,11 +707,12 @@ export class FinancialReportsComponent implements OnInit, OnDestroy {
     if (this._cachedTotalExpenses !== null) {
       return this._cachedTotalExpenses;
     }
-    if (!this.reportData?.trends) {
+    const currentReport = this.getCurrentReportData();
+    if (!currentReport?.trends) {
       this._cachedTotalExpenses = 0;
       return 0;
     }
-    this._cachedTotalExpenses = this.reportData.trends.reduce((sum, trend) => sum + (trend.expenses || 0), 0);
+    this._cachedTotalExpenses = currentReport.trends.reduce((sum: number, trend: any) => sum + (trend.expenses || 0), 0);
     return this._cachedTotalExpenses!;
   }
 
@@ -578,15 +734,375 @@ export class FinancialReportsComponent implements OnInit, OnDestroy {
   }
 
   getTrendChange(trend: any, index: number): number {
-    if (!this.reportData?.trends || index === 0) return 0;
-    const previousTrend = this.reportData.trends[index - 1];
+    try {
+      const currentReport = this.getCurrentReportData();
+      if (!currentReport?.trends || currentReport.trends.length < 2) return 0;
+      
+      // For trend analysis, compare current period with a meaningful baseline
+      // Use the most recent period vs a previous period (not just the immediate previous)
+    const currentNet = trend.net || 0;
+      
+      // Find a meaningful comparison point based on data length
+      let comparisonIndex: number;
+      if (currentReport.trends.length <= 7) {
+        // For small datasets, compare with the last entry
+        comparisonIndex = currentReport.trends.length - 1;
+      } else if (currentReport.trends.length <= 30) {
+        // For medium datasets, compare with 7 periods ago (weekly comparison)
+        comparisonIndex = Math.max(0, index - 7);
+      } else {
+        // For large datasets, compare with 30 periods ago (monthly comparison)
+        comparisonIndex = Math.max(0, index - 30);
+      }
+      
+      // Don't compare with self
+      if (comparisonIndex === index) {
+        comparisonIndex = Math.max(0, index - 1);
+      }
+      
+      const comparisonTrend = currentReport.trends[comparisonIndex];
+      if (!comparisonTrend) return 0;
+      
+      const comparisonNet = comparisonTrend.net || 0;
+      
+      // Handle edge cases
+      if (comparisonNet === 0) {
+        return currentNet > 0 ? 100 : (currentNet < 0 ? -100 : 0);
+      }
+      
+      // Calculate percentage change: ((new - old) / |old|) * 100
+      const change = ((currentNet - comparisonNet) / Math.abs(comparisonNet)) * 100;
+      
+      // Ensure the result is a valid number
+      if (isNaN(change) || !isFinite(change)) {
+        return 0;
+      }
+      
+      return change;
+    } catch (error) {
+      console.error('Error in getTrendChange:', error);
+      return 0;
+    }
+  }
+
+  // Get income trend change
+  getIncomeTrendChange(trend: any, index: number): number {
+    const currentReport = this.getCurrentReportData();
+    if (!currentReport?.trends || index === 0) return 0;
+    const previousTrend = currentReport.trends[index - 1];
     if (!previousTrend) return 0;
     
-    const currentNet = trend.net || 0;
-    const previousNet = previousTrend.net || 0;
+    const currentIncome = trend.income || 0;
+    const previousIncome = previousTrend.income || 0;
     
-    if (previousNet === 0) return 0;
-    return ((currentNet - previousNet) / Math.abs(previousNet)) * 100;
+    if (previousIncome === 0) {
+      return currentIncome > 0 ? 100 : 0;
+    }
+    
+    return ((currentIncome - previousIncome) / previousIncome) * 100;
+  }
+
+  // Get expense trend change
+  getExpenseTrendChange(trend: any, index: number): number {
+    const currentReport = this.getCurrentReportData();
+    if (!currentReport?.trends || index === 0) return 0;
+    const previousTrend = currentReport.trends[index - 1];
+    if (!previousTrend) return 0;
+    
+    const currentExpense = trend.expenses || 0;
+    const previousExpense = previousTrend.expenses || 0;
+    
+    if (previousExpense === 0) {
+      return currentExpense > 0 ? 100 : 0;
+    }
+    
+    return ((currentExpense - previousExpense) / previousExpense) * 100;
+  }
+
+  // Get trend direction (improving, declining, stable)
+  getTrendDirection(trend: any, index: number): 'improving' | 'declining' | 'stable' {
+    const change = this.getTrendChange(trend, index);
+    
+    // For the first month (current), base direction on net value, not change
+    if (index === 0) {
+      const netValue = trend.net || 0;
+      if (netValue > 0) return 'improving';
+      if (netValue < 0) return 'declining';
+      return 'stable';
+    }
+    
+    // For subsequent months, use percentage change
+    if (Math.abs(change) < 5) return 'stable';
+    
+    // For net values: positive change means improving financial position
+    return change > 0 ? 'improving' : 'declining';
+  }
+
+  // Get overall trend analysis
+  getOverallTrendAnalysis(): string {
+    if (this._cachedOverallTrendAnalysis !== null) {
+      return this._cachedOverallTrendAnalysis;
+    }
+    
+    try {
+      const currentReport = this.getCurrentReportData();
+      if (!currentReport?.trends || currentReport.trends.length === 0) {
+        this._cachedOverallTrendAnalysis = 'Insufficient data';
+        return this._cachedOverallTrendAnalysis;
+      }
+      
+      const trends = currentReport.trends;
+      
+      // For single period, base analysis on net value
+      if (trends.length === 1) {
+        const netValue = trends[0].net || 0;
+        if (netValue > 1000) this._cachedOverallTrendAnalysis = 'Strong Growth';
+        else if (netValue > 0) this._cachedOverallTrendAnalysis = 'Growing';
+        else if (netValue > -1000) this._cachedOverallTrendAnalysis = 'Declining';
+        else this._cachedOverallTrendAnalysis = 'Strong Decline';
+        return this._cachedOverallTrendAnalysis;
+      }
+      
+      // For multiple periods, analyze total net value (not average)
+      const netValues = trends.map((trend: any) => trend.net || 0);
+      const totalNet = netValues.reduce((sum: number, net: number) => sum + net, 0);
+      
+      if (totalNet > 1000) this._cachedOverallTrendAnalysis = 'Strong Growth';
+      else if (totalNet > 0) this._cachedOverallTrendAnalysis = 'Growing';
+      else if (totalNet > -1000) this._cachedOverallTrendAnalysis = 'Declining';
+      else this._cachedOverallTrendAnalysis = 'Strong Decline';
+      
+      return this._cachedOverallTrendAnalysis;
+      
+    } catch (error) {
+      console.error('Error in getOverallTrendAnalysis:', error);
+      this._cachedOverallTrendAnalysis = 'Analysis Error';
+      return this._cachedOverallTrendAnalysis;
+    }
+  }
+
+  // Get period length in months for display
+  getPeriodLength(): number {
+    // Return period length based on selected period, not actual data
+    switch (this.selectedPeriod) {
+      case 'week':
+        return 1; // 1 week = ~0.25 months, but show as 1 for simplicity
+      case 'month':
+        return 1;
+      case 'quarter':
+        return 3;
+      case 'year':
+        return 12;
+      default:
+        return 1;
+    }
+  }
+
+  // Get latest change as absolute value (not percentage)
+  getLatestChangeAbsolute(): number {
+    const currentReport = this.getCurrentReportData();
+    if (!currentReport?.trends || currentReport.trends.length === 0) return 0;
+    
+    // Calculate total net for the entire period
+    const totalNet = currentReport.trends.reduce((sum: number, trend: any) => sum + (trend.net || 0), 0);
+    return totalNet;
+  }
+
+  // Get max net value for percentage calculation
+  getMaxNetValue(): number {
+    const currentReport = this.getCurrentReportData();
+    if (!currentReport?.trends || currentReport.trends.length === 0) return 1;
+    
+    const maxValue = Math.max(...currentReport.trends.map((t: any) => Math.abs(t.net || 0)));
+    return Math.max(maxValue, 1); // Ensure we don't divide by 0
+  }
+
+  // Get net percentage for a trend
+  getNetPercentage(trend: any): number {
+    const maxValue = this.getMaxNetValue();
+    return Math.min((Math.abs(trend.net || 0) / maxValue) * 100, 100);
+  }
+
+  // Format date based on granularity
+  formatTrendDate(trend: any): string {
+    if (!trend.month) return '';
+    
+    const date = new Date(trend.month);
+    
+    // Check if we have daily granularity by looking at the period field
+    if (trend.period && trend.period.includes('-') && trend.period.length === 10) {
+      // Daily data - show full date
+      return date.toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric'
+      }); // Format: "25 Oct 2025"
+    } else {
+      // Monthly data - show month and year
+      return date.toLocaleDateString('en-GB', {
+        month: 'short',
+        year: 'numeric'
+      }); // Format: "Oct 2025"
+    }
+  }
+
+  // Get trend indicator icon
+  getTrendIcon(trend: any, index: number): string {
+    const direction = this.getTrendDirection(trend, index);
+    switch (direction) {
+      case 'improving': return 'fas fa-arrow-up';
+      case 'declining': return 'fas fa-arrow-down';
+      default: return 'fas fa-minus';
+    }
+  }
+
+  // Get trend color class
+  getTrendColorClass(trend: any, index: number): string {
+    const direction = this.getTrendDirection(trend, index);
+    switch (direction) {
+      case 'improving': return 'trend-improving';
+      case 'declining': return 'trend-declining';
+      default: return 'trend-stable';
+    }
+  }
+
+  // Get overall trend color class
+  getOverallTrendColorClass(): string {
+    try {
+      const analysis = this.getOverallTrendAnalysis();
+      switch (analysis) {
+        case 'Strong Growth':
+        case 'Growing':
+          return 'trend-improving';
+        case 'Declining':
+        case 'Strong Decline':
+          return 'trend-declining';
+        default:
+          return 'trend-stable';
+      }
+    } catch (error) {
+      console.error('Error in getOverallTrendColorClass:', error);
+      return 'trend-stable';
+    }
+  }
+
+  // Get Y-axis tick values for the line chart
+  getYAxisTicks(): number[] {
+    const currentReport = this.getCurrentReportData();
+    if (!currentReport?.trends || currentReport.trends.length === 0) return [0, 1000, 2000, 3000, 4000, 5000];
+    
+    // Find max value across all trends
+    const maxValue = Math.max(...currentReport.trends.map((trend: any) => 
+      Math.max(Math.abs(trend.income || 0), Math.abs(trend.expenses || 0), Math.abs(trend.net || 0))
+    ));
+    
+    if (maxValue === 0) return [0, 1000, 2000, 3000, 4000, 5000];
+    
+    // Generate nice round numbers
+    const magnitude = Math.pow(10, Math.floor(Math.log10(maxValue)));
+    const normalizedMax = Math.ceil(maxValue / magnitude) * magnitude;
+    const step = normalizedMax / 5;
+    
+    return [0, step, step * 2, step * 3, step * 4, normalizedMax];
+  }
+
+  // Get Y-axis position for a value
+  getYAxisPosition(value: number): number {
+    const currentReport = this.getCurrentReportData();
+    if (!currentReport?.trends || currentReport.trends.length === 0) return 400;
+    
+    const maxValue = Math.max(...currentReport.trends.map((trend: any) => 
+      Math.max(Math.abs(trend.income || 0), Math.abs(trend.expenses || 0), Math.abs(trend.net || 0))
+    ));
+    
+    if (maxValue === 0) return 400;
+    
+    // Convert value to Y position (inverted for SVG)
+    // Use full chart height (50 to 400)
+    const percentage = Math.abs(value) / maxValue;
+    const yPos = 400 - (percentage * 350); // 400 is bottom, 50 is top
+    return Math.max(50, Math.min(400, yPos)); // Clamp between 50 and 400
+  }
+
+  // Get X-axis position for an index
+  getXAxisPosition(index: number): number {
+    const currentReport = this.getCurrentReportData();
+    if (!currentReport?.trends || currentReport.trends.length === 0) return 200;
+    
+    const totalPoints = currentReport.trends.length;
+    const startX = 100; // Use more space
+    const endX = 800;   // Use more space
+    const step = totalPoints > 1 ? (endX - startX) / (totalPoints - 1) : 0;
+    
+    const xPos = startX + (index * step);
+    return Math.max(100, Math.min(800, xPos)); // Clamp between 100 and 800
+  }
+
+  // Get line chart points for a specific type
+  getLineChartPoints(type: 'income' | 'expense' | 'net'): string {
+    const currentReport = this.getCurrentReportData();
+    if (!currentReport?.trends || currentReport.trends.length === 0) return '';
+    
+    const points: string[] = [];
+    
+    currentReport.trends.forEach((trend: any, index: number) => {
+      let value = 0;
+      switch (type) {
+        case 'income': value = trend.income || 0; break;
+        case 'expense': value = trend.expenses || 0; break;
+        case 'net': value = trend.net || 0; break;
+      }
+      
+      const x = this.getXAxisPosition(index);
+      const y = this.getYAxisPosition(value);
+      points.push(`${x},${y}`);
+    });
+    
+    return points.join(' ');
+  }
+
+  // Generate SVG path points for trend lines
+  getTrendLinePoints(type: 'income' | 'expense' | 'net'): string {
+    const currentReport = this.getCurrentReportData();
+    if (!currentReport?.trends || currentReport.trends.length < 2) return '';
+    
+    const trends = currentReport.trends;
+    const points: string[] = [];
+    
+    // Find max and min values for proper scaling
+    const values = trends.map((trend: any) => {
+      switch (type) {
+        case 'income': return Math.abs(trend.income || 0);
+        case 'expense': return Math.abs(trend.expenses || 0);
+        case 'net': return Math.abs(trend.net || 0);
+        default: return 0;
+      }
+    });
+    
+    const maxValue = Math.max(...values);
+    if (maxValue === 0) return '';
+    
+    trends.forEach((trend: any, index: number) => {
+      let value = 0;
+      switch (type) {
+        case 'income': value = Math.abs(trend.income || 0); break;
+        case 'expense': value = Math.abs(trend.expenses || 0); break;
+        case 'net': value = Math.abs(trend.net || 0); break;
+      }
+      
+      // Calculate position with proper alignment to match bars
+      const barWidth = 80; // Width of each bar area
+      const barSpacing = 20; // Space between bars
+      const totalWidth = (trends.length - 1) * (barWidth + barSpacing) + barWidth;
+      const startX = (100 - totalWidth) / 2; // Center the bars
+      
+      const x = startX + index * (barWidth + barSpacing) + barWidth / 2; // Center of each bar
+      const y = 90 - (value / maxValue) * 80; // 10% to 90% of height, inverted
+      
+      points.push(`${x},${y}`);
+    });
+    
+    return points.join(' ');
   }
 
   // Helper methods for budget analysis
@@ -596,7 +1112,8 @@ export class FinancialReportsComponent implements OnInit, OnDestroy {
     }
     // For now, use total expenses as budget amount
     // In a real implementation, this would come from budget data
-    this._cachedBudgetAmount = (this.reportData?.summary?.totalExpenses ?? 0) * 1.2; // 20% buffer
+    const summary = this.getCurrentSummary();
+    this._cachedBudgetAmount = (summary?.totalExpenses ?? 0) * 1.2; // 20% buffer
     return this._cachedBudgetAmount;
   }
 
@@ -605,7 +1122,8 @@ export class FinancialReportsComponent implements OnInit, OnDestroy {
       return this._cachedBudgetUtilization;
     }
     const budget = this.getBudgetAmount();
-    const actual = this.reportData?.summary?.totalExpenses ?? 0;
+    const summary = this.getCurrentSummary();
+    const actual = summary?.totalExpenses ?? 0;
     this._cachedBudgetUtilization = budget > 0 ? (actual / budget) * 100 : 0;
     return this._cachedBudgetUtilization;
   }
@@ -614,7 +1132,8 @@ export class FinancialReportsComponent implements OnInit, OnDestroy {
     if (this._cachedBudgetVariance !== null) {
       return this._cachedBudgetVariance;
     }
-    this._cachedBudgetVariance = (this.reportData?.summary?.totalExpenses ?? 0) - this.getBudgetAmount();
+    const summary = this.getCurrentSummary();
+    this._cachedBudgetVariance = (summary?.totalExpenses ?? 0) - this.getBudgetAmount();
     return this._cachedBudgetVariance;
   }
 
@@ -628,7 +1147,8 @@ export class FinancialReportsComponent implements OnInit, OnDestroy {
 
   getCategoryBudgetPercentage(category: any): number {
     const categoryAmount = category.total || category.amount || 0;
-    const totalExpenses = this.reportData?.summary?.totalExpenses ?? 0;
+    const summary = this.getCurrentSummary();
+    const totalExpenses = summary?.totalExpenses ?? 0;
     return totalExpenses > 0 ? (categoryAmount / totalExpenses) * 100 : 0;
   }
 

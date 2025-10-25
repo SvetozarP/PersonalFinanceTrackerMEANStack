@@ -360,6 +360,7 @@ export class FinancialService {
       includeTrends?: boolean;
       includeProjections?: boolean;
       separateByCurrency?: boolean;
+      granularity?: string;
     }
   ): Promise<{
     reportType: string;
@@ -416,7 +417,8 @@ export class FinancialService {
           calculatedEndDate,
           includeCategories,
           includeTrends,
-          includeProjections
+          includeProjections,
+          options.granularity
         );
       }
 
@@ -848,6 +850,127 @@ export class FinancialService {
     }
   }
 
+  /**
+   * Generate trends based on granularity
+   */
+  private generateTrendsByGranularity(transactions: any[], granularity?: string): any[] {
+    if (!transactions || transactions.length === 0) return [];
+
+    // Determine granularity based on period and user preference
+    let actualGranularity = granularity || 'auto';
+    
+    if (actualGranularity === 'auto') {
+      // Auto-determine based on data range
+      const dateRange = this.getDateRange(transactions);
+      const daysDiff = Math.ceil((dateRange.end.getTime() - dateRange.start.getTime()) / (1000 * 60 * 60 * 24));
+      
+      if (daysDiff <= 7) actualGranularity = 'days';
+      else if (daysDiff <= 30) actualGranularity = 'days';
+      else if (daysDiff <= 90) actualGranularity = 'weeks';
+      else if (daysDiff <= 365) actualGranularity = 'months';
+      else actualGranularity = 'quarters';
+    }
+
+    const groupedData: {[key: string]: {income: number, expenses: number}} = {};
+
+    transactions.forEach(transaction => {
+      let periodKey = '';
+      
+      switch (actualGranularity) {
+        case 'days':
+          periodKey = transaction.date.toISOString().substring(0, 10); // YYYY-MM-DD
+          break;
+        case 'weeks':
+          periodKey = this.getWeekKey(transaction.date);
+          break;
+        case 'months':
+          periodKey = transaction.date.toISOString().substring(0, 7); // YYYY-MM
+          break;
+        case 'quarters':
+          periodKey = this.getQuarterKey(transaction.date);
+          break;
+        default:
+          periodKey = transaction.date.toISOString().substring(0, 7); // Default to months
+      }
+
+      if (!groupedData[periodKey]) {
+        groupedData[periodKey] = { income: 0, expenses: 0 };
+      }
+
+      if (transaction.type === 'income') {
+        groupedData[periodKey].income += transaction.amount;
+      } else if (transaction.type === 'expense') {
+        groupedData[periodKey].expenses += transaction.amount;
+      }
+    });
+
+    return Object.entries(groupedData)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([period, data]) => ({
+        period,
+        month: new Date(period + (actualGranularity === 'days' ? '' : '-01')),
+        income: data.income,
+        expenses: data.expenses,
+        net: data.income - data.expenses
+      }));
+  }
+
+  private getDateRange(transactions: any[]): {start: Date, end: Date} {
+    if (transactions.length === 0) return {start: new Date(), end: new Date()};
+    
+    const dates = transactions.map(t => new Date(t.date));
+    return {
+      start: new Date(Math.min(...dates.map(d => d.getTime()))),
+      end: new Date(Math.max(...dates.map(d => d.getTime())))
+    };
+  }
+
+  private getWeekKey(date: Date): string {
+    const year = date.getFullYear();
+    const week = this.getWeekNumber(date);
+    return `${year}-W${week.toString().padStart(2, '0')}`;
+  }
+
+  private getWeekNumber(date: Date): number {
+    const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+    const dayNum = d.getUTCDay() || 7;
+    d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+    return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+  }
+
+  private getQuarterKey(date: Date): string {
+    const year = date.getFullYear();
+    const quarter = Math.ceil((date.getMonth() + 1) / 3);
+    return `${year}-Q${quarter}`;
+  }
+
+  private generateMonthlyTrends(transactions: any[]): any[] {
+    const monthlyData: {[key: string]: {income: number, expenses: number}} = {};
+    
+    transactions.forEach(transaction => {
+      const month = transaction.date.toISOString().substring(0, 7); // YYYY-MM
+      if (!monthlyData[month]) {
+        monthlyData[month] = { income: 0, expenses: 0 };
+      }
+      if (transaction.type === 'income') {
+        monthlyData[month].income += transaction.amount;
+      } else if (transaction.type === 'expense') {
+        monthlyData[month].expenses += transaction.amount;
+      }
+    });
+
+    return Object.entries(monthlyData)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([month, data]) => ({
+        period: month,
+        month: new Date(month + '-01'),
+        income: data.income,
+        expenses: data.expenses,
+        net: data.income - data.expenses
+      }));
+  }
+
   private generateFinancialInsights(stats: any, _trends: any[]): string[] {
     const insights: string[] = [];
 
@@ -865,7 +988,7 @@ export class FinancialService {
     }
 
     // Category insights
-    const topCategory = stats.transactionsByCategory[0];
+    const topCategory = stats.transactionsByCategory && stats.transactionsByCategory.length > 0 ? stats.transactionsByCategory[0] : null;
     if (topCategory && topCategory.percentage > 40) {
       insights.push(
         `${topCategory.categoryName} accounts for ${topCategory.percentage.toFixed(1)}% of your spending. Consider if this aligns with your priorities.`
@@ -981,27 +1104,75 @@ export class FinancialService {
     endDate: Date,
     includeCategories: boolean,
     includeTrends: boolean,
-    includeProjections: boolean
+    includeProjections: boolean,
+    granularity?: string
   ): Promise<{[currency: string]: any}> {
     try {
-      logger.info('Generating currency-separated financial report', { userId, reportType, startDate, endDate });
+      logger.info('Generating currency-separated financial report', { userId, reportType, startDate, endDate, granularity });
+      
+      // Add timeout to prevent hanging
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Report generation timeout')), 25000); // 25 second timeout
+      });
+      
+      const reportPromise = this.generateCurrencySeparatedReportInternal(
+        userId, reportType, startDate, endDate, includeCategories, includeTrends, includeProjections, granularity
+      );
+      
+      return await Promise.race([reportPromise, timeoutPromise]) as {[currency: string]: any};
+    } catch (error) {
+      logger.error('Error in generateCurrencySeparatedReport', { error: String(error), userId, reportType });
+      throw error;
+    }
+  }
 
-      // Get all transactions for the period to identify currencies
+  private async generateCurrencySeparatedReportInternal(
+    userId: string,
+    reportType: string,
+    startDate: Date,
+    endDate: Date,
+    includeCategories: boolean,
+    includeTrends: boolean,
+    includeProjections: boolean,
+    granularity?: string
+  ): Promise<{[currency: string]: any}> {
+    // Get all transactions for the period to identify currencies
       const transactions = await this.transactionService.getUserTransactions(userId, {
         startDate,
         endDate,
         limit: 10000
       });
 
+      console.log('Transactions response:', transactions);
+      console.log('Transactions type:', typeof transactions);
+      console.log('Is array:', Array.isArray(transactions));
+
       // Group transactions by currency
       const transactionsByCurrency: {[currency: string]: any[]} = {};
-      transactions.transactions.forEach(transaction => {
+      
+      // Handle both array and object response structures
+      let transactionList: any[];
+      if (Array.isArray(transactions)) {
+        transactionList = transactions;
+      } else if (transactions && transactions.transactions) {
+        transactionList = transactions.transactions;
+      } else {
+        throw new Error('No transactions found or invalid response structure');
+      }
+
+      console.log('Transaction list length:', transactionList.length);
+      console.log('First transaction:', transactionList[0]);
+      
+      transactionList.forEach((transaction, index) => {
+        console.log(`Processing transaction ${index}:`, transaction.currency);
         const currency = transaction.currency || 'USD';
         if (!transactionsByCurrency[currency]) {
           transactionsByCurrency[currency] = [];
         }
         transactionsByCurrency[currency].push(transaction);
       });
+      
+      console.log('Transactions by currency:', Object.keys(transactionsByCurrency));
 
       const currencyReports: {[currency: string]: any} = {};
 
@@ -1025,49 +1196,44 @@ export class FinancialService {
         if (includeCategories) {
           const categoryMap: {[key: string]: {count: number, total: number, name: string}} = {};
           currencyTransactions.forEach(transaction => {
-            if (transaction.categoryId && transaction.categoryName) {
-              if (!categoryMap[transaction.categoryId]) {
-                categoryMap[transaction.categoryId] = {
+            // Try different field names for category
+            const categoryId = transaction.categoryId?._id || transaction.categoryId?.id || transaction.category?.id || transaction.category?._id;
+            const categoryName = transaction.categoryId?.name || transaction.categoryName || transaction.category?.name;
+            
+            if (categoryId && categoryName) {
+              if (!categoryMap[categoryId]) {
+                categoryMap[categoryId] = {
                   count: 0,
                   total: 0,
-                  name: transaction.categoryName
+                  name: categoryName
                 };
               }
-              categoryMap[transaction.categoryId].count++;
-              categoryMap[transaction.categoryId].total += transaction.amount;
+              categoryMap[categoryId].count++;
+              categoryMap[categoryId].total += transaction.amount;
             }
           });
+          // Calculate total of all category amounts for percentage calculation
+          const totalCategoryAmount = Object.values(categoryMap).reduce((sum, data) => sum + Math.abs(data.total), 0);
+          
           categories = Object.entries(categoryMap).map(([categoryId, data]) => ({
             categoryId,
             categoryName: data.name,
             count: data.count,
             total: data.total,
-            percentage: totalExpenses > 0 ? (data.total / totalExpenses) * 100 : 0
+            percentage: totalCategoryAmount > 0 ? (Math.abs(data.total) / totalCategoryAmount) * 100 : 0
           }));
         }
 
         // Generate trends for this currency
         let trends: any[] = [];
         if (includeTrends) {
-          // Group by month for trends
-          const monthlyData: {[key: string]: {income: number, expenses: number}} = {};
-          currencyTransactions.forEach(transaction => {
-            const month = transaction.date.toISOString().substring(0, 7); // YYYY-MM
-            if (!monthlyData[month]) {
-              monthlyData[month] = { income: 0, expenses: 0 };
-            }
-            if (transaction.type === 'income') {
-              monthlyData[month].income += transaction.amount;
-            } else if (transaction.type === 'expense') {
-              monthlyData[month].expenses += transaction.amount;
-            }
-          });
-          trends = Object.entries(monthlyData).map(([month, data]) => ({
-            month,
-            income: data.income,
-            expenses: data.expenses,
-            net: data.income - data.expenses
-          }));
+          try {
+            trends = this.generateTrendsByGranularity(currencyTransactions, granularity);
+          } catch (error: any) {
+            console.error(`Error generating trends for currency ${currency}:`, error);
+            // Fallback to monthly trends
+            trends = this.generateMonthlyTrends(currencyTransactions);
+          }
         }
 
         // Generate insights for this currency
@@ -1107,15 +1273,7 @@ export class FinancialService {
         reportCount: Object.keys(currencyReports).length 
       });
 
-      return currencyReports;
-    } catch (error) {
-      logger.error('Error generating currency-separated financial report', { 
-        error: String(error), 
-        userId, 
-        reportType 
-      });
-      throw error;
-    }
+    return currencyReports;
   }
 }
 

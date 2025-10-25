@@ -493,32 +493,430 @@
           }
         }
   
-        // Trends Section
-        &.trends-section {
-          .trends-chart {
-            .chart-placeholder {
-              background: #f8f9fa;
-              border: 2px dashed #dee2e6;
-              border-radius: 12px;
-              padding: 60px 24px;
-              text-align: center;
-              color: #6c757d;
-  
-              i {
-                font-size: 48px;
-                margin-bottom: 16px;
-                opacity: 0.5;
+    // Trends Section
+    &.trends-section {
+      .trend-summary {
+        background: white;
+        border-radius: 12px;
+        padding: 24px;
+        margin-bottom: 24px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+
+        .trend-analysis-card {
+          .analysis-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid #e9ecef;
+
+            h4 {
+              margin: 0;
+              font-size: 18px;
+              font-weight: 600;
+              color: #2c3e50;
+            }
+
+            .overall-trend {
+              padding: 8px 16px;
+              border-radius: 20px;
+              font-size: 12px;
+              font-weight: 600;
+              text-transform: uppercase;
+              letter-spacing: 0.5px;
+
+              &.trend-improving {
+                background: #d4edda;
+                color: #155724;
+                border: 1px solid #c3e6cb;
               }
-  
-              p {
-                margin: 0 0 8px 0;
-                font-size: 18px;
+
+              &.trend-declining {
+                background: #f8d7da;
+                color: #721c24;
+                border: 1px solid #f5c6cb;
+              }
+
+              &.trend-stable {
+                background: #e2e3e5;
+                color: #6c757d;
+                border: 1px solid #d6d8db;
+              }
+            }
+          }
+
+          .analysis-details {
+            display: flex;
+            gap: 32px;
+
+            .detail-item {
+              display: flex;
+              flex-direction: column;
+              gap: 4px;
+
+              .label {
+                font-size: 12px;
+                color: #6c757d;
                 font-weight: 500;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
               }
-  
-              small {
-                font-size: 14px;
-                opacity: 0.7;
+
+              .value {
+                font-size: 16px;
+                font-weight: 600;
+                color: #2c3e50;
+
+                &.positive {
+                  color: #28a745;
+                }
+
+                &.negative {
+                  color: #dc3545;
+                }
+              }
+            }
+          }
+        }
+      }
+
+      .trends-chart {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+
+            h4 {
+              margin: 0 0 20px 0;
+              font-size: 18px;
+              font-weight: 600;
+              color: #2c3e50;
+            }
+
+            .chart-container {
+              background: #f8f9fa;
+              border-radius: 8px;
+              padding: 20px;
+
+              .trend-chart {
+            .chart-header {
+              display: flex;
+              justify-content: center;
+              align-items: center;
+              margin-bottom: 20px;
+              padding-bottom: 16px;
+              border-bottom: 2px solid #e9ecef;
+
+              .chart-legend {
+                display: flex;
+                gap: 16px;
+
+                    .legend-item {
+                      display: flex;
+                      align-items: center;
+                      gap: 6px;
+                      font-size: 12px;
+                      color: #6c757d;
+
+                      .legend-color {
+                        width: 12px;
+                        height: 12px;
+                        border-radius: 2px;
+
+                        &.income {
+                          background: #28a745;
+                        }
+
+                        &.expense {
+                          background: #dc3545;
+                        }
+
+                        &.net {
+                          background: #007bff;
+                        }
+                      }
+                    }
+                  }
+                }
+
+                .chart-bars {
+                  display: flex;
+                  gap: 24px;
+                  align-items: end;
+                  min-height: 300px;
+                  padding: 20px 0;
+                  position: relative;
+
+                  // Add grid lines for better visualization
+                  &::before {
+                    content: '';
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    background-image: 
+                      linear-gradient(to right, #e9ecef 1px, transparent 1px),
+                      linear-gradient(to bottom, #e9ecef 1px, transparent 1px);
+                    background-size: 20px 20px;
+                    opacity: 0.3;
+                    pointer-events: none;
+                  }
+
+                  // Trend lines overlay
+                  .trend-lines {
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    pointer-events: none;
+                    z-index: 10;
+
+                    .trend-svg {
+                      width: 100%;
+                      height: 100%;
+                      position: absolute;
+                      top: 0;
+                      left: 0;
+
+                      .trend-line {
+                        opacity: 0.8;
+                        filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+                        
+                        &.income-trend {
+                          stroke: #28a745;
+                          stroke-width: 3;
+                          stroke-dasharray: 5,5;
+                        }
+
+                        &.expense-trend {
+                          stroke: #dc3545;
+                          stroke-width: 3;
+                          stroke-dasharray: 5,5;
+                        }
+
+                        &.net-trend {
+                          stroke: #007bff;
+                          stroke-width: 4;
+                          stroke-dasharray: none;
+                        }
+                      }
+                    }
+                  }
+
+                  .trend-bar {
+                    flex: 1;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    gap: 12px;
+                    position: relative;
+
+                    .bar-container {
+                      display: flex;
+                      flex-direction: column;
+                      gap: 1px;
+                      width: 100%;
+                      max-width: 80px;
+                      min-height: 200px;
+                      position: relative;
+                      border-radius: 4px 4px 0 0;
+                      overflow: hidden;
+
+                      .bar-section {
+                        display: flex;
+                        align-items: flex-end;
+                        justify-content: center;
+                        transition: all 0.3s ease;
+                        position: relative;
+                        min-height: 20px;
+                        border-radius: 0;
+
+                        &.income-bar {
+                          background: linear-gradient(180deg, #28a745, #20c997);
+                          border-radius: 4px 4px 0 0;
+                        }
+
+                        &.expense-bar {
+                          background: linear-gradient(180deg, #dc3545, #c82333);
+                          border-radius: 0;
+                        }
+
+                    &.net-bar {
+                      background: linear-gradient(180deg, #007bff, #0056b3);
+                      border-radius: 0 0 4px 4px;
+
+                      &.positive {
+                        background: linear-gradient(180deg, #007bff, #0056b3);
+                      }
+
+                      &.negative {
+                        background: linear-gradient(180deg, #dc3545, #fd7e14);
+                      }
+                    }
+
+                        // Show bar values with proper styling
+                        .bar-value {
+                          position: absolute;
+                          top: 50%;
+                          left: 50%;
+                          transform: translate(-50%, -50%);
+                          font-size: 10px;
+                          font-weight: 600;
+                          color: white;
+                          text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+                          z-index: 5;
+                          white-space: nowrap;
+                        }
+                      }
+                    }
+
+                    .bar-label {
+                      font-size: 14px;
+                      font-weight: 600;
+                      color: #2c3e50;
+                      text-align: center;
+                      margin-top: 8px;
+                    }
+
+                    // Add value labels below the bars
+                    .bar-values {
+                      display: flex;
+                      flex-direction: column;
+                      gap: 4px;
+                      margin-top: 8px;
+                      text-align: center;
+
+                      .value-item {
+                        font-size: 11px;
+                        font-weight: 500;
+                        padding: 2px 6px;
+                        border-radius: 12px;
+                        background: rgba(255, 255, 255, 0.9);
+                        border: 1px solid #e9ecef;
+                        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+
+                        &.income {
+                          color: #28a745;
+                          border-color: #28a745;
+                        }
+
+                        &.expense {
+                          color: #dc3545;
+                          border-color: #dc3545;
+                        }
+
+                        &.net {
+                          color: #007bff;
+                          border-color: #007bff;
+                          font-weight: 600;
+
+                          &.positive {
+                            color: #28a745;
+                            border-color: #28a745;
+                          }
+
+                          &.negative {
+                            color: #dc3545;
+                            border-color: #dc3545;
+                          }
+                        }
+                      }
+                    }
+
+                    // Trend direction indicator
+                    .trend-direction {
+                      display: flex;
+                      flex-direction: column;
+                      align-items: center;
+                      gap: 2px;
+                      margin-top: 8px;
+                      padding: 6px 10px;
+                      border-radius: 12px;
+                      font-size: 10px;
+                      font-weight: 600;
+                      text-transform: uppercase;
+                      letter-spacing: 0.5px;
+                      text-align: center;
+
+                      &.trend-improving {
+                        background: #d4edda;
+                        color: #155724;
+                        border: 1px solid #c3e6cb;
+                      }
+
+                      &.trend-declining {
+                        background: #f8d7da;
+                        color: #721c24;
+                        border: 1px solid #f5c6cb;
+                      }
+
+                      &.trend-stable {
+                        background: #e2e3e5;
+                        color: #6c757d;
+                        border: 1px solid #d6d8db;
+                      }
+
+                      i {
+                        font-size: 10px;
+                      }
+
+                      .trend-label {
+                        font-size: 9px;
+                        font-weight: 600;
+                      }
+
+                      .trend-percentage {
+                        font-size: 8px;
+                        font-weight: 500;
+                        opacity: 0.8;
+                      }
+                    }
+                  }
+                }
+
+                .chart-summary {
+                  display: flex;
+                  justify-content: space-around;
+                  padding-top: 20px;
+                  border-top: 1px solid #e9ecef;
+                  margin-top: 20px;
+
+                  .summary-item {
+                    text-align: center;
+
+                    .summary-label {
+                      display: block;
+                      font-size: 12px;
+                      color: #6c757d;
+                      margin-bottom: 4px;
+                    }
+
+                    .summary-value {
+                      font-size: 14px;
+                      font-weight: 600;
+
+                      &.income {
+                        color: #28a745;
+                      }
+
+                      &.expense {
+                        color: #dc3545;
+                      }
+
+                      &.positive {
+                        color: #28a745;
+                      }
+
+                      &.negative {
+                        color: #dc3545;
+                      }
+                    }
+                  }
+                }
               }
             }
           }
@@ -741,7 +1139,542 @@
     }
   }
   
+  // Detailed Report Section
+  .detailed-section {
+    background: white;
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 24px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+
+    h3 {
+      margin: 0 0 24px 0;
+      font-size: 20px;
+      font-weight: 600;
+      color: #2c3e50;
+    }
+
+    .detailed-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 32px;
+
+      .stat-card {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 20px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        transition: all 0.2s ease;
+
+        &:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-icon {
+          width: 48px;
+          height: 48px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 20px;
+          color: white;
+          background: linear-gradient(135deg, #007bff, #0056b3);
+        }
+
+        .stat-content {
+          flex: 1;
+
+          .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #2c3e50;
+            margin-bottom: 4px;
+          }
+
+          .stat-label {
+            font-size: 14px;
+            color: #6c757d;
+            font-weight: 500;
+          }
+        }
+      }
+    }
+
+    .chart-section {
+      margin-bottom: 32px;
+
+      h4 {
+        margin: 0 0 16px 0;
+        font-size: 18px;
+        font-weight: 600;
+        color: #2c3e50;
+      }
+
+      .chart-container {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 20px;
+
+        .breakdown-chart {
+          .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid #e9ecef;
+
+            .chart-title {
+              font-size: 18px;
+              font-weight: 600;
+              color: #2c3e50;
+            }
+
+            .chart-total {
+              font-size: 16px;
+              font-weight: 500;
+              color: #6c757d;
+              background: white;
+              padding: 8px 16px;
+              border-radius: 20px;
+              border: 1px solid #e9ecef;
+            }
+          }
+
+          .chart-bars {
+            margin-bottom: 20px;
+
+            .chart-bar {
+              margin-bottom: 12px;
+              border-radius: 8px;
+              overflow: hidden;
+              position: relative;
+              min-height: 60px;
+              display: flex;
+              align-items: center;
+
+              &.income-bar {
+                background: linear-gradient(90deg, #28a745, #20c997);
+              }
+
+              &.expense-bar {
+                background: linear-gradient(90deg, #dc3545, #c82333);
+              }
+
+              .bar-content {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                width: 100%;
+                padding: 0 20px;
+                color: white;
+                font-weight: 500;
+
+                .bar-label {
+                  font-size: 16px;
+                  font-weight: 600;
+                }
+
+                .bar-amount {
+                  font-size: 18px;
+                  font-weight: 700;
+                }
+
+                .bar-percentage {
+                  font-size: 14px;
+                  background: rgba(255, 255, 255, 0.2);
+                  padding: 4px 12px;
+                  border-radius: 12px;
+                }
+              }
+            }
+          }
+
+          .chart-legend {
+            display: flex;
+            gap: 24px;
+            justify-content: center;
+
+            .legend-item {
+              display: flex;
+              align-items: center;
+              gap: 8px;
+              font-size: 14px;
+              color: #6c757d;
+
+              .legend-color {
+                width: 16px;
+                height: 16px;
+                border-radius: 2px;
+
+                &.income {
+                  background: #28a745;
+                }
+
+                &.expense {
+                  background: #dc3545;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Multi-Currency Reports
+  .multi-currency-reports {
+    background: white;
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 24px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+
+    h3 {
+      margin: 0 0 20px 0;
+      font-size: 20px;
+      font-weight: 600;
+      color: #2c3e50;
+    }
+
+    .currency-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+
+      .currency-tab {
+        padding: 12px 24px;
+        border: 2px solid #e9ecef;
+        background: white;
+        border-radius: 8px;
+        font-weight: 500;
+        color: #6c757d;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        min-width: 80px;
+        text-align: center;
+
+        &:hover {
+          border-color: #007bff;
+          color: #007bff;
+          transform: translateY(-1px);
+        }
+
+        &.active {
+          background: #007bff;
+          border-color: #007bff;
+          color: white;
+          box-shadow: 0 2px 8px rgba(0, 123, 255, 0.3);
+        }
+      }
+    }
+  }
+
+  // Trend Table Styling
+  .trend-table {
+    background: white;
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 24px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+
+    h4 {
+      margin: 0 0 20px 0;
+      font-size: 18px;
+      font-weight: 600;
+      color: #2c3e50;
+    }
+
+    .table-container {
+      overflow-x: auto;
+
+      .trends-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 14px;
+
+        th, td {
+          padding: 16px 12px;
+          text-align: left;
+          border-bottom: 1px solid #e9ecef;
+          vertical-align: middle;
+        }
+
+        th {
+          background: #f8f9fa;
+          font-weight: 600;
+          color: #495057;
+          font-size: 12px;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          position: sticky;
+          top: 0;
+          z-index: 10;
+        }
+
+        .month-cell {
+          .month-info {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+
+            .month-name {
+              font-weight: 600;
+              color: #2c3e50;
+              font-size: 14px;
+            }
+
+            .month-indicator {
+              font-size: 10px;
+              padding: 2px 6px;
+              border-radius: 10px;
+              font-weight: 500;
+              text-transform: uppercase;
+              letter-spacing: 0.5px;
+
+              &.current {
+                background: #d4edda;
+                color: #155724;
+              }
+
+              &.previous {
+                background: #e2e3e5;
+                color: #6c757d;
+              }
+            }
+          }
+        }
+
+        .amount-cell {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+
+          .amount {
+            font-weight: 600;
+            font-size: 14px;
+          }
+
+          .trend-indicator {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 10px;
+
+            i {
+              font-size: 8px;
+            }
+
+            &.income { color: #28a745; }
+            &.expense { color: #dc3545; }
+            &.net.positive { color: #28a745; }
+            &.net.negative { color: #dc3545; }
+            &.zero i { color: #6c757d; }
+          }
+        }
+
+        .change-cell {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+
+          .change-value {
+            font-weight: 600;
+            font-size: 13px;
+          }
+
+          .change-bar {
+            width: 100%;
+            height: 4px;
+            background: #e9ecef;
+            border-radius: 2px;
+            overflow: hidden;
+
+            .change-fill {
+              height: 100%;
+              border-radius: 2px;
+              transition: width 0.3s ease;
+              &.positive { background: linear-gradient(90deg, #28a745, #20c997); }
+              &.negative { background: linear-gradient(90deg, #dc3545, #fd7e14); }
+            }
+          }
+        }
+
+        .trend-visual {
+          .trend-indicator {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border-radius: 16px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+
+            &.trend-improving {
+              background: #d4edda;
+              color: #155724;
+              border: 1px solid #c3e6cb;
+            }
+
+            &.trend-declining {
+              background: #f8d7da;
+              color: #721c24;
+              border: 1px solid #f5c6cb;
+            }
+
+            &.trend-stable {
+              background: #e2e3e5;
+              color: #6c757d;
+              border: 1px solid #d6d8db;
+            }
+
+            i {
+              font-size: 10px;
+            }
+
+            .trend-label {
+              font-size: 10px;
+            }
+          }
+        }
+
+        td {
+          &.income, &.positive { color: #28a745; }
+          &.expense, &.negative { color: #dc3545; }
+        }
+
+        tbody tr {
+          transition: all 0.2s ease;
+
+          &:hover {
+            background: #f8f9fa;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+          }
+        }
+      }
+    }
+  }
+
   // Utility Classes
   .text-success { color: #28a745 !important; }
   .text-danger { color: #dc3545 !important; }
   .text-muted { color: #6c757d !important; }
+
+  // Line Chart Styles
+  .line-chart {
+    .chart-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 16px;
+      border-bottom: 2px solid #e9ecef;
+
+      .chart-title {
+        font-size: 18px;
+        font-weight: 600;
+        color: #2c3e50;
+      }
+
+      .chart-legend {
+        display: flex;
+        gap: 20px;
+
+        .legend-item {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-size: 14px;
+          color: #495057;
+
+          .legend-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+
+            &.income {
+              background: #28a745;
+            }
+
+            &.expense {
+              background: #dc3545;
+            }
+
+            &.net {
+              background: #007bff;
+            }
+          }
+        }
+      }
+    }
+
+    .chart-content {
+      .line-chart-svg {
+        width: 100%;
+        height: 400px;
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+        background: white;
+
+          .axis-label {
+            font-size: 12px;
+            fill: #6c757d;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            
+            &.x-axis-label {
+              font-size: 10px;
+              fill: #495057;
+            }
+          }
+
+        .trend-line {
+          filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+          
+          &.income-line {
+            stroke: #28a745;
+            stroke-width: 3;
+          }
+
+          &.expense-line {
+            stroke: #dc3545;
+            stroke-width: 3;
+          }
+
+          &.net-line {
+            stroke: #007bff;
+            stroke-width: 4;
+          }
+        }
+
+        .data-point {
+          cursor: pointer;
+          transition: all 0.2s ease;
+
+          &:hover {
+            r: 6;
+            filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.2));
+          }
+
+          &.income-point {
+            fill: #28a745;
+          }
+
+          &.expense-point {
+            fill: #dc3545;
+          }
+
+          &.net-point {
+            fill: #007bff;
+          }
+        }
+      }
+    }
+  }

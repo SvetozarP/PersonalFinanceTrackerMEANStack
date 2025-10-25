@@ -222,8 +222,10 @@ export class FinancialService {
     includeCategories?: boolean;
     includeTrends?: boolean;
     includeProjections?: boolean;
-  }): Observable<FinancialReport> {
-    return this.http.post<ApiResponse<FinancialReport>>(`${this.baseUrl}/reports`, options)
+    separateByCurrency?: boolean;
+    granularity?: string;
+  }): Observable<FinancialReport | {[currency: string]: FinancialReport}> {
+    return this.http.post<ApiResponse<FinancialReport | {[currency: string]: FinancialReport}>>(`${this.baseUrl}/reports`, options)
       .pipe(
         map(response => response.data),
         catchError(error => throwError(() => new Error(this.handleError(error))))

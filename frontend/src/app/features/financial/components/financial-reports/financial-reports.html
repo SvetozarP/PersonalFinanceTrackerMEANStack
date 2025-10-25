@@ -46,6 +46,19 @@
           </select>
         </div>
   
+        <!-- Time Granularity Control (only for trends) -->
+        <div class="config-group" *ngIf="selectedReportType === 'trends'">
+          <label for="granularity">Time Granularity:</label>
+          <select id="granularity" [(ngModel)]="selectedGranularity" (change)="onGranularityChange(selectedGranularity)" class="form-control">
+            <option *ngFor="let option of granularityOptions" [value]="option.value">
+              {{ option.label }}
+            </option>
+          </select>
+          <small class="form-text text-muted" *ngIf="selectedGranularity !== 'auto'">
+            {{ getGranularityDescription(selectedGranularity) }}
+          </small>
+        </div>
+  
         <!-- Custom Date Range -->
         <div class="config-group" *ngIf="customDateRange">
           <label for="startDate">Start Date:</label>
@@ -128,7 +141,7 @@
           </span>
           <span class="meta-item">
             <i class="fas fa-chart-bar"></i>
-            {{ reportData?.summary?.transactionCount }} transactions
+            {{ getCurrentSummary()?.transactionCount }} transactions
           </span>
         </div>
       </div>
@@ -142,7 +155,7 @@
               <i class="fas fa-arrow-up"></i>
               <span>Total Income</span>
             </div>
-            <div class="card-value">{{ reportData?.summary?.totalIncome | currency }}</div>
+            <div class="card-value">{{ getCurrentSummary()?.totalIncome | currency:getCurrentCurrency() }}</div>
             <div class="card-change positive">+12.5% vs last period</div>
           </div>
   
@@ -151,7 +164,7 @@
               <i class="fas fa-arrow-down"></i>
               <span>Total Expenses</span>
             </div>
-            <div class="card-value">{{ reportData?.summary?.totalExpenses | currency }}</div>
+            <div class="card-value">{{ getCurrentSummary()?.totalExpenses | currency:getCurrentCurrency() }}</div>
             <div class="card-change negative">+8.2% vs last period</div>
           </div>
   
@@ -160,11 +173,11 @@
               <i class="fas fa-balance-scale"></i>
               <span>Net Income</span>
             </div>
-            <div class="card-value" [class.positive]="(reportData?.summary?.netAmount ?? 0) >= 0" [class.negative]="(reportData?.summary?.netAmount ?? 0) < 0">
-              {{ reportData?.summary?.netAmount | currency }}
+            <div class="card-value" [class.positive]="(getCurrentSummary()?.netAmount ?? 0) >= 0" [class.negative]="(getCurrentSummary()?.netAmount ?? 0) < 0">
+              {{ getCurrentSummary()?.netAmount | currency:getCurrentCurrency() }}
             </div>
-            <div class="card-change" [class.positive]="(reportData?.summary?.netAmount ?? 0) >= 0" [class.negative]="(reportData?.summary?.netAmount ?? 0) < 0">
-              {{ (reportData?.summary?.netAmount ?? 0) >= 0 ? '+' : '' }}{{ (reportData?.summary?.netAmount ?? 0) >= 0 ? '12.5' : '8.2' }}% vs last period
+            <div class="card-change" [class.positive]="(getCurrentSummary()?.netAmount ?? 0) >= 0" [class.negative]="(getCurrentSummary()?.netAmount ?? 0) < 0">
+              {{ (getCurrentSummary()?.netAmount ?? 0) >= 0 ? '+' : '' }}{{ (getCurrentSummary()?.netAmount ?? 0) >= 0 ? '12.5' : '8.2' }}% vs last period
             </div>
           </div>
   
@@ -173,7 +186,7 @@
               <i class="fas fa-exchange-alt"></i>
               <span>Total Transfers</span>
             </div>
-            <div class="card-value">{{ reportData?.summary?.totalTransfers | currency }}</div>
+            <div class="card-value">{{ getCurrentSummary()?.totalTransfers | currency:getCurrentCurrency() }}</div>
             <div class="card-change neutral">No change</div>
           </div>
         </div>
@@ -190,7 +203,7 @@
               <i class="fas fa-receipt"></i>
             </div>
             <div class="stat-content">
-              <div class="stat-value">{{ reportData?.summary?.transactionCount || 0 }}</div>
+              <div class="stat-value">{{ getCurrentSummary()?.transactionCount || 0 }}</div>
               <div class="stat-label">Total Transactions</div>
             </div>
           </div>
@@ -200,7 +213,7 @@
               <i class="fas fa-calculator"></i>
             </div>
             <div class="stat-content">
-              <div class="stat-value">{{ ((reportData?.summary?.totalIncome ?? 0) + (reportData?.summary?.totalExpenses ?? 0)) / (reportData?.summary?.transactionCount ?? 1) | currency }}</div>
+              <div class="stat-value">{{ ((getCurrentSummary()?.totalIncome ?? 0) + (getCurrentSummary()?.totalExpenses ?? 0)) / (getCurrentSummary()?.transactionCount ?? 1) | currency:getCurrentCurrency() }}</div>
               <div class="stat-label">Average Transaction</div>
             </div>
           </div>
@@ -210,7 +223,7 @@
               <i class="fas fa-arrow-up"></i>
             </div>
             <div class="stat-content">
-              <div class="stat-value">{{ reportData?.summary?.totalIncome | currency }}</div>
+              <div class="stat-value">{{ getCurrentSummary()?.totalIncome | currency:getCurrentCurrency() }}</div>
               <div class="stat-label">Total Income</div>
             </div>
           </div>
@@ -220,7 +233,7 @@
               <i class="fas fa-arrow-down"></i>
             </div>
             <div class="stat-content">
-              <div class="stat-value">{{ reportData?.summary?.totalExpenses | currency }}</div>
+              <div class="stat-value">{{ getCurrentSummary()?.totalExpenses | currency:getCurrentCurrency() }}</div>
               <div class="stat-label">Total Expenses</div>
             </div>
           </div>
@@ -233,21 +246,21 @@
             <div class="breakdown-chart">
               <div class="chart-header">
                 <div class="chart-title">Income vs Expenses</div>
-                <div class="chart-total">Total: {{ ((reportData?.summary?.totalIncome ?? 0) + (reportData?.summary?.totalExpenses ?? 0)) | currency }}</div>
+                <div class="chart-total">Total: {{ ((getCurrentSummary()?.totalIncome ?? 0) + (getCurrentSummary()?.totalExpenses ?? 0)) | currency:getCurrentCurrency() }}</div>
               </div>
               
               <div class="chart-bars">
                 <div class="chart-bar income-bar" [style.width.%]="getIncomePercentage()">
                   <div class="bar-content">
                     <div class="bar-label">Income</div>
-                    <div class="bar-amount">{{ reportData?.summary?.totalIncome | currency }}</div>
+                    <div class="bar-amount">{{ getCurrentSummary()?.totalIncome | currency:getCurrentCurrency() }}</div>
                     <div class="bar-percentage">{{ getIncomePercentage() | number:'1.1-1' }}%</div>
                   </div>
                 </div>
                 <div class="chart-bar expense-bar" [style.width.%]="getExpensePercentage()">
                   <div class="bar-content">
                     <div class="bar-label">Expenses</div>
-                    <div class="bar-amount">{{ reportData?.summary?.totalExpenses | currency }}</div>
+                    <div class="bar-amount">{{ getCurrentSummary()?.totalExpenses | currency:getCurrentCurrency() }}</div>
                     <div class="bar-percentage">{{ getExpensePercentage() | number:'1.1-1' }}%</div>
                   </div>
                 </div>
@@ -305,7 +318,7 @@
       <!-- Category Analysis Report -->
       <div class="report-section category-section" *ngIf="selectedReportType === 'category'">
         <h3>Category Analysis</h3>
-        <div class="category-table" *ngIf="reportData?.categories && (reportData?.categories?.length ?? 0) > 0">
+        <div class="category-table" *ngIf="getCurrentReportData()?.categories && (getCurrentReportData()?.categories?.length ?? 0) > 0">
           <div class="table-header">
             <div class="header-cell">Category</div>
             <div class="header-cell">Amount</div>
@@ -314,12 +327,12 @@
             <div class="header-cell">Trend</div>
           </div>
           
-          <div class="table-row" *ngFor="let category of reportData?.categories?.slice(0, 10)">
+          <div class="table-row" *ngFor="let category of getCurrentReportData()?.categories?.slice(0, 10)">
             <div class="table-cell category-name">
               <i class="fas fa-tag"></i>
               {{ category.categoryName || category.name || 'Uncategorized' }}
             </div>
-            <div class="table-cell amount">{{ category.total || category.amount | currency }}</div>
+            <div class="table-cell amount">{{ category.total || category.amount | currency:getCurrentCurrency() }}</div>
             <div class="table-cell count">{{ category.count }}</div>
             <div class="table-cell percentage">
               <div class="percentage-bar">
@@ -333,7 +346,7 @@
             </div>
           </div>
         </div>
-        <div *ngIf="!reportData?.categories || reportData?.categories?.length === 0" class="no-data">
+        <div *ngIf="!getCurrentReportData()?.categories || getCurrentReportData()?.categories?.length === 0" class="no-data">
           <i class="fas fa-info-circle"></i>
           <p>No category data available for this period</p>
         </div>
@@ -343,50 +356,37 @@
       <div class="report-section trends-section" *ngIf="selectedReportType === 'trends'">
         <h3>Trend Analysis</h3>
         
-        <!-- Trend Overview -->
-        <div class="trend-overview" *ngIf="reportData?.trends && (reportData?.trends?.length ?? 0) > 0">
-          <div class="trend-summary">
-            <div class="trend-card">
-              <div class="trend-icon">
-                <i class="fas fa-chart-line"></i>
-              </div>
-              <div class="trend-content">
-                <div class="trend-value">{{ getTotalIncome() | currency }}</div>
-                <div class="trend-label">Total Income</div>
+        <!-- Trend Summary -->
+        <div class="trend-summary" *ngIf="getCurrentReportData()?.trends && (getCurrentReportData()?.trends?.length ?? 0) > 0">
+          <div class="trend-analysis-card">
+            <div class="analysis-header">
+              <h4>Financial Trend Analysis</h4>
+              <div class="overall-trend" [class]="getOverallTrendColorClass()">
+                {{ getOverallTrendAnalysis() }}
               </div>
             </div>
-            
-            <div class="trend-card">
-              <div class="trend-icon">
-                <i class="fas fa-chart-line-down"></i>
+            <div class="analysis-details">
+              <div class="detail-item">
+                <span class="label">Period:</span>
+                <span class="value">{{ getPeriodLength() }} month{{ getPeriodLength() > 1 ? 's' : '' }}</span>
               </div>
-              <div class="trend-content">
-                <div class="trend-value">{{ getTotalExpensesForTrends() | currency }}</div>
-                <div class="trend-label">Total Expenses</div>
-              </div>
-            </div>
-            
-            <div class="trend-card">
-              <div class="trend-icon">
-                <i class="fas fa-balance-scale"></i>
-              </div>
-              <div class="trend-content">
-                <div class="trend-value" [class.positive]="getNetTrend() >= 0" [class.negative]="getNetTrend() < 0">
-                  {{ getNetTrend() | currency }}
-                </div>
-                <div class="trend-label">Net Trend</div>
+              <div class="detail-item">
+                <span class="label">Net for Period:</span>
+                <span class="value" [class.positive]="getLatestChangeAbsolute() >= 0" [class.negative]="getLatestChangeAbsolute() < 0">
+                  {{ getLatestChangeAbsolute() >= 0 ? '+' : '' }}{{ getLatestChangeAbsolute() | currency:getCurrentCurrency() }}
+                </span>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- Monthly Trend Chart -->
-        <div class="trends-chart" *ngIf="reportData?.trends && (reportData?.trends?.length ?? 0) > 0">
-          <h4>Monthly Trends</h4>
+        <!-- Trend Analysis Line Chart -->
+        <div class="trends-chart" *ngIf="getCurrentReportData()?.trends && (getCurrentReportData()?.trends?.length ?? 0) > 0">
+          <h4>Financial Trend Analysis</h4>
           <div class="chart-container">
-            <div class="trend-chart">
+            <div class="line-chart">
               <div class="chart-header">
-                <div class="chart-title">Monthly Income vs Expenses</div>
+                <div class="chart-title">Spending Trend</div>
                 <div class="chart-legend">
                   <div class="legend-item">
                     <div class="legend-color income"></div>
@@ -403,45 +403,133 @@
                 </div>
               </div>
               
-              <div class="chart-bars">
-                <div class="trend-bar" *ngFor="let trend of reportData?.trends">
-                  <div class="bar-container">
-                    <div class="bar-section income-bar" [style.height.%]="getBarHeight(trend.income, 'income')">
-                      <div class="bar-value">{{ trend.income | currency }}</div>
-                    </div>
-                    <div class="bar-section expense-bar" [style.height.%]="getBarHeight(trend.expenses, 'expense')">
-                      <div class="bar-value">{{ trend.expenses | currency }}</div>
-                    </div>
-                    <div class="bar-section net-bar" [style.height.%]="getBarHeight(Math.abs(trend.net), 'net')" [class.positive]="trend.net >= 0" [class.negative]="trend.net < 0">
-                      <div class="bar-value">{{ trend.net | currency }}</div>
-                    </div>
-                  </div>
-                  <div class="bar-label">{{ trend.month | date:'MMM yyyy' }}</div>
-                </div>
-              </div>
-              
-              <div class="chart-summary">
-                <div class="summary-item">
-                  <span class="summary-label">Total Income:</span>
-                  <span class="summary-value income">{{ getTotalIncome() | currency }}</span>
-                </div>
-                <div class="summary-item">
-                  <span class="summary-label">Total Expenses:</span>
-                  <span class="summary-value expense">{{ getTotalExpensesForTrends() | currency }}</span>
-                </div>
-                <div class="summary-item">
-                  <span class="summary-label">Net Trend:</span>
-                  <span class="summary-value" [class.positive]="getNetTrend() >= 0" [class.negative]="getNetTrend() < 0">
-                    {{ getNetTrend() | currency }}
-                  </span>
-                </div>
+              <div class="chart-content">
+                <svg class="line-chart-svg" [attr.viewBox]="'0 0 900 450'">
+                  <!-- Grid lines -->
+                  <defs>
+                    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+                      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#e9ecef" stroke-width="1" opacity="0.3"/>
+                    </pattern>
+                  </defs>
+                  <rect width="100%" height="100%" fill="url(#grid)" />
+                  
+                  <!-- Y-axis grid lines -->
+                  <g class="y-grid-lines">
+                    <line *ngFor="let tick of getYAxisTicks(); let i = index" 
+                          [attr.x1]="100" 
+                          [attr.y1]="getYAxisPosition(tick)" 
+                          [attr.x2]="800" 
+                          [attr.y2]="getYAxisPosition(tick)" 
+                          stroke="#e9ecef" 
+                          stroke-width="1" 
+                          opacity="0.5"/>
+                  </g>
+                  
+                  <!-- X-axis grid lines -->
+                  <g class="x-grid-lines">
+                    <line *ngFor="let trend of getCurrentReportData()?.trends; let i = index" 
+                          [attr.x1]="getXAxisPosition(i)" 
+                          [attr.y1]="50" 
+                          [attr.x2]="getXAxisPosition(i)" 
+                          [attr.y2]="400" 
+                          stroke="#e9ecef" 
+                          stroke-width="1" 
+                          opacity="0.5"/>
+                  </g>
+                  
+                  <!-- Y-axis labels -->
+                  <g class="y-axis">
+                    <text *ngFor="let tick of getYAxisTicks(); let i = index" 
+                          [attr.x]="80" 
+                          [attr.y]="getYAxisPosition(tick)" 
+                          text-anchor="end" 
+                          dominant-baseline="middle" 
+                          class="axis-label">
+                      {{ tick | number:'1.0-0' }}
+                    </text>
+                  </g>
+                  
+                  <!-- X-axis labels -->
+                  <g class="x-axis">
+                    <text *ngFor="let trend of getCurrentReportData()?.trends; let i = index" 
+                          [attr.x]="getXAxisPosition(i)" 
+                          [attr.y]="420" 
+                          text-anchor="end" 
+                          dominant-baseline="middle" 
+                          [attr.transform]="'rotate(-45, ' + getXAxisPosition(i) + ', 420)'"
+                          class="axis-label x-axis-label">
+                      {{ formatTrendDate(trend) }}
+                    </text>
+                  </g>
+                  
+                  <!-- Income line -->
+                  <polyline 
+                    class="trend-line income-line"
+                    [attr.points]="getLineChartPoints('income')"
+                    fill="none"
+                    stroke="#28a745"
+                    stroke-width="3"
+                    stroke-linecap="round"
+                    stroke-linejoin="round">
+                  </polyline>
+                  
+                  <!-- Expense line -->
+                  <polyline 
+                    class="trend-line expense-line"
+                    [attr.points]="getLineChartPoints('expense')"
+                    fill="none"
+                    stroke="#dc3545"
+                    stroke-width="3"
+                    stroke-linecap="round"
+                    stroke-linejoin="round">
+                  </polyline>
+                  
+                  <!-- Net line -->
+                  <polyline 
+                    class="trend-line net-line"
+                    [attr.points]="getLineChartPoints('net')"
+                    fill="none"
+                    stroke="#007bff"
+                    stroke-width="4"
+                    stroke-linecap="round"
+                    stroke-linejoin="round">
+                  </polyline>
+                  
+                  <!-- Data points -->
+                  <g class="data-points">
+                    <circle *ngFor="let trend of getCurrentReportData()?.trends; let i = index" 
+                            [attr.cx]="getXAxisPosition(i)" 
+                            [attr.cy]="getYAxisPosition(trend.income)" 
+                            r="4" 
+                            fill="#28a745" 
+                            class="data-point income-point">
+                      <title>{{ trend.income | currency:getCurrentCurrency() }}</title>
+                    </circle>
+                    <circle *ngFor="let trend of getCurrentReportData()?.trends; let i = index" 
+                            [attr.cx]="getXAxisPosition(i)" 
+                            [attr.cy]="getYAxisPosition(trend.expenses)" 
+                            r="4" 
+                            fill="#dc3545" 
+                            class="data-point expense-point">
+                      <title>{{ trend.expenses | currency:getCurrentCurrency() }}</title>
+                    </circle>
+                    <circle *ngFor="let trend of getCurrentReportData()?.trends; let i = index" 
+                            [attr.cx]="getXAxisPosition(i)" 
+                            [attr.cy]="getYAxisPosition(trend.net)" 
+                            r="5" 
+                            fill="#007bff" 
+                            class="data-point net-point">
+                      <title>{{ trend.net | currency:getCurrentCurrency() }}</title>
+                    </circle>
+                  </g>
+                </svg>
               </div>
             </div>
           </div>
         </div>
 
         <!-- Trend Data Table -->
-        <div class="trend-table" *ngIf="reportData?.trends && (reportData?.trends?.length ?? 0) > 0">
+        <div class="trend-table" *ngIf="getCurrentReportData()?.trends && (getCurrentReportData()?.trends?.length ?? 0) > 0">
           <h4>Detailed Trend Data</h4>
           <div class="table-container">
             <table class="trends-table">
@@ -452,18 +540,64 @@
                   <th>Expenses</th>
                   <th>Net</th>
                   <th>Change</th>
+                  <th>Trend</th>
                 </tr>
               </thead>
               <tbody>
-                <tr *ngFor="let trend of reportData?.trends; let i = index">
-                  <td>{{ trend.month | date:'MMM yyyy' }}</td>
-                  <td class="income">{{ trend.income | currency }}</td>
-                  <td class="expense">{{ trend.expenses | currency }}</td>
+                <tr *ngFor="let trend of getCurrentReportData()?.trends; let i = index">
+                  <td class="month-cell">
+                    <div class="month-info">
+                      <span class="month-name">{{ formatTrendDate(trend) }}</span>
+                      <span class="month-indicator" [class.current]="i === 0" [class.previous]="i === 1">
+                        {{ i === 0 ? 'Current' : i === 1 ? 'Previous' : '' }}
+                      </span>
+                    </div>
+                  </td>
+                  <td class="income">
+                    <div class="amount-cell">
+                      <span class="amount">{{ trend.income | currency:getCurrentCurrency() }}</span>
+                      <div class="trend-indicator income" [class.positive]="trend.income > 0" [class.zero]="trend.income === 0">
+                        <i class="fas fa-arrow-up" *ngIf="trend.income > 0"></i>
+                        <i class="fas fa-minus" *ngIf="trend.income === 0"></i>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="expense">
+                    <div class="amount-cell">
+                      <span class="amount">{{ trend.expenses | currency:getCurrentCurrency() }}</span>
+                      <div class="trend-indicator expense" [class.positive]="trend.expenses > 0" [class.zero]="trend.expenses === 0">
+                        <i class="fas fa-arrow-up" *ngIf="trend.expenses > 0"></i>
+                        <i class="fas fa-minus" *ngIf="trend.expenses === 0"></i>
+                      </div>
+                    </div>
+                  </td>
                   <td [class.positive]="trend.net >= 0" [class.negative]="trend.net < 0">
-                    {{ trend.net | currency }}
+                    <div class="amount-cell">
+                      <span class="amount">{{ trend.net | currency:getCurrentCurrency() }}</span>
+                      <div class="trend-indicator net" [class.positive]="trend.net >= 0" [class.negative]="trend.net < 0">
+                        <i class="fas fa-arrow-up" *ngIf="trend.net > 0"></i>
+                        <i class="fas fa-arrow-down" *ngIf="trend.net < 0"></i>
+                        <i class="fas fa-minus" *ngIf="trend.net === 0"></i>
+                      </div>
+                    </div>
                   </td>
                   <td [class.positive]="getTrendChange(trend, i) >= 0" [class.negative]="getTrendChange(trend, i) < 0">
-                    {{ getTrendChange(trend, i) >= 0 ? '+' : '' }}{{ getTrendChange(trend, i) | number:'1.1-1' }}%
+                    <div class="change-cell">
+                      <span class="change-value">
+                        {{ trend.net >= 0 ? '+' : '' }}{{ trend.net | currency:getCurrentCurrency() }}
+                      </span>
+                      <div class="change-bar">
+                        <div class="change-fill" [style.width.%]="getNetPercentage(trend)" 
+                             [class.positive]="trend.net >= 0" 
+                             [class.negative]="trend.net < 0"></div>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="trend-visual">
+                    <div class="trend-indicator" [class]="getTrendColorClass(trend, i)">
+                      <i [class]="getTrendIcon(trend, i)"></i>
+                      <span class="trend-label">{{ getTrendDirection(trend, i) | titlecase }}</span>
+                    </div>
                   </td>
                 </tr>
               </tbody>
@@ -471,7 +605,7 @@
           </div>
         </div>
         
-        <div *ngIf="!reportData?.trends || (reportData?.trends?.length ?? 0) === 0" class="no-data">
+        <div *ngIf="!getCurrentReportData()?.trends || (getCurrentReportData()?.trends?.length ?? 0) === 0" class="no-data">
           <i class="fas fa-chart-line"></i>
           <p>No trend data available for this period</p>
         </div>
@@ -489,7 +623,7 @@
                 <i class="fas fa-wallet"></i>
               </div>
               <div class="budget-content">
-                <div class="budget-value">{{ reportData?.summary?.totalExpenses | currency }}</div>
+                <div class="budget-value">{{ getCurrentSummary()?.totalExpenses | currency:getCurrentCurrency() }}</div>
                 <div class="budget-label">Total Spending</div>
               </div>
             </div>
@@ -532,7 +666,7 @@
                   </div>
                   <div class="legend-item">
                     <div class="legend-color actual"></div>
-                    <span>Actual ({{ reportData?.summary?.totalExpenses | currency }})</span>
+                    <span>Actual ({{ getCurrentSummary()?.totalExpenses | currency }})</span>
                   </div>
                 </div>
               </div>
@@ -550,7 +684,7 @@
                   <div class="bar-label">Actual</div>
                   <div class="bar-container">
                     <div class="bar-fill actual-fill" [style.width.%]="getActualPercentage()">
-                      <div class="bar-value">{{ reportData?.summary?.totalExpenses | currency }}</div>
+                      <div class="bar-value">{{ getCurrentSummary()?.totalExpenses | currency }}</div>
                     </div>
                   </div>
                 </div>
@@ -647,46 +781,11 @@
             *ngFor="let currency of getAvailableCurrencies()" 
             class="currency-tab"
             [class.active]="selectedCurrency === currency"
-            (click)="selectedCurrency = currency">
+            (click)="onCurrencyChange(currency)">
             {{ currency }}
           </button>
         </div>
         
-        <div *ngFor="let currency of getAvailableCurrencies()" class="currency-report" [style.display]="selectedCurrency === currency ? 'block' : 'none'">
-          <div class="currency-header">
-            <h4>{{ currency }} Report</h4>
-            <span class="currency-period">{{ getReportForCurrency(currency)?.period?.start | date:'mediumDate' }} - {{ getReportForCurrency(currency)?.period?.end | date:'mediumDate' }}</span>
-          </div>
-          
-          <!-- Currency-specific Summary -->
-          <div class="currency-summary" *ngIf="getReportForCurrency(currency)">
-            <div class="summary-grid">
-              <div class="summary-card income">
-                <div class="card-header">
-                  <i class="fas fa-arrow-up"></i>
-                  <span>Total Income</span>
-                </div>
-                <div class="card-value">{{ getReportForCurrency(currency)?.summary?.totalIncome | currency:currency }}</div>
-              </div>
-              <div class="summary-card expenses">
-                <div class="card-header">
-                  <i class="fas fa-arrow-down"></i>
-                  <span>Total Expenses</span>
-                </div>
-                <div class="card-value">{{ getReportForCurrency(currency)?.summary?.totalExpenses | currency:currency }}</div>
-              </div>
-              <div class="summary-card net">
-                <div class="card-header">
-                  <i class="fas fa-balance-scale"></i>
-                  <span>Net Amount</span>
-                </div>
-                <div class="card-value" [class.positive]="(getReportForCurrency(currency)?.summary?.netAmount ?? 0) >= 0" [class.negative]="(getReportForCurrency(currency)?.summary?.netAmount ?? 0) < 0">
-                  {{ getReportForCurrency(currency)?.summary?.netAmount | currency:currency }}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
   
       <!-- Report Footer -->
@@ -710,7 +809,7 @@
     </div>
   
     <!-- No Data State -->
-    <div class="no-data-state" *ngIf="!isLoading && !reportData && transactions.length === 0">
+    <div class="no-data-state" *ngIf="!isLoading && !reportData && !hasMultipleCurrencies() && transactions.length === 0">
       <div class="no-data-content">
         <i class="fas fa-chart-bar"></i>
         <h3>No Data Available</h3>
