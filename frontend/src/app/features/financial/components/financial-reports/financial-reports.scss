@@ -1495,6 +1495,14 @@
           .change-value {
             font-weight: 600;
             font-size: 13px;
+            
+            &.positive {
+              color: #28a745;
+            }
+            
+            &.negative {
+              color: #dc3545;
+            }
           }
 
           .change-bar {

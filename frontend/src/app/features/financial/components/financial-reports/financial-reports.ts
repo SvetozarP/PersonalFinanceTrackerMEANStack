@@ -742,48 +742,23 @@ export class FinancialReportsComponent implements OnInit, OnDestroy {
 
   getTrendChange(trend: any, index: number): number {
     try {
-      const currentReport = this.getCurrentReportData();
-      if (!currentReport?.trends || currentReport.trends.length < 2) return 0;
+      const tableTrends = this.getTableTrends();
+      if (!tableTrends || tableTrends.length < 2) return 0;
       
-      // For trend analysis, compare current period with a meaningful baseline
-      // Use the most recent period vs a previous period (not just the immediate previous)
-    const currentNet = trend.net || 0;
+      // For cumulative net, compare with the previous day's cumulative net
+      const currentNet = trend.net || 0;
       
-      // Find a meaningful comparison point based on data length
-      let comparisonIndex: number;
-      if (currentReport.trends.length <= 7) {
-        // For small datasets, compare with the last entry
-        comparisonIndex = currentReport.trends.length - 1;
-      } else if (currentReport.trends.length <= 30) {
-        // For medium datasets, compare with 7 periods ago (weekly comparison)
-        comparisonIndex = Math.max(0, index - 7);
-      } else {
-        // For large datasets, compare with 30 periods ago (monthly comparison)
-        comparisonIndex = Math.max(0, index - 30);
-      }
+      // Get the previous day's cumulative net (next index in the reversed table)
+      const previousIndex = index + 1;
+      if (previousIndex >= tableTrends.length) return 0;
       
-      // Don't compare with self
-      if (comparisonIndex === index) {
-        comparisonIndex = Math.max(0, index - 1);
-      }
+      const previousTrend = tableTrends[previousIndex];
+      if (!previousTrend) return 0;
       
-      const comparisonTrend = currentReport.trends[comparisonIndex];
-      if (!comparisonTrend) return 0;
+      const previousNet = previousTrend.net || 0;
       
-      const comparisonNet = comparisonTrend.net || 0;
-      
-      // Handle edge cases
-      if (comparisonNet === 0) {
-        return currentNet > 0 ? 100 : (currentNet < 0 ? -100 : 0);
-      }
-      
-      // Calculate percentage change: ((new - old) / |old|) * 100
-      const change = ((currentNet - comparisonNet) / Math.abs(comparisonNet)) * 100;
-      
-      // Ensure the result is a valid number
-      if (isNaN(change) || !isFinite(change)) {
-        return 0;
-      }
+      // Calculate the change in cumulative net
+      const change = currentNet - previousNet;
       
       return change;
     } catch (error) {
@@ -830,7 +805,7 @@ export class FinancialReportsComponent implements OnInit, OnDestroy {
   getTrendDirection(trend: any, index: number): 'improving' | 'declining' | 'stable' {
     const change = this.getTrendChange(trend, index);
     
-    // For the first month (current), base direction on net value, not change
+    // For the first entry (newest date), base direction on net value
     if (index === 0) {
       const netValue = trend.net || 0;
       if (netValue > 0) return 'improving';
@@ -838,10 +813,11 @@ export class FinancialReportsComponent implements OnInit, OnDestroy {
       return 'stable';
     }
     
-    // For subsequent months, use percentage change
-    if (Math.abs(change) < 5) return 'stable';
+    // For subsequent entries, use the change in cumulative net
+    // Positive change means improving financial position (net is growing)
+    // Negative change means declining financial position (net is shrinking)
+    if (Math.abs(change) < 0.01) return 'stable'; // Consider changes < 1 cent as stable
     
-    // For net values: positive change means improving financial position
     return change > 0 ? 'improving' : 'declining';
   }
 
@@ -928,6 +904,22 @@ export class FinancialReportsComponent implements OnInit, OnDestroy {
   getNetPercentage(trend: any): number {
     const maxValue = this.getMaxNetValue();
     return Math.min((Math.abs(trend.net || 0) / maxValue) * 100, 100);
+  }
+
+  // Get change percentage for trend change visualization
+  getChangePercentage(trend: any, index: number): number {
+    const change = this.getTrendChange(trend, index);
+    const tableTrends = this.getTableTrends();
+    
+    if (!tableTrends || tableTrends.length === 0) return 0;
+    
+    // Find the maximum absolute change for scaling
+    const maxChange = Math.max(...tableTrends.map((t, i) => Math.abs(this.getTrendChange(t, i))));
+    
+    if (maxChange === 0) return 0;
+    
+    // Normalize change percentage to 0-100 for bar visualization
+    return Math.min((Math.abs(change) / maxChange) * 100, 100);
   }
 
   // Format date based on granularity
@@ -1047,12 +1039,12 @@ export class FinancialReportsComponent implements OnInit, OnDestroy {
 
   // Get line chart points for a specific type
   getLineChartPoints(type: 'income' | 'expense' | 'net'): string {
-    const currentReport = this.getCurrentReportData();
-    if (!currentReport?.trends || currentReport.trends.length === 0) return '';
+    const chartTrends = this.getChartTrends();
+    if (!chartTrends || chartTrends.length === 0) return '';
     
     const points: string[] = [];
     
-    currentReport.trends.forEach((trend: any, index: number) => {
+    chartTrends.forEach((trend: any, index: number) => {
       let value = 0;
       switch (type) {
         case 'income': value = trend.income || 0; break;
@@ -1157,6 +1149,21 @@ export class FinancialReportsComponent implements OnInit, OnDestroy {
     const summary = this.getCurrentSummary();
     const totalExpenses = summary?.totalExpenses ?? 0;
     return totalExpenses > 0 ? (categoryAmount / totalExpenses) * 100 : 0;
+  }
+
+  // Get trends data for chart (chronological order - oldest first)
+  getChartTrends(): any[] {
+    const currentReport = this.getCurrentReportData();
+    return currentReport?.trends || [];
+  }
+
+  // Get trends data for table (newest first)
+  getTableTrends(): any[] {
+    const currentReport = this.getCurrentReportData();
+    if (!currentReport?.trends) return [];
+    
+    // Reverse the array to show newest first in table
+    return [...currentReport.trends].reverse();
   }
 
   // Math utility for template

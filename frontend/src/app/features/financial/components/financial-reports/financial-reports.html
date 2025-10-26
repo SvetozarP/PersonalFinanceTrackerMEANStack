@@ -453,7 +453,7 @@
                   
                   <!-- X-axis labels -->
                   <g class="x-axis">
-                    <text *ngFor="let trend of getCurrentReportData()?.trends; let i = index" 
+                    <text *ngFor="let trend of getChartTrends(); let i = index" 
                           [attr.x]="getXAxisPosition(i)" 
                           [attr.y]="420" 
                           text-anchor="end" 
@@ -499,7 +499,7 @@
                   
                   <!-- Data points -->
                   <g class="data-points">
-                    <circle *ngFor="let trend of getCurrentReportData()?.trends; let i = index" 
+                    <circle *ngFor="let trend of getChartTrends(); let i = index" 
                             [attr.cx]="getXAxisPosition(i)" 
                             [attr.cy]="getYAxisPosition(trend.income)" 
                             r="4" 
@@ -507,7 +507,7 @@
                             class="data-point income-point">
                       <title>{{ trend.income | currency:getCurrentCurrency() }}</title>
                     </circle>
-                    <circle *ngFor="let trend of getCurrentReportData()?.trends; let i = index" 
+                    <circle *ngFor="let trend of getChartTrends(); let i = index" 
                             [attr.cx]="getXAxisPosition(i)" 
                             [attr.cy]="getYAxisPosition(trend.expenses)" 
                             r="4" 
@@ -515,7 +515,7 @@
                             class="data-point expense-point">
                       <title>{{ trend.expenses | currency:getCurrentCurrency() }}</title>
                     </circle>
-                    <circle *ngFor="let trend of getCurrentReportData()?.trends; let i = index" 
+                    <circle *ngFor="let trend of getChartTrends(); let i = index" 
                             [attr.cx]="getXAxisPosition(i)" 
                             [attr.cy]="getYAxisPosition(trend.net)" 
                             r="5" 
@@ -546,7 +546,7 @@
                 </tr>
               </thead>
               <tbody>
-                <tr *ngFor="let trend of getCurrentReportData()?.trends; let i = index">
+                <tr *ngFor="let trend of getTableTrends(); let i = index">
                   <td class="month-cell">
                     <div class="month-info">
                       <span class="month-name">{{ formatTrendDate(trend) }}</span>
@@ -585,13 +585,13 @@
                   </td>
                   <td [class.positive]="getTrendChange(trend, i) >= 0" [class.negative]="getTrendChange(trend, i) < 0">
                     <div class="change-cell">
-                      <span class="change-value">
-                        {{ trend.net >= 0 ? '+' : '' }}{{ trend.net | currency:getCurrentCurrency() }}
+                      <span class="change-value" [class.positive]="getTrendChange(trend, i) >= 0" [class.negative]="getTrendChange(trend, i) < 0">
+                        {{ getTrendChange(trend, i) >= 0 ? '+' : '' }}{{ getTrendChange(trend, i) | currency:getCurrentCurrency() }}
                       </span>
                       <div class="change-bar">
-                        <div class="change-fill" [style.width.%]="getNetPercentage(trend)" 
-                             [class.positive]="trend.net >= 0" 
-                             [class.negative]="trend.net < 0"></div>
+                        <div class="change-fill" [style.width.%]="getChangePercentage(trend, i)" 
+                             [class.positive]="getTrendChange(trend, i) >= 0" 
+                             [class.negative]="getTrendChange(trend, i) < 0"></div>
                       </div>
                     </div>
                   </td>

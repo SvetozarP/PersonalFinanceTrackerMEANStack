@@ -438,7 +438,17 @@ export class FinancialService {
       // Get trends if requested
       let trends: any[] = [];
       if (includeTrends) {
-        trends = transactionStats.monthlyTrends;
+        // Get all transactions for the period to generate daily trends
+        const allTransactions = await this.transactionService.getUserTransactions(userId, {
+          startDate: calculatedStartDate,
+          endDate: calculatedEndDate,
+          limit: 10000, // Get all transactions
+          sortBy: 'date',
+          sortOrder: 'desc' // Newest first
+        });
+        
+        // Generate daily trends with cumulative net calculation
+        trends = this.generateDailyTrendsWithCumulativeNet(allTransactions.transactions);
       }
 
       // Generate insights
@@ -851,6 +861,55 @@ export class FinancialService {
   }
 
   /**
+   * Generate daily trends with cumulative net calculation
+   */
+  private generateDailyTrendsWithCumulativeNet(transactions: any[]): any[] {
+    if (!transactions || transactions.length === 0) return [];
+
+    // Group transactions by day
+    const dailyData: {[key: string]: {income: number, expenses: number}} = {};
+
+    transactions.forEach(transaction => {
+      const dayKey = transaction.date.toISOString().substring(0, 10); // YYYY-MM-DD
+      
+      if (!dailyData[dayKey]) {
+        dailyData[dayKey] = { income: 0, expenses: 0 };
+      }
+
+      if (transaction.type === 'income') {
+        dailyData[dayKey].income += transaction.amount;
+      } else if (transaction.type === 'expense') {
+        dailyData[dayKey].expenses += transaction.amount;
+      }
+    });
+
+    // Convert to array and sort by date (oldest first for cumulative calculation)
+    const dailyTrends = Object.entries(dailyData)
+      .sort(([a], [b]) => a.localeCompare(b)) // Sort oldest first for cumulative calculation
+      .map(([day, data]) => ({
+        period: day,
+        month: new Date(day),
+        income: data.income,
+        expenses: data.expenses,
+        net: data.income - data.expenses
+      }));
+
+    // Calculate cumulative net (running total from oldest to newest)
+    let cumulativeNet = 0;
+    const trendsWithCumulativeNet = dailyTrends.map(trend => {
+      cumulativeNet += trend.net;
+      return {
+        ...trend,
+        net: cumulativeNet // Replace daily net with cumulative net
+      };
+    });
+
+    // Return in chronological order (oldest first) for proper chart display
+    // The frontend will handle table ordering separately
+    return trendsWithCumulativeNet;
+  }
+
+  /**
    * Generate trends based on granularity
    */
   private generateTrendsByGranularity(transactions: any[], granularity?: string): any[] {
@@ -1228,13 +1287,8 @@ export class FinancialService {
         // Generate trends for this currency
         let trends: any[] = [];
         if (includeTrends) {
-          try {
-            trends = this.generateTrendsByGranularity(currencyTransactions, granularity);
-          } catch (error: any) {
-            console.error(`Error generating trends for currency ${currency}:`, error);
-            // Fallback to monthly trends
-            trends = this.generateMonthlyTrends(currencyTransactions);
-          }
+          // Generate daily trends with cumulative net calculation for this currency
+          trends = this.generateDailyTrendsWithCumulativeNet(currencyTransactions);
         }
 
         // Generate insights for this currency
