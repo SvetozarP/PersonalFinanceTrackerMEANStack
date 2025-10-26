@@ -97,12 +97,6 @@ export class FinancialReportsComponent implements OnInit, OnDestroy {
     // Set default granularity based on initial period
     if (this.selectedPeriod === 'month') {
       this.selectedGranularity = 'days';
-    } else if (this.selectedPeriod === 'quarter') {
-      this.selectedGranularity = 'days';
-    } else if (this.selectedPeriod === 'year') {
-      this.selectedGranularity = 'months';
-    } else {
-      this.selectedGranularity = 'days';
     }
     
     this.loadData();
@@ -390,26 +384,39 @@ export class FinancialReportsComponent implements OnInit, OnDestroy {
   }
 
   private generateCategoryAnalysis(): any[] {
-    const categoryMap = new Map<string, { amount: number; count: number }>();
+    const categoryMap = new Map<string, { income: number; expenses: number; count: number }>();
 
-    this.transactions
-      .filter(t => t.type === TransactionType.EXPENSE)
-      .forEach(transaction => {
-        const categoryName = this.getCategoryName(transaction.categoryId);
-        const current = categoryMap.get(categoryName) || { amount: 0, count: 0 };
-        current.amount += transaction.amount;
-        current.count += 1;
-        categoryMap.set(categoryName, current);
-      });
+    // Process all transactions (both income and expenses) to calculate net amounts per category
+    this.transactions.forEach(transaction => {
+      const categoryName = this.getCategoryName(transaction.categoryId);
+      const current = categoryMap.get(categoryName) || { income: 0, expenses: 0, count: 0 };
+      
+      if (transaction.type === TransactionType.INCOME) {
+        current.income += transaction.amount;
+      } else if (transaction.type === TransactionType.EXPENSE) {
+        current.expenses += transaction.amount;
+      }
+      current.count += 1;
+      categoryMap.set(categoryName, current);
+    });
 
     return Array.from(categoryMap.entries())
-      .map(([name, data]) => ({
-        name,
-        amount: data.amount,
-        count: data.count,
-        percentage: (data.amount / this.getTotalExpenses()) * 100
-      }))
-      .sort((a, b) => b.amount - a.amount);
+      .map(([name, data]) => {
+        const netAmount = data.income - data.expenses;
+        const totalAmount = Math.abs(netAmount);
+        const totalExpenses = this.getTotalExpenses();
+        
+        return {
+          name,
+          amount: netAmount, // Net amount (income - expenses)
+          income: data.income,
+          expenses: data.expenses,
+          count: data.count,
+          percentage: totalExpenses > 0 ? (totalAmount / totalExpenses) * 100 : 0,
+          isPositive: netAmount >= 0 // Flag to determine color
+        };
+      })
+      .sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount)); // Sort by absolute value to show largest impact first
   }
 
   private generateTrends(): any[] {

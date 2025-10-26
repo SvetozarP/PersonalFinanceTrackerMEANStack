@@ -453,7 +453,14 @@
   
                 &.amount {
                   font-weight: 600;
-                  color: #dc3545;
+                  
+                  &.positive {
+                    color: #28a745;
+                  }
+                  
+                  &.negative {
+                    color: #dc3545;
+                  }
                 }
   
                 &.count {
@@ -492,6 +499,7 @@
             }
           }
         }
+      }
   
     // Trends Section
     &.trends-section {
@@ -1047,8 +1055,9 @@
       }
     }
   
-    // Responsive Design
-    @media (max-width: 768px) {
+  // Responsive Design
+  @media (max-width: 768px) {
+    .financial-reports-container {
       padding: 16px;
   
       .reports-header {

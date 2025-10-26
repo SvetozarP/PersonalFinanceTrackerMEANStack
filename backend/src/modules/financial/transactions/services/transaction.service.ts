@@ -427,6 +427,7 @@ export class TransactionService {
       count: number;
       total: number;
       percentage: number;
+      isPositive: boolean;
     }>;
     monthlyTrends: Array<{
       month: string;
@@ -515,10 +516,11 @@ export class TransactionService {
         ]
       );
 
-      // Calculate percentages
+      // Calculate percentages and add isPositive flag
       const totalAmount = totalIncome[0]?.total || 0;
       transactionsByCategory.forEach(cat => {
         cat.percentage = totalAmount > 0 ? (cat.total / totalAmount) * 100 : 0;
+        cat.isPositive = cat.total >= 0; // Flag to determine color in frontend
       });
 
       // Get monthly trends
@@ -570,6 +572,7 @@ export class TransactionService {
           count: cat.count,
           total: cat.total,
           percentage: cat.percentage,
+          isPositive: cat.isPositive,
         })),
         monthlyTrends: monthlyTrends.map(trend => ({
           month: `${trend._id.year}-${trend._id.month.toString().padStart(2, '0')}`,

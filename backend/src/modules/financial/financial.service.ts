@@ -1220,7 +1220,8 @@ export class FinancialService {
             categoryName: data.name,
             count: data.count,
             total: data.total,
-            percentage: totalCategoryAmount > 0 ? (Math.abs(data.total) / totalCategoryAmount) * 100 : 0
+            percentage: totalCategoryAmount > 0 ? (Math.abs(data.total) / totalCategoryAmount) * 100 : 0,
+            isPositive: data.total >= 0 // Flag to determine color in frontend
           }));
         }
 
