@@ -362,21 +362,37 @@
         <div class="trend-summary" *ngIf="getCurrentReportData()?.trends && (getCurrentReportData()?.trends?.length ?? 0) > 0">
           <div class="trend-analysis-card">
             <div class="analysis-header">
-              <h4>Financial Trend Analysis</h4>
+              <div class="header-left">
+                <div class="trend-icon">
+                  <i class="fas fa-chart-line"></i>
+                </div>
+                <h4>Financial Trend Analysis</h4>
+              </div>
               <div class="overall-trend" [class]="getOverallTrendColorClass()">
-                {{ getOverallTrendAnalysis() }}
+                <i class="fas" [class]="getTrendIconForAnalysis()"></i>
+                <span>{{ getOverallTrendAnalysis() }}</span>
               </div>
             </div>
             <div class="analysis-details">
               <div class="detail-item">
-                <span class="label">Period:</span>
-                <span class="value">{{ getPeriodLength() }} month{{ getPeriodLength() > 1 ? 's' : '' }}</span>
+                <div class="detail-icon">
+                  <i class="fas fa-calendar-alt"></i>
+                </div>
+                <div class="detail-content">
+                  <span class="label">Period</span>
+                  <span class="value">{{ getPeriodLength() }} month{{ getPeriodLength() > 1 ? 's' : '' }}</span>
+                </div>
               </div>
               <div class="detail-item">
-                <span class="label">Net for Period:</span>
-                <span class="value" [class.positive]="getLatestChangeAbsolute() >= 0" [class.negative]="getLatestChangeAbsolute() < 0">
-                  {{ getLatestChangeAbsolute() >= 0 ? '+' : '' }}{{ getLatestChangeAbsolute() | currency:getCurrentCurrency() }}
-                </span>
+                <div class="detail-icon">
+                  <i class="fas fa-dollar-sign"></i>
+                </div>
+                <div class="detail-content">
+                  <span class="label">Net for Period</span>
+                  <span class="value" [class.positive]="getLatestChangeAbsolute() >= 0" [class.negative]="getLatestChangeAbsolute() < 0">
+                    {{ getLatestChangeAbsolute() >= 0 ? '+' : '' }}{{ getLatestChangeAbsolute() | currency:getCurrentCurrency() }}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
@@ -406,7 +422,7 @@
               </div>
               
               <div class="chart-content">
-                <svg class="line-chart-svg" [attr.viewBox]="'0 0 900 450'">
+                <svg class="line-chart-svg" [attr.viewBox]="'0 0 1200 500'">
                   <!-- Grid lines -->
                   <defs>
                     <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">

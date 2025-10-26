@@ -504,35 +504,106 @@
     // Trends Section
     &.trends-section {
       .trend-summary {
-        background: white;
-        border-radius: 12px;
-        padding: 24px;
-        margin-bottom: 24px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%) !important;
+        border-radius: 16px !important;
+        padding: 32px !important;
+        margin-bottom: 32px !important;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1) !important;
+        border: 1px solid rgba(255, 255, 255, 0.2) !important;
+        backdrop-filter: blur(10px) !important;
+        position: relative !important;
+        overflow: hidden !important;
+
+        &::before {
+          content: '' !important;
+          position: absolute !important;
+          top: 0 !important;
+          left: 0 !important;
+          right: 0 !important;
+          height: 4px !important;
+          background: linear-gradient(90deg, #007bff, #28a745, #ffc107, #dc3545) !important;
+        }
 
         .trend-analysis-card {
           .analysis-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 16px;
-            padding-bottom: 16px;
-            border-bottom: 2px solid #e9ecef;
+            display: flex !important;
+            justify-content: space-between !important;
+            align-items: center !important;
+            margin-bottom: 20px !important;
+            padding-bottom: 20px !important;
+            border-bottom: 2px solid #e9ecef !important;
 
-            h4 {
-              margin: 0;
-              font-size: 18px;
-              font-weight: 600;
-              color: #2c3e50;
+            .header-left {
+              display: flex !important;
+              align-items: center !important;
+              gap: 12px !important;
+
+              .trend-icon {
+                width: 40px !important;
+                height: 40px !important;
+                background: linear-gradient(135deg, #007bff, #0056b3) !important;
+                border-radius: 10px !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                color: white !important;
+                font-size: 18px !important;
+                box-shadow: 0 2px 8px rgba(0, 123, 255, 0.3) !important;
+              }
+
+              h4 {
+                margin: 0 !important;
+                font-size: 20px !important;
+                font-weight: 700 !important;
+                color: #2c3e50 !important;
+                letter-spacing: -0.5px !important;
+              }
             }
 
             .overall-trend {
-              padding: 8px 16px;
-              border-radius: 20px;
-              font-size: 12px;
-              font-weight: 600;
-              text-transform: uppercase;
-              letter-spacing: 0.5px;
+              display: flex !important;
+              align-items: center !important;
+              gap: 10px !important;
+              padding: 16px 24px !important;
+              border-radius: 30px !important;
+              font-size: 14px !important;
+              font-weight: 800 !important;
+              text-transform: uppercase !important;
+              letter-spacing: 1px !important;
+              box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15) !important;
+              transition: all 0.3s ease !important;
+              position: relative !important;
+              overflow: hidden !important;
+
+              &::before {
+                content: '' !important;
+                position: absolute !important;
+                top: 0 !important;
+                left: -100% !important;
+                width: 100% !important;
+                height: 100% !important;
+                background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent) !important;
+                transition: left 0.5s ease !important;
+              }
+
+              &:hover::before {
+                left: 100% !important;
+              }
+
+              i {
+                font-size: 16px !important;
+                filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2)) !important;
+              }
+
+              span {
+                position: relative !important;
+                z-index: 1 !important;
+              }
+
+              &:hover {
+                transform: translateY(-3px) scale(1.05) !important;
+                box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2) !important;
+              }
 
               &.trend-improving {
                 background: #d4edda;
@@ -551,37 +622,130 @@
                 color: #6c757d;
                 border: 1px solid #d6d8db;
               }
+
+              // Additional trend classes for the new analysis
+              &.trend-strong-growth {
+                background: linear-gradient(135deg, #d1ecf1, #bee5eb) !important;
+                color: #0c5460 !important;
+                border: 2px solid #17a2b8 !important;
+                box-shadow: 0 4px 16px rgba(23, 162, 184, 0.3) !important;
+              }
+
+              &.trend-growth {
+                background: linear-gradient(135deg, #d4edda, #c3e6cb) !important;
+                color: #155724 !important;
+                border: 2px solid #28a745 !important;
+                box-shadow: 0 4px 16px rgba(40, 167, 69, 0.3) !important;
+              }
+
+              &.trend-stable {
+                background: linear-gradient(135deg, #e2e3e5, #d6d8db) !important;
+                color: #6c757d !important;
+                border: 2px solid #6c757d !important;
+                box-shadow: 0 4px 16px rgba(108, 117, 125, 0.3) !important;
+              }
+
+              &.trend-decline {
+                background: linear-gradient(135deg, #f8d7da, #f5c6cb) !important;
+                color: #721c24 !important;
+                border: 2px solid #dc3545 !important;
+                box-shadow: 0 4px 16px rgba(220, 53, 69, 0.3) !important;
+              }
+
+              &.trend-strong-decline {
+                background: linear-gradient(135deg, #f5c6cb, #f1b0b7) !important;
+                color: #721c24 !important;
+                border: 2px solid #c82333 !important;
+                box-shadow: 0 4px 16px rgba(200, 35, 51, 0.3) !important;
+              }
             }
           }
 
           .analysis-details {
-            display: flex;
-            gap: 32px;
+            display: flex !important;
+            gap: 40px !important;
 
             .detail-item {
-              display: flex;
-              flex-direction: column;
-              gap: 4px;
+              display: flex !important;
+              align-items: center !important;
+              gap: 20px !important;
+              padding: 24px 28px !important;
+              background: linear-gradient(135deg, #ffffff, #f8f9fa) !important;
+              border-radius: 16px !important;
+              border: 2px solid rgba(0, 123, 255, 0.1) !important;
+              transition: all 0.3s ease !important;
+              flex: 1 !important;
+              position: relative !important;
+              overflow: hidden !important;
 
-              .label {
-                font-size: 12px;
-                color: #6c757d;
-                font-weight: 500;
-                text-transform: uppercase;
-                letter-spacing: 0.5px;
+              &::before {
+                content: '' !important;
+                position: absolute !important;
+                top: 0 !important;
+                left: 0 !important;
+                width: 4px !important;
+                height: 100% !important;
+                background: linear-gradient(180deg, #007bff, #28a745) !important;
+                transition: width 0.3s ease !important;
               }
 
-              .value {
-                font-size: 16px;
-                font-weight: 600;
-                color: #2c3e50;
+              &:hover {
+                background: linear-gradient(135deg, #f8f9fa, #e9ecef) !important;
+                transform: translateY(-4px) !important;
+                box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15) !important;
+                border-color: rgba(0, 123, 255, 0.3) !important;
 
-                &.positive {
-                  color: #28a745;
+                &::before {
+                  width: 8px !important;
+                }
+              }
+
+              .detail-icon {
+                width: 48px !important;
+                height: 48px !important;
+                background: linear-gradient(135deg, #007bff, #0056b3) !important;
+                border-radius: 12px !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                color: white !important;
+                font-size: 18px !important;
+                flex-shrink: 0 !important;
+                box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3) !important;
+                transition: all 0.3s ease !important;
+
+                &:hover {
+                  transform: scale(1.1) !important;
+                  box-shadow: 0 6px 16px rgba(0, 123, 255, 0.4) !important;
+                }
+              }
+
+              .detail-content {
+                display: flex !important;
+                flex-direction: column !important;
+                gap: 4px !important;
+
+                .label {
+                  font-size: 11px !important;
+                  color: #6c757d !important;
+                  font-weight: 600 !important;
+                  text-transform: uppercase !important;
+                  letter-spacing: 0.8px !important;
                 }
 
-                &.negative {
-                  color: #dc3545;
+                .value {
+                  font-size: 18px !important;
+                  font-weight: 700 !important;
+                  color: #2c3e50 !important;
+                  letter-spacing: -0.3px !important;
+
+                  &.positive {
+                    color: #28a745 !important;
+                  }
+
+                  &.negative {
+                    color: #dc3545 !important;
+                  }
                 }
               }
             }
@@ -590,23 +754,40 @@
       }
 
       .trends-chart {
-            background: white;
-            border-radius: 12px;
-            padding: 24px;
-            margin-bottom: 24px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+        border-radius: 16px;
+        padding: 32px;
+        margin-bottom: 32px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        backdrop-filter: blur(10px);
+        position: relative;
+        overflow: hidden;
 
-            h4 {
-              margin: 0 0 20px 0;
-              font-size: 18px;
-              font-weight: 600;
-              color: #2c3e50;
-            }
+        &::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: 4px;
+          background: linear-gradient(90deg, #007bff, #28a745, #ffc107, #dc3545);
+        }
 
-            .chart-container {
-              background: #f8f9fa;
-              border-radius: 8px;
-              padding: 20px;
+        h4 {
+          margin: 0 0 24px 0;
+          font-size: 20px;
+          font-weight: 700;
+          color: #2c3e50;
+          letter-spacing: -0.5px;
+        }
+
+        .chart-container {
+          background: linear-gradient(135deg, #ffffff, #f8f9fa);
+          border-radius: 12px;
+          padding: 24px;
+          border: 2px solid rgba(0, 123, 255, 0.1);
+          box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.05);
 
               .trend-chart {
             .chart-header {
@@ -1636,38 +1817,78 @@
     .chart-content {
       .line-chart-svg {
         width: 100%;
-        height: 400px;
-        border: 1px solid #e9ecef;
-        border-radius: 8px;
-        background: white;
+        height: 500px;
+        border: 2px solid rgba(0, 123, 255, 0.1);
+        border-radius: 12px;
+        background: linear-gradient(135deg, #ffffff, #f8f9fa);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+        overflow: visible;
 
           .axis-label {
-            font-size: 12px;
-            fill: #6c757d;
+            font-size: 13px;
+            fill: #495057;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-weight: 600;
             
             &.x-axis-label {
-              font-size: 10px;
-              fill: #495057;
+              font-size: 11px;
+              fill: #6c757d;
             }
           }
 
         .trend-line {
-          filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+          filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.15));
+          transition: all 0.3s ease;
           
           &.income-line {
             stroke: #28a745;
-            stroke-width: 3;
+            stroke-width: 4;
+            stroke-linecap: round;
+            stroke-linejoin: round;
           }
 
           &.expense-line {
             stroke: #dc3545;
-            stroke-width: 3;
+            stroke-width: 4;
+            stroke-linecap: round;
+            stroke-linejoin: round;
           }
 
           &.net-line {
             stroke: #007bff;
-            stroke-width: 4;
+            stroke-width: 5;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            filter: drop-shadow(0 4px 8px rgba(0, 123, 255, 0.3));
+          }
+        }
+
+        .data-point {
+          transition: all 0.3s ease;
+          cursor: pointer;
+
+          &:hover {
+            r: 7;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+          }
+
+          &.income-point {
+            fill: #28a745;
+            stroke: #ffffff;
+            stroke-width: 2;
+          }
+
+          &.expense-point {
+            fill: #dc3545;
+            stroke: #ffffff;
+            stroke-width: 2;
+          }
+
+          &.net-point {
+            fill: #007bff;
+            stroke: #ffffff;
+            stroke-width: 3;
+            filter: drop-shadow(0 2px 4px rgba(0, 123, 255, 0.3));
           }
         }
 

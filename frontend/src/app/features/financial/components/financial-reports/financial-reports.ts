@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, inject, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, ChangeDetectorRef, ViewEncapsulation } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
@@ -24,7 +24,8 @@ import { environment } from '../../../../../environments/environment';
   standalone: true,
   imports: [CommonModule, RouterModule, FormsModule, ReactiveFormsModule],
   templateUrl: './financial-reports.html',
-  styleUrls: ['./financial-reports.scss']
+  styleUrls: ['./financial-reports.scss'],
+  encapsulation: ViewEncapsulation.None
 })
 export class FinancialReportsComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
@@ -62,6 +63,15 @@ export class FinancialReportsComponent implements OnInit, OnDestroy {
   private _cachedBudgetUtilization: number | null = null;
   private _cachedBudgetVariance: number | null = null;
   private _cachedOverallTrendAnalysis: string | null = null;
+
+  // Performance optimization caches
+  private _cachedChartTrends: any[] = [];
+  private _cachedTableTrends: any[] = [];
+  private _cachedTrendChanges: Map<string, number> = new Map();
+  private _cachedChangePercentages: Map<string, number> = new Map();
+  private _cacheValid: boolean = false;
+  private _cachedOverallTrendColorClass: string | null = null;
+  private _cachedTrendIconForAnalysis: string | null = null;
 
   // UI State
   isLoading: boolean = false;
@@ -493,6 +503,9 @@ export class FinancialReportsComponent implements OnInit, OnDestroy {
     this._cachedBudgetUtilization = null;
     this._cachedBudgetVariance = null;
     this._cachedOverallTrendAnalysis = null;
+    
+    // Clear performance caches
+    this.clearPerformanceCaches();
   }
 
   // Clear cached values when currency changes
@@ -741,28 +754,45 @@ export class FinancialReportsComponent implements OnInit, OnDestroy {
   }
 
   getTrendChange(trend: any, index: number): number {
+    const cacheKey = `${trend.period || index}-${index}`;
+    
+    if (this._cachedTrendChanges.has(cacheKey)) {
+      return this._cachedTrendChanges.get(cacheKey)!;
+    }
+    
     try {
       const tableTrends = this.getTableTrends();
-      if (!tableTrends || tableTrends.length < 2) return 0;
+      if (!tableTrends || tableTrends.length < 2) {
+        this._cachedTrendChanges.set(cacheKey, 0);
+        return 0;
+      }
       
       // For cumulative net, compare with the previous day's cumulative net
       const currentNet = trend.net || 0;
       
       // Get the previous day's cumulative net (next index in the reversed table)
       const previousIndex = index + 1;
-      if (previousIndex >= tableTrends.length) return 0;
+      if (previousIndex >= tableTrends.length) {
+        this._cachedTrendChanges.set(cacheKey, 0);
+        return 0;
+      }
       
       const previousTrend = tableTrends[previousIndex];
-      if (!previousTrend) return 0;
+      if (!previousTrend) {
+        this._cachedTrendChanges.set(cacheKey, 0);
+        return 0;
+      }
       
       const previousNet = previousTrend.net || 0;
       
       // Calculate the change in cumulative net
       const change = currentNet - previousNet;
       
+      this._cachedTrendChanges.set(cacheKey, change);
       return change;
     } catch (error) {
       console.error('Error in getTrendChange:', error);
+      this._cachedTrendChanges.set(cacheKey, 0);
       return 0;
     }
   }
@@ -829,30 +859,19 @@ export class FinancialReportsComponent implements OnInit, OnDestroy {
     
     try {
       const currentReport = this.getCurrentReportData();
-      if (!currentReport?.trends || currentReport.trends.length === 0) {
+      if (!currentReport?.summary) {
         this._cachedOverallTrendAnalysis = 'Insufficient data';
         return this._cachedOverallTrendAnalysis;
       }
       
-      const trends = currentReport.trends;
+      // Use the actual net amount from the summary for the selected period
+      const netAmount = currentReport.summary.netAmount || 0;
       
-      // For single period, base analysis on net value
-      if (trends.length === 1) {
-        const netValue = trends[0].net || 0;
-        if (netValue > 1000) this._cachedOverallTrendAnalysis = 'Strong Growth';
-        else if (netValue > 0) this._cachedOverallTrendAnalysis = 'Growing';
-        else if (netValue > -1000) this._cachedOverallTrendAnalysis = 'Declining';
-        else this._cachedOverallTrendAnalysis = 'Strong Decline';
-        return this._cachedOverallTrendAnalysis;
-      }
-      
-      // For multiple periods, analyze total net value (not average)
-      const netValues = trends.map((trend: any) => trend.net || 0);
-      const totalNet = netValues.reduce((sum: number, net: number) => sum + net, 0);
-      
-      if (totalNet > 1000) this._cachedOverallTrendAnalysis = 'Strong Growth';
-      else if (totalNet > 0) this._cachedOverallTrendAnalysis = 'Growing';
-      else if (totalNet > -1000) this._cachedOverallTrendAnalysis = 'Declining';
+      // Determine trend based on net amount for the period
+      if (netAmount > 5000) this._cachedOverallTrendAnalysis = 'Strong Growth';
+      else if (netAmount > 1000) this._cachedOverallTrendAnalysis = 'Growth';
+      else if (netAmount > -1000) this._cachedOverallTrendAnalysis = 'Stable';
+      else if (netAmount > -5000) this._cachedOverallTrendAnalysis = 'Decline';
       else this._cachedOverallTrendAnalysis = 'Strong Decline';
       
       return this._cachedOverallTrendAnalysis;
@@ -884,11 +903,10 @@ export class FinancialReportsComponent implements OnInit, OnDestroy {
   // Get latest change as absolute value (not percentage)
   getLatestChangeAbsolute(): number {
     const currentReport = this.getCurrentReportData();
-    if (!currentReport?.trends || currentReport.trends.length === 0) return 0;
+    if (!currentReport?.summary) return 0;
     
-    // Calculate total net for the entire period
-    const totalNet = currentReport.trends.reduce((sum: number, trend: any) => sum + (trend.net || 0), 0);
-    return totalNet;
+    // Use the actual net amount from the summary for the selected period
+    return currentReport.summary.netAmount || 0;
   }
 
   // Get max net value for percentage calculation
@@ -967,21 +985,71 @@ export class FinancialReportsComponent implements OnInit, OnDestroy {
 
   // Get overall trend color class
   getOverallTrendColorClass(): string {
+    if (this._cachedOverallTrendColorClass !== null) {
+      return this._cachedOverallTrendColorClass;
+    }
+    
     try {
       const analysis = this.getOverallTrendAnalysis();
       switch (analysis) {
         case 'Strong Growth':
-        case 'Growing':
-          return 'trend-improving';
-        case 'Declining':
+          this._cachedOverallTrendColorClass = 'trend-strong-growth';
+          break;
+        case 'Growth':
+          this._cachedOverallTrendColorClass = 'trend-growth';
+          break;
+        case 'Stable':
+          this._cachedOverallTrendColorClass = 'trend-stable';
+          break;
+        case 'Decline':
+          this._cachedOverallTrendColorClass = 'trend-decline';
+          break;
         case 'Strong Decline':
-          return 'trend-declining';
+          this._cachedOverallTrendColorClass = 'trend-strong-decline';
+          break;
         default:
-          return 'trend-stable';
+          this._cachedOverallTrendColorClass = 'trend-stable';
       }
+      return this._cachedOverallTrendColorClass;
     } catch (error) {
       console.error('Error in getOverallTrendColorClass:', error);
-      return 'trend-stable';
+      this._cachedOverallTrendColorClass = 'trend-stable';
+      return this._cachedOverallTrendColorClass;
+    }
+  }
+
+  // Get trend icon for analysis badge
+  getTrendIconForAnalysis(): string {
+    if (this._cachedTrendIconForAnalysis !== null) {
+      return this._cachedTrendIconForAnalysis;
+    }
+    
+    try {
+      const analysis = this.getOverallTrendAnalysis();
+      switch (analysis) {
+        case 'Strong Growth':
+          this._cachedTrendIconForAnalysis = 'fa-arrow-up';
+          break;
+        case 'Growth':
+          this._cachedTrendIconForAnalysis = 'fa-arrow-up';
+          break;
+        case 'Stable':
+          this._cachedTrendIconForAnalysis = 'fa-minus';
+          break;
+        case 'Decline':
+          this._cachedTrendIconForAnalysis = 'fa-arrow-down';
+          break;
+        case 'Strong Decline':
+          this._cachedTrendIconForAnalysis = 'fa-arrow-down';
+          break;
+        default:
+          this._cachedTrendIconForAnalysis = 'fa-minus';
+      }
+      return this._cachedTrendIconForAnalysis;
+    } catch (error) {
+      console.error('Error in getTrendIconForAnalysis:', error);
+      this._cachedTrendIconForAnalysis = 'fa-minus';
+      return this._cachedTrendIconForAnalysis;
     }
   }
 
@@ -1007,34 +1075,41 @@ export class FinancialReportsComponent implements OnInit, OnDestroy {
 
   // Get Y-axis position for a value
   getYAxisPosition(value: number): number {
-    const currentReport = this.getCurrentReportData();
-    if (!currentReport?.trends || currentReport.trends.length === 0) return 400;
+    const chartTrends = this.getChartTrends();
+    if (!chartTrends || chartTrends.length === 0) return 400;
     
-    const maxValue = Math.max(...currentReport.trends.map((trend: any) => 
+    // Find max value across all trends for proper scaling
+    const maxValue = Math.max(...chartTrends.map((trend: any) => 
       Math.max(Math.abs(trend.income || 0), Math.abs(trend.expenses || 0), Math.abs(trend.net || 0))
     ));
     
     if (maxValue === 0) return 400;
     
-    // Convert value to Y position (inverted for SVG)
-    // Use full chart height (50 to 400)
-    const percentage = Math.abs(value) / maxValue;
-    const yPos = 400 - (percentage * 350); // 400 is bottom, 50 is top
-    return Math.max(50, Math.min(400, yPos)); // Clamp between 50 and 400
+    // Use more vertical space with better padding
+    const chartHeight = 450; // Increased chart height
+    const topPadding = 50;   // Top padding
+    const bottomPadding = 50; // Bottom padding
+    const availableHeight = chartHeight - topPadding - bottomPadding;
+    
+    // Calculate percentage with some headroom to prevent overflow
+    const percentage = Math.abs(value) / (maxValue * 1.1); // 10% headroom
+    const yPos = chartHeight - bottomPadding - (percentage * availableHeight);
+    
+    return Math.max(topPadding, Math.min(chartHeight - bottomPadding, yPos));
   }
 
   // Get X-axis position for an index
   getXAxisPosition(index: number): number {
-    const currentReport = this.getCurrentReportData();
-    if (!currentReport?.trends || currentReport.trends.length === 0) return 200;
+    const chartTrends = this.getChartTrends();
+    if (!chartTrends || chartTrends.length === 0) return 200;
     
-    const totalPoints = currentReport.trends.length;
-    const startX = 100; // Use more space
-    const endX = 800;   // Use more space
+    const totalPoints = chartTrends.length;
+    const startX = 120; // Increased left padding
+    const endX = 1000;   // Increased total width
     const step = totalPoints > 1 ? (endX - startX) / (totalPoints - 1) : 0;
     
     const xPos = startX + (index * step);
-    return Math.max(100, Math.min(800, xPos)); // Clamp between 100 and 800
+    return Math.max(120, Math.min(1000, xPos)); // Clamp between 120 and 1000
   }
 
   // Get line chart points for a specific type
@@ -1153,20 +1228,47 @@ export class FinancialReportsComponent implements OnInit, OnDestroy {
 
   // Get trends data for chart (chronological order - oldest first)
   getChartTrends(): any[] {
+    if (this._cacheValid && this._cachedChartTrends.length > 0) {
+      return this._cachedChartTrends;
+    }
+    
     const currentReport = this.getCurrentReportData();
-    return currentReport?.trends || [];
+    this._cachedChartTrends = currentReport?.trends || [];
+    this._cacheValid = true;
+    return this._cachedChartTrends;
   }
 
   // Get trends data for table (newest first)
   getTableTrends(): any[] {
+    if (this._cacheValid && this._cachedTableTrends.length > 0) {
+      return this._cachedTableTrends;
+    }
+    
     const currentReport = this.getCurrentReportData();
-    if (!currentReport?.trends) return [];
+    if (!currentReport?.trends) {
+      this._cachedTableTrends = [];
+      this._cacheValid = true;
+      return this._cachedTableTrends;
+    }
     
     // Reverse the array to show newest first in table
-    return [...currentReport.trends].reverse();
+    this._cachedTableTrends = [...currentReport.trends].reverse();
+    this._cacheValid = true;
+    return this._cachedTableTrends;
   }
 
   // Math utility for template
   Math = Math;
+
+  // Clear performance caches when data changes
+  private clearPerformanceCaches(): void {
+    this._cachedChartTrends = [];
+    this._cachedTableTrends = [];
+    this._cachedTrendChanges.clear();
+    this._cachedChangePercentages.clear();
+    this._cacheValid = false;
+    this._cachedOverallTrendColorClass = null;
+    this._cachedTrendIconForAnalysis = null;
+  }
 
 }
